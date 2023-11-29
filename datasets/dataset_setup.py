@@ -5,17 +5,16 @@ python3 datasets/dataset_setup.py \
     --data_dir=~/data \
     --mnist
 """
+import sys
 from absl import flags
 import tensorflow_datasets as tfds
 from torchvision.datasets import CIFAR10, CIFAR100
 
 
-FLAGS = flags.FLAGS
-
 # general flags
 flags.DEFINE_string(
     'data_dir',
-    '~/data',
+    '~/data_bob',
     'The path to the folder where datasets should be downloaded.')
 flags.DEFINE_string(
     'temp_dir',
@@ -28,6 +27,7 @@ flags.DEFINE_boolean('cifar10', False, 'Whether to include CIFAR-10 in download'
 flags.DEFINE_boolean('cifar100', False, 'Whether to include CIFAR-100 in download')
 flags.DEFINE_boolean('all', False, 'Whether to download all datasets.')
 
+FLAGS = flags.FLAGS
 
 def download_mnist(data_dir):
     tfds.builder('mnist', data_dir=data_dir).download_and_prepare()
@@ -50,12 +50,16 @@ def download_cifar100(data_dir):
 
 
 def main():
+    # need to explicitly tell flags library to parse argv before you can access FLAGS.xxx
+    # we could do this implicitly by using app.run()
+    FLAGS(sys.argv)
+
     if FLAGS.all or FLAGS.mnist:
-        download_mnist()
+        download_mnist(FLAGS.data_dir)
     if FLAGS.all or FLAGS.cifar10:
-        download_cifar10()
+        download_cifar10(FLAGS.data_dir)
     if FLAGS.all or FLAGS.cifar100:
-        download_cifar100()
+        download_cifar100(FLAGS.data_dir)
 
 
 if __name__ == '__main__':
