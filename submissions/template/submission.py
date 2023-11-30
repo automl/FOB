@@ -1,4 +1,4 @@
 # imports
 
-def configure_optimizers():
+def configure_optimizers(model):
     pass
