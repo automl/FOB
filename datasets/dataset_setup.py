@@ -7,8 +7,7 @@ python3 datasets/dataset_setup.py \
 """
 import sys
 from absl import flags
-import tensorflow_datasets as tfds
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10, CIFAR100, MNIST
 
 
 # general flags
@@ -30,7 +29,11 @@ flags.DEFINE_boolean('all', False, 'Whether to download all datasets.')
 FLAGS = flags.FLAGS
 
 def download_mnist(data_dir):
-    tfds.builder('mnist', data_dir=data_dir).download_and_prepare()
+    # https://pytorch.org/vision/stable/generated/torchvision.datasets.MNIST.html#torchvision.datasets.MNIST
+    # training set
+    MNIST(root=data_dir, train=True, download=True)
+    # test set
+    MNIST(root=data_dir, train=False, download=True)
 
 
 def download_cifar10(data_dir):
@@ -60,7 +63,6 @@ def main():
         download_cifar10(FLAGS.data_dir)
     if FLAGS.all or FLAGS.cifar100:
         download_cifar100(FLAGS.data_dir)
-
 
 if __name__ == '__main__':
     main()
