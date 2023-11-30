@@ -2,31 +2,13 @@
 Example command:
 
 python3 datasets/dataset_setup.py \
-    --data_dir=~/data \
-    --mnist
+    --data_dir=~/data_bob \
+    --all
 """
-import sys
-from absl import flags
+import os
+import argparse
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST
 
-
-# general flags
-flags.DEFINE_string(
-    'data_dir',
-    '~/data_bob',
-    'The path to the folder where datasets should be downloaded.')
-flags.DEFINE_string(
-    'temp_dir',
-    '/tmp/bob',
-    'A local path to a folder where temp files can be downloaded.')
-
-# Workload flags
-flags.DEFINE_boolean('mnist', False, 'Whether to include MNIST in download')
-flags.DEFINE_boolean('cifar10', False, 'Whether to include CIFAR-10 in download')
-flags.DEFINE_boolean('cifar100', False, 'Whether to include CIFAR-100 in download')
-flags.DEFINE_boolean('all', False, 'Whether to download all datasets.')
-
-FLAGS = flags.FLAGS
 
 def download_mnist(data_dir):
     # https://pytorch.org/vision/stable/generated/torchvision.datasets.MNIST.html#torchvision.datasets.MNIST
@@ -52,17 +34,66 @@ def download_cifar100(data_dir):
     CIFAR100(root=data_dir, train=False, download=True)
 
 
-def main():
-    # need to explicitly tell flags library to parse argv before you can access FLAGS.xxx
-    # we could do this implicitly by using app.run()
-    FLAGS(sys.argv)
+def get_parser():
+    parser = argparse.ArgumentParser()
 
-    if FLAGS.all or FLAGS.mnist:
-        download_mnist(FLAGS.data_dir)
-    if FLAGS.all or FLAGS.cifar10:
-        download_cifar10(FLAGS.data_dir)
-    if FLAGS.all or FLAGS.cifar100:
-        download_cifar100(FLAGS.data_dir)
+    # dir paths
+    parser.add_argument(
+        "--data_dir",
+        help="The path to the folder where datasets should be stored.",
+        required=True,
+        type=str
+    )
+    parser.add_argument(
+        "--tmp_dir",
+        help="A local path to a folder where tmp files can be downloaded.",
+        type=str,
+    )
+
+    # Workload args
+    parser.add_argument(
+        "--all",
+        help="Whether to include all data sets",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--mnist",
+        help="Whether to include MNIST",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--cifar10",
+        help="Whether to include CIFAR10",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--cifar100",
+        help="Whether to include CIFAR100",
+        action="store_true"
+    )
+    return parser
+
+
+
+def main():
+    parser = get_parser()
+    args = parser.parse_args()
+
+    # TODO: check if data_dir already exists
+
+    # if no tmp folder given: create tmp folder in data folder
+    if not args.tmp_dir:
+        DEFAULT_TMP_DIR = "tmp/"
+        args.tmp_dir = os.path.join(args.data_dir, DEFAULT_TMP_DIR)
+        # TODO make sure tmp_dir exists
+
+    if args.all or args.mnist:
+        download_mnist(args.data_dir)
+    if args.all or args.cifar10:
+        download_cifar10(args.data_dir)
+    if args.all or args.cifar100:
+        download_cifar100(args.data_dir)
+
 
 if __name__ == '__main__':
     main()
