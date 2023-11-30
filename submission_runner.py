@@ -1,12 +1,22 @@
 import argparse
 from pathlib import Path
+import lightning as L
 
 import workloads
 import submissions
 
 
 def main(args: argparse.Namespace):
-    dataset_path: Path = args.datasets
+    datasets_dir: Path = args.datasets
+    if args.download:
+        raise NotImplementedError("download on demand not implemented yet")
+    workload = workloads.import_workload(args.workload)
+    submission = submissions.import_submission(args.submission)
+
+    data_module = workload.get_datamodule(datasets_dir)
+    model = workload.get_model(submission.configure_optimizers)
+    trainer = L.Trainer(max_epochs=10)
+    trainer.fit(model, datamodule=data_module)
 
 
 if __name__ == "__main__":

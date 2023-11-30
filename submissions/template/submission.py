@@ -1,4 +1,5 @@
-# imports
+import torch
 
 def configure_optimizers(model):
-    pass
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    return optimizer
