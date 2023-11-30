@@ -7,10 +7,8 @@ python3 datasets/dataset_setup.py \
 """
 import os
 import argparse
-from torchvision.datasets import CIFAR10, CIFAR100, MNIST
-
-# print(os.path)
-from workloads.mnist.DataModule import MNISTDataModule
+from torchvision.datasets import CIFAR10, CIFAR100
+from workloads.mnist.data import MNISTDataModule
 
 
 def download_mnist(data_dir):

@@ -1,11 +1,12 @@
-import lightning as L
+from lightning import LightningDataModule
+import torch
 from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import MNIST
 from torchvision import transforms
 
 
-class MNISTDataModule(L.LightningDataModule):
-    def __init__(self, data_dir: str = "./"):
+class MNISTDataModule(LightningDataModule):
+    def __init__(self, data_dir: str = "./data"):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = 32
@@ -45,10 +46,10 @@ class MNISTDataModule(L.LightningDataModule):
         return DataLoader(self.mnist_train, batch_size=self.batch_size)
 
     def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size==self.batch_size)
+        return DataLoader(self.mnist_val, batch_size=self.batch_size)
 
     def test_dataloader(self):
-        return DataLoader(self.mnist_test, batch_size==self.batch_size)
+        return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
     def predict_dataloader(self):
-        return DataLoader(self.mnist_predict, batch_size==self.batch_size)
+        return DataLoader(self.mnist_predict, batch_size=self.batch_size)
