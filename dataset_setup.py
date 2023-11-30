@@ -7,35 +7,24 @@ python3 datasets/dataset_setup.py \
 """
 import os
 import argparse
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10
 from workloads.mnist.data import MNISTDataModule
+from workloads.cifar100.data import CIFAR100DataModule
 
 
 def download_mnist(data_dir):
-    # https://pytorch.org/vision/stable/generated/torchvision.datasets.MNIST.html#torchvision.datasets.MNIST
-    # training set
-    mnist = MNISTDataModule(data_dir)
-    mnist.prepare_data()
-    # MNIST(root=data_dir, train=True, download=True)
-    # test set
-    # MNIST(root=data_dir, train=False, download=True)
+    MNISTDataModule(data_dir).prepare_data()
 
+def download_cifar100(data_dir):
+    CIFAR100DataModule(data_dir).prepare_data()
 
+# TODO: do we need cifar10? if yes create workload
 def download_cifar10(data_dir):
     # https://pytorch.org/vision/0.8/datasets.html#cifar
     # training set
     CIFAR10(root=data_dir, train=True, download=True)
     # test set
     CIFAR10(root=data_dir, train=False, download=True)
-
-
-def download_cifar100(data_dir):
-    # https://pytorch.org/vision/0.8/datasets.html#cifar
-    # training set
-    CIFAR100(root=data_dir, train=True, download=True)
-    # test set
-    CIFAR100(root=data_dir, train=False, download=True)
-
 
 def get_parser():
     parser = argparse.ArgumentParser()

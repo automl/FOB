@@ -15,9 +15,12 @@ class MNISTDataModule(LightningDataModule):
         self.train_val_split = [55000, 5000]
         self.seed = 42
 
-        # TODO: which transform should we use here https://lightning.ai/docs/pytorch/stable/data/datamodule.html
-        # (0.1307,), (0.3081,) is taken from https://lightning.ai/docs/pytorch/stable/data/datamodule.html
-        self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+        # TODO: check values
+        # https://lightning.ai/docs/pytorch/stable/data/datamodule.html
+        meanOfMNIST = (0.1307,)
+        stdOfMNIST = (0.3081,)
+        self.transform = transforms.Compose([transforms.ToTensor(),
+                                             transforms.Normalize(meanOfMNIST, stdOfMNIST)])
     
     def prepare_data(self):
         # download
@@ -30,9 +33,8 @@ class MNISTDataModule(LightningDataModule):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
             mnist_full = MNIST(self.data_dir, train=True, transform=self.transform)
-            self.mnist_train, self.mnist_val = random_split(
-                mnist_full, self.train_val_split, generator=torch.Generator().manual_seed(self.seed)
-            )
+            gen = torch.Generator().manual_seed(self.seed)
+            self.mnist_train, self.mnist_val = random_split(mnist_full, self.train_val_split, generator=gen)
         
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
@@ -53,3 +55,4 @@ class MNISTDataModule(LightningDataModule):
 
     def predict_dataloader(self):
         return DataLoader(self.mnist_predict, batch_size=self.batch_size)
+    
