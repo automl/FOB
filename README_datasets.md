@@ -13,22 +13,22 @@ conda activate bob
 ```
 
 packages installed might be in non optimal order:
+Later we will have a requirements.txt;
+here is how to manually install the packages, depending on your compute platform
 
-I installed it in this order, but absl-py installs 2.0 and tensoorflow will later downgrade absl to 1.4.0
+PyTorch 2.1.1 CUDA 12.1
 ```
-pip install absl-py
-pip install tensorflow-datasets
+pip3 install torch torchvision torchaudio
+pip install lightning
 ```
-the 3rd package needed already differs for the cuda version we want to use:  
-https://pytorch.org/get-started/locally/ 
-i used the following
+
+PyTorch 2.1.1 CUDA 11.8
 ```
+# untested
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install lightning
 ```
 
-```
-pip install tensorflow
-```
 
 ## Usage
 

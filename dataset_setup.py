@@ -9,13 +9,18 @@ import os
 import argparse
 from torchvision.datasets import CIFAR10, CIFAR100, MNIST
 
+# print(os.path)
+from workloads.mnist.DataModule import MNISTDataModule
+
 
 def download_mnist(data_dir):
     # https://pytorch.org/vision/stable/generated/torchvision.datasets.MNIST.html#torchvision.datasets.MNIST
     # training set
-    MNIST(root=data_dir, train=True, download=True)
+    mnist = MNISTDataModule(data_dir)
+    mnist.prepare_data()
+    # MNIST(root=data_dir, train=True, download=True)
     # test set
-    MNIST(root=data_dir, train=False, download=True)
+    # MNIST(root=data_dir, train=False, download=True)
 
 
 def download_cifar10(data_dir):
