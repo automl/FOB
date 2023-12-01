@@ -7,7 +7,7 @@ class MNISTModel(LightningModule):
         super().__init__()
         self.create_optimizer_fn = create_optimizer_fn
 
-        input_size = 28 * 28
+        input_size = 28 * 28  # 784
         num_hidden = 128
         num_classes = 10
         
@@ -27,7 +27,7 @@ class MNISTModel(LightningModule):
 
     def forward(self, x):
         batch_size, channels, widht, height = x.size()
-
+        
         # (b, 1, 28, 28) -> (b, 1*28*28)
         x = x.view(batch_size, -1)
         output = self.model(x)
@@ -36,7 +36,10 @@ class MNISTModel(LightningModule):
 
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
+        x, y = batch 
+        batch_size, channels, widht, height = x.size()
+        # import pdb; pdb.set_trace()
+        x = x.view(batch_size, -1)
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
 
