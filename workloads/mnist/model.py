@@ -10,11 +10,7 @@ class MNISTModel(LightningModule):
         input_size = 28 * 28  # 784
         num_hidden = 128
         num_classes = 10
-        
-        # TODO param?
-        lr_rate = 1.0
-        self.lr_rate = lr_rate
-        
+
         # algoperf net
         # https://github.com/mlcommons/algorithmic-efficiency/blob/main/algorithmic_efficiency/workloads/mnist/mnist_pytorch/workload.py
         self.model = torch.nn.Sequential(
