@@ -11,7 +11,8 @@ class CIFAR100DataModule(LightningDataModule):
         self.data_dir = data_dir
         self.batch_size = 32  # TODO: which batch size to use???
         # cifar 100 has 60000 32x32 color images (600 images per class)
-        self.train_val_split = [55000, 5000]
+        # 10k for test
+        self.train_val_split = [45000, 5000]
         self.seed = 42
 
         # TODO check values
