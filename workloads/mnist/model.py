@@ -38,13 +38,10 @@ class MNISTModel(LightningModule):
         x = x.view(batch_size, -1)
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
-
-        logs = {'train_loss': loss}
-        return {'loss': loss, 'log': logs}
     
         # # Logging to TensorBoard (if installed) by default
-        # self.log("train_loss", loss)
-        # return loss
+        self.log("train_loss", loss)
+        return loss
 
     def configure_optimizers(self):
         return self.create_optimizer_fn(self)
