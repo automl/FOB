@@ -9,7 +9,7 @@ class MNISTDataModule(LightningDataModule):
     def __init__(self, data_dir: str = "./data"):
         super().__init__()
         self.data_dir = data_dir
-        self.batch_size = 32
+        self.batch_size = 512
         # split can also be a fraction self.train_val_split
         # [55000, 5000] is taken from https://lightning.ai/docs/pytorch/stable/data/datamodule.html
         self.train_val_split = [55000, 5000]

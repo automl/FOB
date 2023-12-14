@@ -1,6 +1,8 @@
 import argparse
 from pathlib import Path
 import lightning as L
+from lightning.pytorch.callbacks import LearningRateMonitor
+import torch
 
 import workloads
 import submissions
@@ -15,7 +17,14 @@ def main(args: argparse.Namespace):
 
     data_module = workload.get_datamodule(datasets_dir)
     model = workload.get_model(submission.configure_optimizers)
-    trainer = L.Trainer(max_epochs=10)
+    specs = workload.get_specs()
+    trainer = L.Trainer(
+        max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?
+        callbacks=[
+            LearningRateMonitor()
+        ],
+        devices=1  # TODO: adjust according to workload
+    )
     trainer.fit(model, datamodule=data_module)
 
 

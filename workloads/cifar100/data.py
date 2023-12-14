@@ -9,7 +9,7 @@ class CIFAR100DataModule(LightningDataModule):
     def __init__(self, data_dir: str = "./data"):
         super().__init__()
         self.data_dir = data_dir
-        self.batch_size = 32  # TODO: which batch size to use???
+        self.batch_size = 1024  # TODO: which batch size to use???
         # cifar 100 has 60000 32x32 color images (600 images per class)
         # 10k for test
         self.train_val_split = [45000, 5000]
