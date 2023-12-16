@@ -1,11 +1,12 @@
-from lightning import LightningDataModule
+from typing import Any
 import torch
 from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import MNIST
 from torchvision import transforms
+from workloads import WorkloadDataModule
 
 
-class MNISTDataModule(LightningDataModule):
+class MNISTDataModule(WorkloadDataModule):
     def __init__(self, data_dir: str = "./data"):
         super().__init__()
         self.data_dir = data_dir
@@ -43,7 +44,6 @@ class MNISTDataModule(LightningDataModule):
         if stage == "predict":
             self.mnist_predict = MNIST(self.data_dir, train=False, transform=self.transform)
 
-
     def train_dataloader(self):
         return DataLoader(self.mnist_train, batch_size=self.batch_size)
 
@@ -55,4 +55,7 @@ class MNISTDataModule(LightningDataModule):
 
     def predict_dataloader(self):
         return DataLoader(self.mnist_predict, batch_size=self.batch_size)
+
+    def get_specs(self) -> dict[str, Any]:
+        return {"batch_size": self.batch_size}
     

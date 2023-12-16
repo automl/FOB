@@ -1,10 +1,10 @@
-from pathlib import Path
+from typing import Any
 import torch
 import torch.utils.data as data
-from lightning import LightningDataModule
 from lightning.pytorch.demos.boring_classes import RandomDataset
+from workloads import WorkloadDataModule
 
-class TemplateDataModule(LightningDataModule):
+class TemplateDataModule(WorkloadDataModule):
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems
         # only called on 1 GPU/TPU in distributed
@@ -26,3 +26,6 @@ class TemplateDataModule(LightningDataModule):
 
     def test_dataloader(self):
         return data.DataLoader(self.test)
+
+    def get_specs(self) -> dict[str, Any]:
+        return {"batch_size": 42}

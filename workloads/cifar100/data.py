@@ -44,7 +44,6 @@ class CIFAR100DataModule(WorkloadDataModule):
         if stage == "predict":
             self.cifar100_predict = CIFAR100(self.data_dir, train=False, transform=self.transform)
 
-
     def train_dataloader(self):
         return DataLoader(self.cifar100_train, batch_size=self.batch_size)
 

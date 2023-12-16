@@ -1,9 +1,9 @@
 from typing import Any
 import torch
 from torch import nn
+from torchvision.models import densenet121
 from workloads import WorkloadModel
 from submissions import Submission
-from torchvision.models import resnet34, resnet18, densenet121
 
 
 class CIFAR100Model(WorkloadModel):
