@@ -1,14 +1,15 @@
-from typing import Callable
-from lightning import LightningModule
-from torchvision.models import resnet34
-from torch import nn
+from typing import Any
 import torch
+from torch import nn
+from workloads import WorkloadModel
+from submissions import Submission
+from torchvision.models import resnet34, resnet18, densenet121
 
-class CIFAR100Model(LightningModule):
-    def __init__(self, create_optimizer_fn: Callable):
-        super().__init__()
-        self.create_optimizer_fn = create_optimizer_fn
-        self.model = resnet34()
+
+class CIFAR100Model(WorkloadModel):
+    def __init__(self, submission: Submission):
+        model = densenet121()
+        super().__init__(model, submission)
         self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -38,5 +39,5 @@ class CIFAR100Model(LightningModule):
         # By default logs it per epoch (weighted average over batches)
         self.log(log_label, acc)
 
-    def configure_optimizers(self):
-        return self.create_optimizer_fn(self)
+    def get_specs(self) -> dict[str, Any]:
+        return {"max_epochs": 100}

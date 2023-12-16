@@ -1,11 +1,12 @@
-from lightning import LightningDataModule
+from typing import Any
 import torch
 from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import CIFAR100
 from torchvision import transforms
+from workloads import WorkloadDataModule
 
 
-class CIFAR100DataModule(LightningDataModule):
+class CIFAR100DataModule(WorkloadDataModule):
     def __init__(self, data_dir: str = "./data"):
         super().__init__()
         self.data_dir = data_dir
@@ -55,4 +56,7 @@ class CIFAR100DataModule(LightningDataModule):
 
     def predict_dataloader(self):
         return DataLoader(self.cifar100_predict, batch_size=self.batch_size)
+
+    def get_specs(self) -> dict[str, Any]:
+        return {"batch_size": self.batch_size}
     

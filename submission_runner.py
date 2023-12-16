@@ -9,6 +9,7 @@ import submissions
 
 
 def main(args: argparse.Namespace):
+    torch.set_float32_matmul_precision('high') # TODO: check if gpu has tensor cores
     datasets_dir: Path = args.datasets
     if args.download:
         raise NotImplementedError("download on demand not implemented yet")
@@ -16,8 +17,8 @@ def main(args: argparse.Namespace):
     submission = submissions.import_submission(args.submission)
 
     data_module = workload.get_datamodule(datasets_dir)
-    model = workload.get_model(submission.configure_optimizers)
-    specs = workload.get_specs()
+    model = workload.get_model(submission.get_submission(args.hyperparameters))
+    specs = workload.get_specs(model, data_module)
     trainer = L.Trainer(
         max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?
         callbacks=[
@@ -26,6 +27,7 @@ def main(args: argparse.Namespace):
         devices=1  # TODO: adjust according to workload
     )
     trainer.fit(model, datamodule=data_module)
+    trainer.test(model, datamodule=data_module)
 
 
 if __name__ == "__main__":
@@ -36,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", "-o", type=Path)
     parser.add_argument("--workload", "-w", required=True, type=str, choices=workloads.workload_names())
     parser.add_argument("--submission", "-s", required=True, type=str, choices=submissions.submission_names())
+    parser.add_argument("--hyperparameters", type=Path, help="Path to hyperparameters file")
     # TODO: hyperparameter, trial number, experiment name
     args = parser.parse_args()
     main(args)
