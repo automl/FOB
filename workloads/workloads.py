@@ -13,7 +13,7 @@ def import_workload(name: str):
 
 
 def workload_names() -> list[str]:
-    EXCLUDE = ["__pycache__", "template"]
+    EXCLUDE = ["__pycache__"]
     return [d.name for d in Path(__file__).parent.iterdir() if d.is_dir() and d.name not in EXCLUDE]
 
 

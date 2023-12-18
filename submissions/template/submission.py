@@ -4,10 +4,11 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.nn import Module
 from torch.optim import SGD
 from submissions import Submission
+from bob.runtime import RuntimeArgs
 
 
-def get_submission(hyperparameter_path: Optional[Path] = None) -> Submission:
-    return TemplateSubmission(hyperparameter_path)
+def get_submission(runtime_args: RuntimeArgs) -> Submission:
+    return TemplateSubmission(runtime_args.hyperparameter_path)
 
 
 class TemplateSubmission(Submission):

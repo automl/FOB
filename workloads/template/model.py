@@ -11,6 +11,7 @@ class TemplateModel(WorkloadModel):
             torch.nn.Linear(10, 1),
             torch.nn.ReLU(),
         )
+        self.loss = torch.nn.functional.mse_loss
         super().__init__(model, submission)
 
     def training_step(self, batch, batch_idx):
@@ -18,7 +19,7 @@ class TemplateModel(WorkloadModel):
         # it is independent of forward
         x = y = batch
         y_hat = self.model(x)
-        loss = torch.nn.functional.mse_loss(y_hat, y)
+        loss = self.loss(y_hat, y)
         # Logging to TensorBoard (if installed) by default
         self.log("train_loss", loss)
         return loss
@@ -30,7 +31,7 @@ class TemplateModel(WorkloadModel):
         self.compute_and_log_loss(batch, "test_loss")
 
     def compute_and_log_loss(self, batch, log_name: str):
-        x, y = batch
+        x = y = batch
         batch_size = x.size(0)
         x = x.view(batch_size, -1)
         y_hat = self.model(x)

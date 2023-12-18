@@ -5,6 +5,9 @@ from lightning.pytorch.demos.boring_classes import RandomDataset
 from workloads import WorkloadDataModule
 
 class TemplateDataModule(WorkloadDataModule):
+    def __init__(self) -> None:
+        super().__init__()
+
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems
         # only called on 1 GPU/TPU in distributed
