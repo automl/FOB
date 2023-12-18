@@ -39,4 +39,4 @@ class TemplateModel(WorkloadModel):
         self.log(log_name, loss)
 
     def get_specs(self) -> dict[str, Any]:
-        return {"max_epochs": 42}
+        return {"max_epochs": 10}

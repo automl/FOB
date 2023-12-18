@@ -5,7 +5,7 @@ import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor
 import torch
 
-from bob.runtime import RuntimeArgs, combine_specs
+from bob.runtime import RuntimeArgs
 
 import workloads
 import submissions
@@ -18,7 +18,7 @@ def main(runtime_args: RuntimeArgs):
 
     data_module: workloads.WorkloadDataModule = workload.get_datamodule(runtime_args)
     model: workloads.WorkloadModel = workload.get_model(submission.get_submission(runtime_args))
-    specs = combine_specs(model, data_module)
+    specs = workloads.combine_specs(model, data_module)
     trainer = L.Trainer(
         max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?
         callbacks=[
