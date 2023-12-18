@@ -2,6 +2,7 @@ import importlib
 from typing import Any
 from pathlib import Path
 from lightning import LightningModule, LightningDataModule
+from torch.utils.data import DataLoader
 from submissions import Submission
 from torch.nn import Module
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
@@ -32,6 +33,35 @@ class WorkloadModel(LightningModule):
 class WorkloadDataModule(LightningDataModule):
     def __init__(self) -> None:
         super().__init__()
+        self.data_train: Any
+        self.data_val: Any
+        self.data_test: Any
+        self.data_predict: Any
+        self.batch_size: int
+
+    def check_dataset(self, data):
+        """Make sure that all workloads have correctly configured their data sets"""
+        if not data:
+            raise NotImplementedError("Each workload has its own data set")
+        if not self.batch_size or self.batch_size < 1:
+            raise NotImplementedError("Each workload configures its own batch_size. Please set it explicitely, to avoid confusion.")
+
+
+    def train_dataloader(self):
+        self.check_dataset(self.data_train)
+        return DataLoader(self.data_train, batch_size=self.batch_size)
+
+    def val_dataloader(self):
+        self.check_dataset(self.data_val)
+        return DataLoader(self.data_val, batch_size=self.batch_size)
+
+    def test_dataloader(self):
+        self.check_dataset(self.data_test)
+        return DataLoader(self.data_test, batch_size=self.batch_size)
+
+    def predict_dataloader(self):
+        self.check_dataset(self.data_predict)
+        return DataLoader(self.data_predict, batch_size=self.batch_size)
 
     def get_specs(self) -> dict[str, Any]:
         raise NotImplementedError("Each workload has its own specs.")

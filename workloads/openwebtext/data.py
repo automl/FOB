@@ -21,7 +21,7 @@ class OpenWebTextDataModule(WorkloadDataModule):
     def __init__(self, data_dir: Path):
         super().__init__()
         self.data_dir = data_dir
-        self.batch_size = 1  # TODO
+        self.batch_size = 0  # TODO
         self.train_val_split = [1, 1]  # TODO
         self.seed = 42
 
@@ -40,18 +40,6 @@ class OpenWebTextDataModule(WorkloadDataModule):
             pass
         if stage == "predict":
             pass
-
-    def train_dataloader(self):
-        return DataLoader(self.openwebtext_train, batch_size=self.batch_size)
-
-    def val_dataloader(self):
-        return DataLoader(self.openwebtext_val, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        return DataLoader(self.openwebtext_test, batch_size=self.batch_size)
-
-    def predict_dataloader(self):
-        return DataLoader(self.openwebtext_predict, batch_size=self.batch_size)
 
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}

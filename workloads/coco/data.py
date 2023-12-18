@@ -25,17 +25,6 @@ class COCODataModule(WorkloadDataModule):
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
-
-    def train_dataloader(self):
-        pass
-
-    def val_dataloader(self):
-        pass
-
-    def test_dataloader(self):
-        pass
-
-    def predict_dataloader(self):
         pass
 
     def get_specs(self) -> dict[str, Any]:

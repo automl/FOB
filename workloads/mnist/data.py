@@ -36,26 +36,14 @@ class MNISTDataModule(WorkloadDataModule):
         if stage == "fit":
             mnist_full = MNIST(str(self.data_dir), train=True, transform=self.transform)
             gen = torch.Generator().manual_seed(self.seed)
-            self.mnist_train, self.mnist_val = random_split(mnist_full, self.train_val_split, generator=gen)
+            self.data_train, self.data_val = random_split(mnist_full, self.train_val_split, generator=gen)
         
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.mnist_test = MNIST(str(self.data_dir), train=False, transform=self.transform)
+            self.data_test = MNIST(str(self.data_dir), train=False, transform=self.transform)
 
         if stage == "predict":
-            self.mnist_predict = MNIST(str(self.data_dir), train=False, transform=self.transform)
-
-    def train_dataloader(self):
-        return DataLoader(self.mnist_train, batch_size=self.batch_size)
-
-    def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        return DataLoader(self.mnist_test, batch_size=self.batch_size)
-
-    def predict_dataloader(self):
-        return DataLoader(self.mnist_predict, batch_size=self.batch_size)
+            self.data_predict = MNIST(str(self.data_dir), train=False, transform=self.transform)
 
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}

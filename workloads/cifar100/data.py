@@ -36,26 +36,14 @@ class CIFAR100DataModule(WorkloadDataModule):
         if stage == "fit":
             cifar100_full = CIFAR100(str(self.data_dir), train=True, transform=self.transform)
             gen = torch.Generator().manual_seed(self.seed)
-            self.cifar100_train, self.cifar100_val = random_split(cifar100_full, self.train_val_split, generator=gen)
+            self.data_train, self.data_val = random_split(cifar100_full, self.train_val_split, generator=gen)
         
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.cifar100_test = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
+            self.data_test = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
 
         if stage == "predict":
-            self.cifar100_predict = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
-
-    def train_dataloader(self):
-        return DataLoader(self.cifar100_train, batch_size=self.batch_size)
-
-    def val_dataloader(self):
-        return DataLoader(self.cifar100_val, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        return DataLoader(self.cifar100_test, batch_size=self.batch_size)
-
-    def predict_dataloader(self):
-        return DataLoader(self.cifar100_predict, batch_size=self.batch_size)
+            self.data_predict = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
 
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}

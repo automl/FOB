@@ -29,18 +29,6 @@ class OGBGDataModule(WorkloadDataModule):
         if stage == "predict":
             pass
 
-    def train_dataloader(self):
-        return DataLoader(self.ogbg_train, batch_size=self.batch_size)
-
-    def val_dataloader(self):
-        return DataLoader(self.ogbg_val, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        return DataLoader(self.ogbg_test, batch_size=self.batch_size)
-
-    def predict_dataloader(self):
-        return DataLoader(self.ogbg_predict, batch_size=self.batch_size)
-
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}
     
