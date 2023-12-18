@@ -7,10 +7,11 @@ from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
+from bob.runtime import RuntimeArgs
 
 
-def get_submission(hyperparameter_path: Optional[Path] = None) -> Submission:
-    return AdamWBaseline(hyperparameter_path)
+def get_submission(runtime_args: RuntimeArgs) -> Submission:
+    return AdamWBaseline(runtime_args.hyperparameter_path)
 
 
 def cosine_warmup(step_hint: int, warmup_factor: float, optimizer):
