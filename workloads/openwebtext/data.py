@@ -5,13 +5,14 @@
 # extracted_files = dl_manager.extract(downloaded_files)
 
 from typing import Any
+from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 # from torchvision import transforms
 from workloads import WorkloadDataModule
 
 class OpenWebTextDataModule(WorkloadDataModule):
-    def __init__(self, data_dir: str = "./data"):
+    def __init__(self, data_dir: Path):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = 1  # TODO

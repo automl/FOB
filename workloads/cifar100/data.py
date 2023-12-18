@@ -1,4 +1,5 @@
 from typing import Any
+from pathlib import Path
 import torch
 from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import CIFAR100
@@ -7,7 +8,7 @@ from workloads import WorkloadDataModule
 
 
 class CIFAR100DataModule(WorkloadDataModule):
-    def __init__(self, data_dir: str = "./data"):
+    def __init__(self, data_dir: Path):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = 1024  # TODO: which batch size to use???
@@ -25,24 +26,24 @@ class CIFAR100DataModule(WorkloadDataModule):
 
     def prepare_data(self):
         # download
-        CIFAR100(self.data_dir, train=True, download=True)
-        CIFAR100(self.data_dir, train=False, download=True)
+        CIFAR100(str(self.data_dir), train=True, download=True)
+        CIFAR100(str(self.data_dir), train=False, download=True)
     
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            cifar100_full = CIFAR100(self.data_dir, train=True, transform=self.transform)
+            cifar100_full = CIFAR100(str(self.data_dir), train=True, transform=self.transform)
             gen = torch.Generator().manual_seed(self.seed)
             self.cifar100_train, self.cifar100_val = random_split(cifar100_full, self.train_val_split, generator=gen)
         
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
-            self.cifar100_test = CIFAR100(self.data_dir, train=False, transform=self.transform)
+            self.cifar100_test = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
 
         if stage == "predict":
-            self.cifar100_predict = CIFAR100(self.data_dir, train=False, transform=self.transform)
+            self.cifar100_predict = CIFAR100(str(self.data_dir), train=False, transform=self.transform)
 
     def train_dataloader(self):
         return DataLoader(self.cifar100_train, batch_size=self.batch_size)
