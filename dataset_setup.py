@@ -7,8 +7,9 @@ python3 datasets/dataset_setup.py \
 """
 import os
 import argparse
+from pathlib import Path
 from workloads.mnist.data import MNISTDataModule
-from workloads.cifar10.data import CIFAR10DataModule
+from workloads.coco.data import COCODataModule
 from workloads.cifar100.data import CIFAR100DataModule
 
 
@@ -18,24 +19,24 @@ def download_mnist(data_dir):
 def download_cifar100(data_dir):
     CIFAR100DataModule(data_dir).prepare_data()
 
-def download_cifar10(data_dir):
-    CIFAR10DataModule(data_dir).prepare_data()
+def download_coco(data_dir):
+    COCODataModule(data_dir).prepare_data()
 
 def get_parser():
     parser = argparse.ArgumentParser()
 
     # dir paths
     parser.add_argument(
-        "--data_dir",
+        "--data_dir", "-d",
         help="The path to the folder where datasets should be stored.",
         required=True,
-        type=str
+        type=Path
     )
     parser.add_argument(
         "--tmp_dir",
         help="A local path to a folder where tmp files can be downloaded.",
         type=str,
-    )
+    ) # TODO: actually use this
 
     # Workload args
     parser.add_argument(
@@ -49,8 +50,8 @@ def get_parser():
         action="store_true"
     )
     parser.add_argument(
-        "--cifar10",
-        help="Whether to include CIFAR10",
+        "--coco",
+        help="Whether to include COCO",
         action="store_true"
     )
     parser.add_argument(
@@ -74,8 +75,8 @@ def main():
 
     if args.all or args.mnist:
         download_mnist(args.data_dir)
-    if args.all or args.cifar10:
-        download_cifar10(args.data_dir)
+    if args.all or args.coco:
+        download_coco(args.data_dir)
     if args.all or args.cifar100:
         download_cifar100(args.data_dir)
 
