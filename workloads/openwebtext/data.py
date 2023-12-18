@@ -1,5 +1,11 @@
 # https://huggingface.co/datasets/Skylion007/openwebtext
 
+# maybe we can joink code from here:
+# https://github.com/karpathy/nanoGPT/tree/master/data/openwebtext
+# that guy joinked it from here: (also lightning)
+# https://github.com/Dao-AILab/flash-attention/blob/main/training/src/datamodules/language_modeling_hf.py
+
+# if not joinkable; have a look here
 # https://huggingface.co/docs/datasets/v2.15.0/en/package_reference/builder_classes#datasets.DownloadManager
 # downloaded_files = dl_manager.download('https://storage.googleapis.com/seldon-datasets/sentence_polarity_v1/rt-polaritydata.tar.gz')
 # extracted_files = dl_manager.extract(downloaded_files)
@@ -8,7 +14,7 @@ from typing import Any
 from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
-# from torchvision import transforms
+from datasets import load_dataset # huggingface datasets
 from workloads import WorkloadDataModule
 
 class OpenWebTextDataModule(WorkloadDataModule):

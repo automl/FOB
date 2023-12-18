@@ -9,7 +9,15 @@ class OGBGModel(WorkloadModel):
         # TODO: decide which model to use; depends on the task of the model?
         model = None
         super().__init__(model, submission)
-        # self.loss_fn = nn.CrossEntropyLoss()
+
+        # datasets:
+        #   ogbg-molhiv
+        #   https://ogb.stanford.edu/docs/graphprop/
+        # task:
+        #   graph property prediction
+        # metric:
+        #   ROC-AUC
+        # self.loss_fn = None # TODO
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
