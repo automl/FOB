@@ -4,11 +4,11 @@ import torch
 from torch.utils.data import DataLoader
 # from torchvision import transforms
 from workloads import WorkloadDataModule
+from bob.runtime import RuntimeArgs
 
 class OGBGDataModule(WorkloadDataModule):
-    def __init__(self, data_dir: Path):
-        super().__init__()
-        self.data_dir = data_dir
+    def __init__(self, runtime_args: RuntimeArgs):
+        super().__init__(runtime_args)
         self.batch_size = 1  # TODO
         self.train_val_split = [1, 1]  # TODO
         self.seed = 42

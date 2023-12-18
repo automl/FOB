@@ -5,12 +5,12 @@ from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import CIFAR100
 from torchvision import transforms
 from workloads import WorkloadDataModule
+from bob.runtime import RuntimeArgs
 
 
 class CIFAR100DataModule(WorkloadDataModule):
-    def __init__(self, data_dir: Path):
-        super().__init__()
-        self.data_dir = data_dir
+    def __init__(self, runtime_args: RuntimeArgs):
+        super().__init__(runtime_args)
         self.batch_size = 1024  # TODO: which batch size to use???
         # cifar 100 has 60000 32x32 color images (600 images per class)
         # 10k for test

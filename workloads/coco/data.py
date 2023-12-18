@@ -6,12 +6,13 @@ from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import CocoDetection
 from torchvision import transforms
 from workloads import WorkloadDataModule
+from bob.runtime import RuntimeArgs
 
 
 class COCODataModule(WorkloadDataModule):
-    def __init__(self, data_dir: Path):
-        super().__init__()
-        self.data_dir = data_dir / "COCO"
+    def __init__(self, runtime_args: RuntimeArgs):
+        super().__init__(runtime_args)
+        self.data_dir = self.data_dir / "COCO"
         self.batch_size = 512
 
     def prepare_data(self):
