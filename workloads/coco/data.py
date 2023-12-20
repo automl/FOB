@@ -102,7 +102,9 @@ class COCODataModule(WorkloadDataModule):
             self.data_train = self._coco_remove_images_without_annotations(
                 self._wrapped_coco_dataset(train_path, annot_path / "instances_train2017.json", self.train_transforms)
             )
-            self.data_val = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
+            self.data_val = self._coco_remove_images_without_annotations(
+                self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
+            )
         # use validation set for test and predict, because test labels are not available
         if stage == "test":
             self.data_test = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
