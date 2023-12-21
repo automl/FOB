@@ -7,7 +7,7 @@ import torch.nn as nn
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 
 from submissions import Submission
-from bob.runtime import RuntimeArgs
+from bob.runtime import DatasetArgs
 
 
 def import_workload(name: str):
@@ -33,10 +33,10 @@ class WorkloadModel(LightningModule):
 
 
 class WorkloadDataModule(LightningDataModule):
-    def __init__(self, runtime_args: RuntimeArgs) -> None:
+    def __init__(self, dataset_args: DatasetArgs) -> None:
         super().__init__()
-        self.workers = runtime_args.cpu_cores - 1
-        self.data_dir = runtime_args.dataset_dir
+        self.workers = dataset_args.cpu_cores - 1
+        self.data_dir = dataset_args.data_dir
         self.data_train: Any
         self.data_val: Any
         self.data_test: Any

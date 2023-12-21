@@ -5,11 +5,11 @@ from torch.utils.data import random_split, DataLoader
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from workloads import WorkloadDataModule
-from bob.runtime import RuntimeArgs
+from bob.runtime import DatasetArgs
 
 
 class MNISTDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: RuntimeArgs):
+    def __init__(self, runtime_args: DatasetArgs):
         super().__init__(runtime_args)
         self.batch_size = 512
         # split can also be a fraction self.train_val_split

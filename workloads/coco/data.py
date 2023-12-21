@@ -9,7 +9,7 @@ from torchvision.transforms import v2
 from torchvision import datasets, tv_tensors
 from tqdm import tqdm
 from workloads import WorkloadDataModule
-from bob.runtime import RuntimeArgs
+from bob.runtime import DatasetArgs
 
 
 class COCODataModule(WorkloadDataModule):
@@ -18,8 +18,8 @@ class COCODataModule(WorkloadDataModule):
     Implementation and choice of transforms is heavily inspired by example in
     https://pytorch.org/vision/stable/auto_examples/transforms/plot_transforms_e2e.html
     """
-    def __init__(self, runtime_args: RuntimeArgs):
-        super().__init__(runtime_args)
+    def __init__(self, dataset_args: DatasetArgs):
+        super().__init__(dataset_args)
         self.data_dir = self.data_dir / "COCO"
         self.batch_size = 8
         self.train_transforms = v2.Compose(

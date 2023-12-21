@@ -4,10 +4,10 @@ import torch
 from torch.utils.data import DataLoader
 # from torchvision import transforms
 from workloads import WorkloadDataModule
-from bob.runtime import RuntimeArgs
+from bob.runtime import DatasetArgs
 
 class OGBGDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: RuntimeArgs):
+    def __init__(self, runtime_args: DatasetArgs):
         super().__init__(runtime_args)
         self.batch_size = 1  # TODO
         self.train_val_split = [1, 1]  # TODO
