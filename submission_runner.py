@@ -1,5 +1,4 @@
 import argparse
-from typing import Any
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor
@@ -16,8 +15,7 @@ def main(runtime_args: RuntimeArgs):
     workload = workloads.import_workload(runtime_args.workload_name)
     submission = submissions.import_submission(runtime_args.submission_name)
 
-    data_module: workloads.WorkloadDataModule = workload.get_datamodule(runtime_args)
-    model: workloads.WorkloadModel = workload.get_model(submission.get_submission(runtime_args))
+    model, data_module = workload.get_workload(submission.get_submission(runtime_args), runtime_args)
     specs = workloads.combine_specs(model, data_module)
     trainer = L.Trainer(
         max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?

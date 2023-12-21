@@ -1,17 +1,13 @@
-from typing import Any
-from pathlib import Path
-from lightning import LightningDataModule
-from workloads import WorkloadModel, WorkloadDataModule
-from submissions import Submission
 from bob.runtime import DatasetArgs
+from submissions import Submission
+from workloads import WorkloadModel, WorkloadDataModule
+from workloads.cifar100 import data
+from workloads.cifar100 import model
 
-import workloads.cifar100.data as data
-import workloads.cifar100.model as model
 
-
-def get_datamodule(dataset_args: DatasetArgs) -> LightningDataModule:
+def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
     return data.CIFAR100DataModule(dataset_args)
 
 
-def get_model(submission: Submission) -> WorkloadModel:
-    return model.CIFAR100Model(submission)
+def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
+    return model.CIFAR100Model(submission), get_datamodule(dataset_args)

@@ -1,17 +1,13 @@
-from typing import Any
-from pathlib import Path
-from lightning import LightningDataModule
-from workloads import WorkloadModel, WorkloadDataModule
-from submissions import Submission
 from bob.runtime import DatasetArgs
-
-import workloads.ogbg.data as data
-import workloads.ogbg.model as model
+from submissions import Submission
+from workloads import WorkloadModel, WorkloadDataModule
+from workloads.ogbg import data
+from workloads.ogbg import model
 
 
 def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
     return data.OGBGDataModule(dataset_args)
 
 
-def get_model(submission: Submission) -> WorkloadModel:
-    return model.OGBGModel(submission)
+def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
+    return model.OGBGModel(submission), get_datamodule(dataset_args)

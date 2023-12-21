@@ -1,17 +1,13 @@
-from typing import Any
-from pathlib import Path
-from lightning import LightningDataModule
-from workloads import WorkloadModel, WorkloadDataModule
-from submissions import Submission
 from bob.runtime import DatasetArgs
-
-import workloads.openwebtext.data as data
-import workloads.openwebtext.model as model
+from submissions import Submission
+from workloads import WorkloadModel, WorkloadDataModule
+from workloads.openwebtext import data
+from workloads.openwebtext import model
 
 
 def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
     return data.OpenWebTextDataModule(dataset_args)
 
 
-def get_model(submission: Submission) -> WorkloadModel:
-    return model.OpenWebTextModel(submission)
+def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
+    return model.OpenWebTextModel(submission), get_datamodule(dataset_args)
