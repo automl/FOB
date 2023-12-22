@@ -32,7 +32,7 @@ def get_parser():
                         help="the workload for which to download the data.")
     parser.add_argument("--all", "-a", action="store_true", \
                         help="Whether to download all datasets.")
-    parser.add_argument("--cpu_cores", type=int, \
+    parser.add_argument("--workers", type=int, \
                         help="number of parallelism used for loading data, default: all available")
     return parser
 

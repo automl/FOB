@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--submission", "-s", required=True, type=str, choices=submissions.submission_names())
     parser.add_argument("--hyperparameters", type=Path, \
                         help="path to hyperparameters file")
-    parser.add_argument("--cpu_cores", type=int, \
+    parser.add_argument("--workers", type=int, \
                         help="number of parallelism used for loading data, default: all available")
     # TODO: hyperparameter, trial number, experiment name
     args = parser.parse_args()

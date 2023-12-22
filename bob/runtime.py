@@ -10,7 +10,7 @@ class DatasetArgs:
     def __init__(self, args: argparse.Namespace):
         self.data_dir: Path = args.data_dir
         self.workload_name: str = args.workload
-        self.cpu_cores: int = args.cpu_cores if args.cpu_cores else cpu_count()
+        self.workers: int = args.workers if args.workers else cpu_count() - 1
 
 
 class RuntimeArgs(DatasetArgs):
