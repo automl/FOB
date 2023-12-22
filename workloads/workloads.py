@@ -35,7 +35,7 @@ class WorkloadModel(LightningModule):
 class WorkloadDataModule(LightningDataModule):
     def __init__(self, dataset_args: DatasetArgs) -> None:
         super().__init__()
-        self.workers = dataset_args.cpu_cores - 1
+        self.workers = dataset_args.workers
         self.data_dir = dataset_args.data_dir
         self.data_train: Any
         self.data_val: Any
