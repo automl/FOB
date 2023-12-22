@@ -36,11 +36,9 @@ class OpenWebTextDataModule(WorkloadDataModule):
         num_proc_load_dataset = self.workers
         cache_dir = self.data_dir / "cache"
         data_dir = self.data_dir
-        resume_download = True
         dataset = load_dataset("openwebtext",
                                data_dir=data_dir,
                                cache_dir=cache_dir,
-                               resume_download=resume_download,
                                num_proc=num_proc_load_dataset)
 
         # owt by default only contains the 'train' split, so create a test split
@@ -48,6 +46,8 @@ class OpenWebTextDataModule(WorkloadDataModule):
         # split_dataset['val'] = split_dataset.pop('test') # rename the test split to val
 
     def setup(self, stage: str):
+        """setup is called from every process across all the nodes. Setting state here is recommended.
+        """
         if stage == "fit":
             pass
         if stage == "test":
