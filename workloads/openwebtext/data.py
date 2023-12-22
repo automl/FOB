@@ -19,11 +19,12 @@ from workloads import WorkloadDataModule
 from bob.runtime import DatasetArgs
 
 class OpenWebTextDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: DatasetArgs):
-        super().__init__(runtime_args)
+    def __init__(self, dataset_args: DatasetArgs):
+        super().__init__(dataset_args)
         self.batch_size = 0  # TODO
         self.train_val_split = [1, 1]  # TODO
         self.seed = 42
+        self.data_dir = self.data_dir / "openwebtext"
 
         # TODO do we need to normalize?
         # meanOfOpenWebText = torch.tensor(0)
@@ -32,11 +33,19 @@ class OpenWebTextDataModule(WorkloadDataModule):
         
     def prepare_data(self):
         # takes 54GB in huggingface .cache dir, about 8M documents (8,013,769)
-        dataset = load_dataset("openwebtext", num_proc=num_proc_load_dataset)
+        num_proc_load_dataset = self.workers
+        cache_dir = self.data_dir / "cache"
+        data_dir = self.data_dir
+        resume_download = True
+        dataset = load_dataset("openwebtext",
+                               data_dir=data_dir,
+                               cache_dir=cache_dir,
+                               resume_download=resume_download,
+                               num_proc=num_proc_load_dataset)
 
-         # owt by default only contains the 'train' split, so create a test split
-        split_dataset = dataset["train"].train_test_split(test_size=0.0005, seed=2357, shuffle=True)
-        split_dataset['val'] = split_dataset.pop('test') # rename the test split to val
+        # owt by default only contains the 'train' split, so create a test split
+        # split_dataset = dataset["train"].train_test_split(test_size=0.0005, seed=2357, shuffle=True)
+        # split_dataset['val'] = split_dataset.pop('test') # rename the test split to val
 
     def setup(self, stage: str):
         if stage == "fit":

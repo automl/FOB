@@ -7,8 +7,8 @@ from workloads import WorkloadDataModule
 from bob.runtime import DatasetArgs
 
 class OGBGDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: DatasetArgs):
-        super().__init__(runtime_args)
+    def __init__(self, dataset_args: DatasetArgs):
+        super().__init__(dataset_args)
         self.batch_size = 1  # TODO
         self.train_val_split = [1, 1]  # TODO
         self.seed = 42
