@@ -20,6 +20,7 @@ def main(runtime_args: RuntimeArgs):
     trainer = L.Trainer(
         max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?
         callbacks=[
+            *(workload.get_callbacks()),
             LearningRateMonitor()
         ],
         devices=1  # TODO: adjust according to workload

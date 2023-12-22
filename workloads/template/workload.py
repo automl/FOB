@@ -1,3 +1,4 @@
+from lightning import Callback
 from bob.runtime import DatasetArgs
 from submissions import Submission
 from workloads import WorkloadDataModule, WorkloadModel
@@ -11,3 +12,6 @@ def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
 
 def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
     return model.TemplateModel(submission), get_datamodule(dataset_args)
+
+def get_callbacks() -> list[Callback]:
+    return []
