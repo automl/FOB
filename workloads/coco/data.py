@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import CocoDetection
 from torchvision.transforms import v2
 from torchvision import datasets, tv_tensors
+from pycocotools.coco import COCO
 from tqdm import tqdm
 from workloads import WorkloadDataModule
 from bob.runtime import DatasetArgs
@@ -15,8 +16,8 @@ from bob.runtime import DatasetArgs
 class COCODataModule(WorkloadDataModule):
     """
     DataModule for COCO object detection task.
-    Implementation and choice of transforms is heavily inspired by example in
-    https://pytorch.org/vision/stable/auto_examples/transforms/plot_transforms_e2e.html
+    Implementation and choice of transforms is heavily inspired by
+    https://github.com/pytorch/vision/tree/main/references/detection
     """
     def __init__(self, dataset_args: DatasetArgs):
         super().__init__(dataset_args)
@@ -106,6 +107,8 @@ class COCODataModule(WorkloadDataModule):
                 self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
             )
         # use validation set for test and predict, because test labels are not available
+        if stage == "validate":
+            self.data_val = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
         if stage == "test":
             self.data_test = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
         if stage == "predict":
@@ -128,6 +131,11 @@ class COCODataModule(WorkloadDataModule):
         # TODO: batch_size=1 for val/test?
         return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
 
+    def eval_gt_data(self) -> COCO:
+        val_path = self.data_dir / "val2017"
+        annot_path = self.data_dir / "annotations" / "instances_val2017.json"
+        ds = self._wrapped_coco_dataset(val_path, annot_path, transforms=self.val_transforms)
+        return ds.coco
 
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}
