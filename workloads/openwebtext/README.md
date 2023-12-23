@@ -25,3 +25,9 @@ test with (takes 1-2 mins)
 
 you should see something like:  
 ```[{'label': 'POSITIVE', 'score': 0.9998704195022583}]```
+
+# tiktoken
+
+https://github.com/openai/tiktoken
+
+```pip install tiktoken```

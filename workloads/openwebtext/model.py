@@ -3,7 +3,7 @@
 from typing import Any
 import torch
 
-from transformers import AutoTokenizer, GPT2Config, GPT2Model, GPT2LMHeadModel
+from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
 from workloads import WorkloadModel
 from workloads.specs import RuntimeSpecs
@@ -14,22 +14,21 @@ class OpenWebTextModel(WorkloadModel):
         
         # TODO: decide which model to use; depends on the task of the model?
 
-        # (1)
-        # model = densenet121()
-        # Initializing a model (with random weights) from the configuration
-        configuration = GPT2Config()
-        model = GPT2Model(configuration)
-        
-        # (2)
-        # The bare GPT2 Model transformer outputting raw hidden-states without any specific head on top.
-        tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        model = GPT2Model.from_pretrained("gpt2")
-
-        # (3)
-        # The GPT2 Model transformer with a language modeling head on top
-        # (linear layer with weights tied to the input embeddings).
-        tokenizer = AutoTokenizer.from_pretrained("gpt2")
-        model = GPT2LMHeadModel.from_pretrained("gpt2")
+        mode = 3
+        if mode == 1:
+            # (1)
+            # Initializing a model (with random weights) from the configuration
+            configuration = GPT2Config()
+            model = GPT2Model(configuration)
+        elif mode == 2:
+            # (2)
+            # The bare GPT2 Model transformer outputting raw hidden-states without any specific head on top.
+            model = GPT2Model.from_pretrained("gpt2")
+        else:
+            # (3)
+            # The GPT2 Model transformer with a language modeling head on top
+            # (linear layer with weights tied to the input embeddings).
+            model = GPT2LMHeadModel.from_pretrained("gpt2")
 
         super().__init__(model, submission)
         # self.loss_fn = nn.CrossEntropyLoss()
@@ -38,12 +37,21 @@ class OpenWebTextModel(WorkloadModel):
         return self.model(x)
 
     def training_step(self, batch, batch_idx) -> torch.Tensor:
-        raise NotImplementedError
+        self.model.train()
+        input_ids = batch["input_ids"]
+        labels = input_ids.clone()
+        labels[:, :-1] = input_ids[:, 1:]
+        labels[:, -1] = -100  # Ignore loss for padding tokens
+        outputs = self(input_ids)
+        loss = torch.nn.functional.cross_entropy(outputs.view(-1, outputs.size(-1)), labels.view(-1))
+        return loss
 
     def validation_step(self, batch, batch_idx):
+        self.model.eval()
         raise NotImplementedError
 
     def test_step(self, batch, batch_idx):
+        self.model.eval()
         raise NotImplementedError
 
     def get_specs(self) -> RuntimeSpecs:
