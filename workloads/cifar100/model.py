@@ -22,15 +22,14 @@ class CIFAR100Model(WorkloadModel):
     def training_step(self, batch, batch_idx) -> torch.Tensor:
         imgs, labels = batch
         preds = self.model(imgs)
-        loss = self.loss_fn(preds, labels)
+        loss = self.compute_and_log_loss(preds, labels, "train_loss")
         self.compute_and_log_acc(preds, labels, "train_acc")
-        self.log("train_loss", loss)
-
         return loss
 
     def validation_step(self, batch, batch_idx):
         imgs, labels = batch
         preds = self.model(imgs)
+        self.compute_and_log_loss(preds, labels, "val_loss")
         self.compute_and_log_acc(preds, labels, "val_acc")
 
     def test_step(self, batch, batch_idx):
@@ -38,10 +37,16 @@ class CIFAR100Model(WorkloadModel):
         preds = self.model(imgs)
         self.compute_and_log_acc(preds, labels, "test_acc")
 
-    def compute_and_log_acc(self, preds: torch.Tensor, labels: torch.Tensor, log_label: str):
+    def compute_and_log_acc(self, preds: torch.Tensor, labels: torch.Tensor, log_label: str) -> torch.Tensor:
         acc = (preds.argmax(dim=-1) == labels).float().mean()
         # By default logs it per epoch (weighted average over batches)
         self.log(log_label, acc)
+        return acc
+
+    def compute_and_log_loss(self, preds: torch.Tensor, labels: torch.Tensor, log_label: str) -> torch.Tensor:
+        loss = self.loss_fn(preds, labels)
+        self.log(log_label, loss)
+        return loss
 
     def get_specs(self) -> dict[str, Any]:
-        return {"max_epochs": 100}
+        return {"max_epochs": 50}
