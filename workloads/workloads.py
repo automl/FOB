@@ -2,10 +2,10 @@ import importlib
 from typing import Any
 from pathlib import Path
 from lightning import LightningModule, LightningDataModule
-from torch.utils.data import DataLoader
-import torch.nn as nn
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-
+from torch import nn
+from torch.utils.data import DataLoader
+from workloads.specs import RuntimeSpecs, to_submission_specs
 from submissions import Submission
 from bob.runtime import DatasetArgs
 
@@ -26,9 +26,10 @@ class WorkloadModel(LightningModule):
         self.model = model
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        return self.submission.configure_optimizers(self.model, self.get_specs())
+        specs = to_submission_specs(self.get_specs())
+        return self.submission.configure_optimizers(self.model, specs)
 
-    def get_specs(self) -> dict[str, Any]:
+    def get_specs(self) -> RuntimeSpecs:
         raise NotImplementedError("Each workload has its own specs.")
 
 
@@ -66,10 +67,3 @@ class WorkloadDataModule(LightningDataModule):
     def predict_dataloader(self):
         self.check_dataset(self.data_predict)
         return DataLoader(self.data_predict, batch_size=self.batch_size)
-
-    def get_specs(self) -> dict[str, Any]:
-        raise NotImplementedError("Each workload has its own specs.")
-
-
-def combine_specs(workload: WorkloadModel, datamodule: WorkloadDataModule) -> dict[str, Any]:
-    return dict(workload.get_specs(), **(datamodule.get_specs()))

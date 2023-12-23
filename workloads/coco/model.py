@@ -8,6 +8,7 @@ from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 
@@ -106,5 +107,10 @@ class COCODetectionModel(WorkloadModel):
     def total_loss(self, losses: dict):
         return sum(loss for loss in losses.values())
 
-    def get_specs(self) -> dict[str, Any]:
-        return {"max_epochs": 26}
+    def get_specs(self) -> RuntimeSpecs:
+        return RuntimeSpecs(
+            max_epochs=26,
+            devices=1,  # TODO: correct devices (4)
+            target_metric="val_AP",
+            target_metric_mode="max"
+        )

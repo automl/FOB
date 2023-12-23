@@ -1,6 +1,6 @@
-from typing import Any
 import torch
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 class OGBGModel(WorkloadModel):
@@ -31,5 +31,5 @@ class OGBGModel(WorkloadModel):
     def test_step(self, batch, batch_idx):
         raise NotImplementedError
 
-    def get_specs(self) -> dict[str, Any]:
+    def get_specs(self) -> RuntimeSpecs:
         raise NotImplementedError

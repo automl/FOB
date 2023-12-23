@@ -55,6 +55,3 @@ class CIFAR100DataModule(WorkloadDataModule):
             return CIFAR100(str(self.data_dir), train=True, transform=self.train_transforms)
         else:
             return CIFAR100(str(self.data_dir), train=False, transform=self.val_transforms)
-
-    def get_specs(self) -> dict[str, Any]:
-        return {"batch_size": self.batch_size}

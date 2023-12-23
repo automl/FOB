@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torchvision.models import resnet18
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 
@@ -48,5 +49,10 @@ class CIFAR100Model(WorkloadModel):
         self.log(log_label, loss)
         return loss
 
-    def get_specs(self) -> dict[str, Any]:
-        return {"max_epochs": 50}
+    def get_specs(self) -> RuntimeSpecs:
+        return RuntimeSpecs(
+            max_epochs=50,
+            devices=1,
+            target_metric="val_acc",
+            target_metric_mode="max"
+        )

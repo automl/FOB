@@ -1,6 +1,7 @@
 from typing import Any
 import torch
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 
@@ -55,5 +56,11 @@ class MNISTModel(WorkloadModel):
         loss = self.loss(y_hat, y)
         self.log(log_name, loss)
 
-    def get_specs(self) -> dict[str, Any]:
-        return {"max_epochs": 10}
+    def get_specs(self) -> RuntimeSpecs:
+        return RuntimeSpecs(
+            max_epochs=10,
+            devices=1,
+            target_metric="val_loss",
+            target_metric_mode="min"
+            # TODO: correct metric
+        )

@@ -1,12 +1,13 @@
 import argparse
 from pathlib import Path
 import lightning as L
-from lightning.pytorch.callbacks import LearningRateMonitor
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 import torch
 
 from bob.runtime import RuntimeArgs
 
 import workloads
+from workloads import WorkloadModel, WorkloadDataModule
 import submissions
 
 
@@ -15,15 +16,24 @@ def main(runtime_args: RuntimeArgs):
     workload = workloads.import_workload(runtime_args.workload_name)
     submission = submissions.import_submission(runtime_args.submission_name)
 
-    model, data_module = workload.get_workload(submission.get_submission(runtime_args), runtime_args)
-    specs = workloads.combine_specs(model, data_module)
+    wl: tuple[WorkloadModel, WorkloadDataModule] = workload.get_workload(
+        submission.get_submission(runtime_args),
+        runtime_args
+    )
+    model, data_module = wl
+    specs = model.get_specs()
     trainer = L.Trainer(
-        max_epochs=specs["max_epochs"],  # TODO: use max_steps instead?
+        max_epochs=specs.max_epochs,
         callbacks=[
             *(workload.get_callbacks()),
-            LearningRateMonitor()
+            LearningRateMonitor(),
+            ModelCheckpoint(
+                dirpath=runtime_args.checkpoint_dir,
+                monitor=specs.target_metric,
+                mode=specs.target_metric_mode
+            )
         ],
-        devices=1  # TODO: adjust according to workload
+        devices=specs.devices
     )
     trainer.fit(model, datamodule=data_module)
     trainer.test(model, datamodule=data_module)

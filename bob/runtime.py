@@ -19,7 +19,8 @@ class RuntimeArgs(DatasetArgs):
     """
     def __init__(self, args: argparse.Namespace) -> None:
         super().__init__(args)
-        self.hyperparameter_path: Optional[Path] = args.hyperparameters
-        self.output_dir: Optional[Path] = args.output
-        self.checkpoint_dir: Optional[Path] = args.checkpoints
         self.submission_name: str = args.submission
+        self.hyperparameter_path: Optional[Path] = args.hyperparameters
+        output_dir = args.output if args.output else Path.cwd() / "experiments"
+        self.output_dir: Path  = output_dir / self.submission_name / self.workload_name
+        self.checkpoint_dir: Path = args.checkpoints if args.checkpoints else self.output_dir / "checkpoints"

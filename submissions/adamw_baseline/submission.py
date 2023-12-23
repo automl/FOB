@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from pathlib import Path
 from torch.nn import Module
 from torch.optim import AdamW
@@ -6,6 +6,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from workloads.specs import SubmissionSpecs
 from submissions import Submission
 from bob.runtime import RuntimeArgs
 
@@ -30,7 +31,7 @@ class AdamWBaseline(Submission):
             hyperparameter_path = Path(__file__).parent.joinpath("hyperparameters.json")
         super().__init__(hyperparameter_path)
 
-    def configure_optimizers(self, model: Module, workload_specs: dict[str, Any]) -> OptimizerLRScheduler:
+    def configure_optimizers(self, model: Module, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()
         optimizer = AdamW(
             model.parameters(),
@@ -40,5 +41,5 @@ class AdamWBaseline(Submission):
             weight_decay=hparams["weight_decay"],
             fused=False
         )
-        scheduler = cosine_warmup(workload_specs["max_epochs"], hparams["warmup_factor"], optimizer)
+        scheduler = cosine_warmup(workload_specs.max_epochs, hparams["warmup_factor"], optimizer)
         return {"optimizer": optimizer, "lr_scheduler": scheduler}

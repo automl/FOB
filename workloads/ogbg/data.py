@@ -1,5 +1,3 @@
-from typing import Any
-from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 # from torchvision import transforms
@@ -28,7 +26,4 @@ class OGBGDataModule(WorkloadDataModule):
             pass
         if stage == "predict":
             pass
-
-    def get_specs(self) -> dict[str, Any]:
-        return {"batch_size": self.batch_size}
     

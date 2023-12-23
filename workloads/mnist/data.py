@@ -1,7 +1,5 @@
-from typing import Any
-from pathlib import Path
 import torch
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from workloads import WorkloadDataModule
@@ -44,7 +42,3 @@ class MNISTDataModule(WorkloadDataModule):
 
         if stage == "predict":
             self.data_predict = MNIST(str(self.data_dir), train=False, transform=self.transform)
-
-    def get_specs(self) -> dict[str, Any]:
-        return {"batch_size": self.batch_size}
-    

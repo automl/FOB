@@ -137,9 +137,6 @@ class COCODataModule(WorkloadDataModule):
         ds = self._wrapped_coco_dataset(val_path, annot_path, transforms=self.val_transforms)
         return ds.coco
 
-    def get_specs(self) -> dict[str, Any]:
-        return {"batch_size": self.batch_size}
-
     def _wrapped_coco_dataset(self, imgs: Path, annot: Path, transforms: v2.Compose) -> CocoDetection:
         ds = CocoDetection(str(imgs), str(annot), transforms=transforms)
         return datasets.wrap_dataset_for_transforms_v2(ds, target_keys=["boxes", "labels", "image_id"])

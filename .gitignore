@@ -2,3 +2,4 @@ __pycache__
 .vscode
 data
 lightning_logs
+experiments

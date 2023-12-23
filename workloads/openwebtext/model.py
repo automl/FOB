@@ -6,6 +6,7 @@ import torch
 from transformers import AutoTokenizer, GPT2Config, GPT2Model, GPT2LMHeadModel
 
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 class OpenWebTextModel(WorkloadModel):
@@ -45,5 +46,5 @@ class OpenWebTextModel(WorkloadModel):
     def test_step(self, batch, batch_idx):
         raise NotImplementedError
 
-    def get_specs(self) -> dict[str, Any]:
+    def get_specs(self) -> RuntimeSpecs:
         raise NotImplementedError

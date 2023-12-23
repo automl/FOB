@@ -1,8 +1,9 @@
-from typing import Any, Optional
+from typing import Optional
 from pathlib import Path
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.nn import Module
 from torch.optim import SGD
+from workloads.specs import SubmissionSpecs
 from submissions import Submission
 from bob.runtime import RuntimeArgs
 
@@ -17,6 +18,6 @@ class TemplateSubmission(Submission):
             hyperparameter_path = Path(__file__).parent.joinpath("hyperparameters.json")
         super().__init__(hyperparameter_path)
 
-    def configure_optimizers(self, model: Module, workload_specs: dict[str, Any]) -> OptimizerLRScheduler:
+    def configure_optimizers(self, model: Module, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()
         return {"optimizer": SGD(model.parameters(), lr=hparams["learning_rate"])}

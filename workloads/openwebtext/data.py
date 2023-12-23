@@ -10,8 +10,6 @@
 # downloaded_files = dl_manager.download('https://storage.googleapis.com/seldon-datasets/sentence_polarity_v1/rt-polaritydata.tar.gz')
 # extracted_files = dl_manager.extract(downloaded_files)
 
-from typing import Any
-from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 from datasets import load_dataset, load_from_disk, DownloadConfig  # huggingface datasets
@@ -68,7 +66,3 @@ class OpenWebTextDataModule(WorkloadDataModule):
             pass
         if stage == "predict":
             pass
-
-    def get_specs(self) -> dict[str, Any]:
-        return {"batch_size": self.batch_size}
-    
