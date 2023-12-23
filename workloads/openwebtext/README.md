@@ -28,6 +28,10 @@ you should see something like:
 
 # tiktoken
 
-https://github.com/openai/tiktoken
+https://github.com/openai/tiktoken^
+
+- faster than hugging tokenizer (relevant, since its a long process ~10h? or smth? not finished yet)
+- speed up of factor 2 - 3
+- i have issues with parallelizing it, maybe its better to use hugging and give more workers
 
 ```pip install tiktoken```

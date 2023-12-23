@@ -13,7 +13,8 @@
 import torch
 import os
 import numpy as np
-import tqdm
+from tqdm import tqdm
+import tiktoken
 from transformers import AutoTokenizer, GPT2Tokenizer, GPT2LMHeadModel
 from torch.utils.data import DataLoader
 from datasets import load_dataset, load_from_disk, DownloadConfig  # huggingface datasets
@@ -24,8 +25,8 @@ class OpenWebTextDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):
         super().__init__(dataset_args)
         self.cache_dir = self.data_dir / "cache-hugging"
-        #self.data_dir = self.data_dir / "openwebtext"
-        self.data_dir = self.data_dir / "rotten-test-token"
+        self.data_dir = self.data_dir / "openwebtext"
+        # self.data_dir = self.data_dir / "rotten-test-token"
         # self.train_val_split = [1, 1]  # TODO use test_size atm
         self.test_size = 0.0005
         self.seed = 42
@@ -43,7 +44,8 @@ class OpenWebTextDataModule(WorkloadDataModule):
     def prepare_tokenizer(self):
         # GPT-2 is a model with absolute position embeddings so it’s usually advised to pad the inputs on the right rather than the left.
         # tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name, use_fast=True)
-        tokenizer: GPT2Tokenizer = GPT2Tokenizer.from_pretrained('gpt2', cache_dir=self.cache_dir)
+        # tokenizer: GPT2Tokenizer = GPT2Tokenizer.from_pretrained('gpt2', cache_dir=self.cache_dir)
+        tokenizer = tiktoken.get_encoding("gpt2")
         return tokenizer
     
     def prepare_pretrained_model(self):
@@ -57,8 +59,8 @@ class OpenWebTextDataModule(WorkloadDataModule):
                                          cache_dir=self.cache_dir
                                          )
         print("openwebtext: Begin load_dataset of this workload")
-        #dataset = load_dataset("openwebtext",
-        dataset = load_dataset("rotten_tomatoes",
+        dataset = load_dataset("openwebtext",
+        # dataset = load_dataset("rotten_tomatoes",
                                data_dir=self.data_dir,
                                download_config=download_config,
                                num_proc=self.workers)
@@ -76,17 +78,24 @@ class OpenWebTextDataModule(WorkloadDataModule):
             # attention_mask: indicates whether a token should be masked or not.
         
         def tokenizing(example):
-            return self.tokenizer(example["text"],
-                                  max_length=1024,
-                                  truncation=True,
-                                  return_tensors="pt")
+            # return self.tokenizer(example["text"], max_length=1024, truncation=True, return_tensors="pt")
+            # tiktoken version
+            ids = self.tokenizer.encode_ordinary(example["text"])
+            ids.append(self.tokenizer.eot_token)  # token at end
+            result = {"ids": ids, "len": len(ids)}
+            return result
 
         print("openwebtext: Begin tokenizing splits")
         tokenized = dataset.map(tokenizing,
                                 remove_columns=['text'],  # TODO is this ok?
                                 # batched=True,  # TODO check if this is good and how to make it work
                                 desc="tokenizing OpenWebText splits",
-                                num_proc=self.workers
+                                # TODO does not work for more than 1 worker atm
+                                # clean code and reuse tokenizer given in dataclass
+                                # tiktoken tokenizer not pickleable, need a need tokenizer for each process (when using more than 1 cpu)
+                                # https://github.com/huggingface/datasets/issues/5536
+                                # num_proc=self.workers
+                                num_proc=1
                                 )
         print("openwebtext: save tokenized data to disk")
         self._save_tokenized_to_disk(tokenized)
@@ -95,11 +104,12 @@ class OpenWebTextDataModule(WorkloadDataModule):
     def _save_tokenized_to_disk(self, tokenized_data):
         # slightly adapted from https://github.com/karpathy/nanoGPT/blob/master/data/openwebtext/prepare.py
         # concatenate all the ids in each dataset into one large file we can use for training
+        if not os.path.exists(self.data_dir):
+            print(f"creating directory: {self.data_dir}")
+            os.makedirs(self.data_dir)
         for split, dset in tokenized_data.items():
-            # Calculate total number of tokens # TODO cleaner
-            print(tokenized_data.column_names)
-            arr_len = np.sum([len(ids) for ids in tokenized_data["input_ids"]])
-            # arr_len = np.sum(dset['len'], dtype=np.uint64)
+
+            arr_len = np.sum(dset['len'], dtype=np.uint64)
             
             filename = self.data_dir / f"{split}.bin"
             dtype = np.uint16 # (can do since enc.max_token_value == 50256 is < 2**16)
