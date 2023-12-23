@@ -1,14 +1,18 @@
 from typing import Any
 import torch
 from torch import nn
-from torchvision.models import densenet121
+from torchvision.models import resnet18
 from workloads import WorkloadModel
 from submissions import Submission
 
 
 class CIFAR100Model(WorkloadModel):
     def __init__(self, submission: Submission):
-        model = densenet121()
+        model = resnet18(num_classes=100, weights=None)
+        # 7x7 conv is too large for 32x32 images
+        model.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False)
+        # pooling small images is bad
+        model.maxpool = nn.Identity()  #type:ignore
         super().__init__(model, submission)
         self.loss_fn = nn.CrossEntropyLoss()
 
