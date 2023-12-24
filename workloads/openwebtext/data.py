@@ -61,23 +61,14 @@ class OpenWebTextDataModule(WorkloadDataModule):
         print("openwebtext: Begin load_dataset of this workload")
         dataset = load_dataset("openwebtext",
         # dataset = load_dataset("rotten_tomatoes",
+                               cache_dir=self.cache_dir,
                                data_dir=self.data_dir,
                                download_config=download_config,
                                num_proc=self.workers)
         print(dataset)
 
-        # TODO: we could also just reuse the data from the cache directory (instead of saving it here), but i like to have all data at the same place
-        #       definitely think about integrating the huggingface cache if we use more of those datasets
-
-        # TODO we save tokenized data instead
-        # dataset.save_to_disk(self.data_dir)
-
-        # The tokenizer returns a dictionary with three items:
-            # input_ids: the numbers representing the tokens in the text.
-            # token_type_ids: indicates which sequence a token belongs to if there is more than one sequence.
-            # attention_mask: indicates whether a token should be masked or not.
-        
         def tokenizing(example):
+            # hugging version, untested
             # return self.tokenizer(example["text"], max_length=1024, truncation=True, return_tensors="pt")
             # tiktoken version
             ids = self.tokenizer.encode_ordinary(example["text"])
