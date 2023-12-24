@@ -6,6 +6,7 @@ import torch
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
 from workloads import WorkloadModel
+from workloads.specs import RuntimeSpecs
 from submissions import Submission
 
 class ShakespeareModel(WorkloadModel):
@@ -30,5 +31,6 @@ class ShakespeareModel(WorkloadModel):
         ...
         raise NotImplementedError
 
-    def get_specs(self) -> dict[str, Any]:
+    def get_specs(self) -> RuntimeSpecs:
         raise NotImplementedError
+
