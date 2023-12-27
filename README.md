@@ -1,11 +1,11 @@
-# Broad Optimization Benchmark
+# Fast Optimization Benchmark
 
 Fast and cheap Benchmark for HPO and Optimizer.
 
 Master Project at ML chair Freiburg,
 Simon, Tobi, Zachi
 
-This benchmark aims to be fast while maintaining a wide selection of different tasks. It also tries to be independant of the hardware used, however it requires a minimum of 4 gpus. One run of all workloads on a single submission and hyperparameter configuration should not take more than a day.
+This benchmark aims to be fast while maintaining a wide selection of different tasks. It also tries to be independant of the hardware used, however it requires a minimum of 4 gpus. One run of all workloads on a single submission and hyperparameter configuration should not take more than a day. A benchmark run returns the following for each workload: time taken per optimization step compared to baseline, best model performance, final model performance. 
 
 ## Installation
 
