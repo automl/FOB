@@ -5,16 +5,55 @@ Fast and cheap Benchmark for HPO and Optimizer.
 Master Project at ML chair Freiburg,
 Simon, Tobi, Zachi
 
-## Instalation
+This benchmark aims to be fast while maintaining a wide selection of different tasks. It also tries to be independant of the hardware used, however it requires a minimum of 4 gpus. One run of all workloads on a single submission and hyperparameter configuration should not take more than a day.
 
-*TL;DR installing:*
+## Installation
+
+This repo was tested with python 3.10, but any version >= 3.8 should work.  
+Create conda environment:
 ```
-not implemented yet
+conda create -n fob python 3.10 -y
+```
+Activate and install requirements
+```
+conda activate fob
+pip install -r requirements.txt
 ```
 
 ## Getting Started
 
-*TL;DR running a workload:*
+Before running a workload you should first download the required data as this can take a while. Example usage:
 ```
-not implemented yet
+python dataset_setup.py -w mnist
 ```
+You can specify the location with `-d /path/to/data`. There is also the `--all` flag if you want all available workloads.
+
+The benchmark consists of different workloads. You can run a certain workload with the `submission_runner.py` script. Example usage:
+```
+python submission_runner.py -w mnist -s adamw_baseline
+```
+This runs the `adamw_baseline` submission on the `mnist` workload. You can specify other things like the data and output locations, just run `python submission_runner.py -h` for more information.
+
+## Workloads
+
+We try to cover a large range of deep learning tasks in this benchmark.
+ 
+| Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
+| ------- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
+| [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | Resnet18 | Image classification | Validation Accuracy | 0.75 | 10 min | 1 gpu |
+| [COCO](https://cocodataset.org) | FastRCNN MobileNet v3 | Object detection | Average Precision | ? | ~4h | 4 gpus |
+| [Cityscapes](https://www.cityscapes-dataset.com) | UNet | Semantic Segmentation | PASCAL VOC | ? | ? | ? |
+| WMT | transformer | machine translation | ? | ? | ? | ? |
+| openwebtext | transformer | unsupervised pretraining | ? | ? | ? | ? |
+| librispeech | conformer | speech recognition | ? | ? | ? | ? |
+| OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
+| FFHQ | ? | image diffusion | ? | ? | ? | ? |
+| MNIST | MLP | Image classification | Validation Accuracy | ? | 2 min | 1 gpu |
+| ? | FT Transformer | tabular regression | ? | ? | ? | ? |
+| ? | ? | Finetuning | ? | ? | ? | ? |
+
+## Submissions
+
+A submission contains the deep learning training algorithm to benchmark. Each submission has its own subfolder in the `submissions` folder. It can then be selected by the name of that folder with tha `-w` flag of the `submission_runner.py` script.  
+Inside this folder you can put all the code necessary for your submission. It is required to put a `submission.py` file which contains two things. First, a class to encapsulate the submission. It must inherit from the `Submission` base class in `submissions/submissions.py` and provide a method `configure_optimizers` which returns the optimizers and LR schedulers to be used. The methods return type must adhere to the [API](https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.core.LightningModule.html#lightning.pytorch.core.LightningModule.configure_optimizers) of a `LightningModule`. Second, a function `get_submission`, which returns an instance of your submission class.  
+Have a look at the template and baseline submissions for examples of how to structure a submission.
