@@ -48,7 +48,7 @@ We try to cover a large range of deep learning tasks in this benchmark.
 | librispeech | conformer | speech recognition | ? | ? | ? | ? |
 | OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
 | FFHQ | ? | image diffusion | ? | ? | ? | ? |
-| MNIST | MLP | Image classification | Validation Accuracy | ? | 2 min | 1 gpu |
+| MNIST | MLP | Image classification | Validation Accuracy | 0.96 | 2 min | 1 gpu |
 | ? | FT Transformer | tabular regression | ? | ? | ? | ? |
 | ? | ? | Finetuning | ? | ? | ? | ? |
 

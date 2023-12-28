@@ -3,6 +3,7 @@ from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 import torch
+import json
 
 from bob.runtime import RuntimeArgs
 
@@ -22,21 +23,27 @@ def main(runtime_args: RuntimeArgs):
     )
     model, data_module = wl
     specs = model.get_specs()
+    model_checkpoint = ModelCheckpoint(
+        dirpath=runtime_args.checkpoint_dir,
+        monitor=specs.target_metric,
+        mode=specs.target_metric_mode
+    )
     trainer = L.Trainer(
         max_epochs=specs.max_epochs,
         callbacks=[
             *(workload.get_callbacks()),
             LearningRateMonitor(),
-            ModelCheckpoint(
-                dirpath=runtime_args.checkpoint_dir,
-                monitor=specs.target_metric,
-                mode=specs.target_metric_mode
-            )
+            model_checkpoint
         ],
         devices=specs.devices
     )
     trainer.fit(model, datamodule=data_module)
-    trainer.test(model, datamodule=data_module)
+    final_score = trainer.test(model, datamodule=data_module)
+    best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
+    with open(runtime_args.output_dir / "results_final_model.json", "w", encoding="utf8") as f:
+        json.dump(final_score, f)
+    with open(runtime_args.output_dir / "results_best_model.json", "w", encoding="utf8") as f:
+        json.dump(best_score, f)
 
 
 if __name__ == "__main__":
