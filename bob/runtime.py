@@ -24,3 +24,4 @@ class RuntimeArgs(DatasetArgs):
         output_dir = args.output if args.output else Path.cwd() / "experiments"
         self.output_dir: Path  = output_dir / self.submission_name / self.workload_name
         self.checkpoint_dir: Path = args.checkpoints if args.checkpoints else self.output_dir / "checkpoints"
+        self.resume = args.resume
