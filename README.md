@@ -40,15 +40,15 @@ We try to cover a large range of deep learning tasks in this benchmark.
  
 | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
-| [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | Resnet18 | Image classification | Validation Accuracy | 0.75 | 10 min | 1 gpu |
-| [COCO](https://cocodataset.org) | FastRCNN MobileNet v3 | Object detection | Average Precision | ? | ~4h | 4 gpus |
-| [Cityscapes](https://www.cityscapes-dataset.com) | UNet | Semantic Segmentation | PASCAL VOC | ? | ? | ? |
+| [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Validation Accuracy | 0.74 | 10 min | 1 gpu |
+| [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision | ? | ~4h | 4 gpus |
+| [PASCAL VOC](http://host.robots.ox.ac.uk/pascal/VOC/index.html) | ViT | Semantic Segmentation | Average Precision | ? | ? | ? |
 | WMT | transformer | machine translation | ? | ? | ? | ? |
 | openwebtext | transformer | unsupervised pretraining | ? | ? | ? | ? |
 | librispeech | conformer | speech recognition | ? | ? | ? | ? |
 | OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
 | FFHQ | ? | image diffusion | ? | ? | ? | ? |
-| MNIST | MLP | Image classification | Validation Accuracy | 0.96 | 2 min | 1 gpu |
+| MNIST | MLP | Image classification | Validation Accuracy | 0.95 | 1 min | 1 gpu |
 | ? | FT Transformer | tabular regression | ? | ? | ? | ? |
 | ? | ? | Finetuning | ? | ? | ? | ? |
 
