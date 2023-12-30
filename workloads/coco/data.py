@@ -90,7 +90,7 @@ class COCODataModule(WorkloadDataModule):
             for img in tqdm(f.infolist(), desc=f"Extracting {subject}"):
                 f.extract(img, out)
         with open(state_file, "a", encoding="utf8") as f:
-            f.write(subject)
+            f.write(f"{subject}\n")
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.

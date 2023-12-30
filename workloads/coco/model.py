@@ -63,7 +63,7 @@ class COCODetectionModel(WorkloadModel):
         return RuntimeSpecs(
             max_epochs=26,
             max_steps=381_134,
-            devices=1,  # TODO: correct devices (4)
+            devices=4,
             target_metric="val_AP",
             target_metric_mode="max"
         )
