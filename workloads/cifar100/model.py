@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 from torch import nn
 from torchvision.models import resnet18
@@ -52,6 +51,7 @@ class CIFAR100Model(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=50,
+            max_steps=19550,
             devices=1,
             target_metric="val_acc",
             target_metric_mode="max"

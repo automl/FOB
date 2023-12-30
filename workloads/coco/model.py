@@ -1,15 +1,10 @@
-from typing import Any
-from contextlib import redirect_stdout
-import io
-import numpy as np
-import torch
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
 from workloads import WorkloadModel
 from workloads.specs import RuntimeSpecs
 from submissions import Submission
+from .coco_eval import CocoEvaluator
 
 
 class COCODetectionModel(WorkloadModel):
@@ -38,65 +33,22 @@ class COCODetectionModel(WorkloadModel):
         return self.total_loss(loss_dict)
 
     def validation_step(self, batch, batch_idx):
+        self._update_coco_eval(batch)
+
+    def test_step(self, batch, batch_idx):
+        self._update_coco_eval(batch)
+
+    def reset_coco_eval(self):
+        self.coco_eval = CocoEvaluator(self.eval_gts, ["bbox"])
+
+    def _update_coco_eval(self, batch):
         imgs, targets = batch
         preds = self.model(imgs)
         res = {target["image_id"]: pred for target, pred in zip(targets, preds)}
-        self._update_eval(res)
+        self.coco_eval.update(res)
 
-    def test_step(self, batch, batch_idx):
-        self.validation_step(batch, batch_idx)
-
-    def reset_coco_eval(self):
-        self.coco_eval = COCOeval(cocoGt=self.eval_gts, iouType="bbox")
-        self.img_ids = []
-        self.eval_imgs = []
-
-    def _update_eval(self, predictions: dict):
-        img_ids = list(np.unique(list(predictions.keys())))
-        self.img_ids.extend(img_ids)
-        results = self._prepare_for_coco_detection(predictions)
-        with redirect_stdout(io.StringIO()):
-            coco_dt = COCO.loadRes(self.eval_gts, results) if results else COCO()  # type:ignore (this is fine)
-        self.coco_eval.cocoDt = coco_dt
-        self.coco_eval.params.imgIds = list(img_ids)
-        with redirect_stdout(io.StringIO()):
-            self.coco_eval.evaluate()
-        eval_imgs = np.asarray(self.coco_eval.evalImgs).reshape(
-            -1,
-            len(self.coco_eval.params.areaRng),
-            len(self.coco_eval.params.imgIds)
-        )
-        self.eval_imgs.append(eval_imgs)
-        return eval_imgs
-
-    def _prepare_for_coco_detection(self, predictions):
-        coco_results = []
-        for original_id, prediction in predictions.items():
-            if len(prediction) == 0:
-                continue
-
-            boxes = prediction["boxes"]
-            boxes = self._convert_to_xywh(boxes).tolist()
-            scores = prediction["scores"].tolist()
-            labels = prediction["labels"].tolist()
-
-            coco_results.extend(
-                [
-                    {
-                        "image_id": original_id,
-                        "category_id": labels[k],
-                        "bbox": box,
-                        "score": scores[k],
-                    }
-                    for k, box in enumerate(boxes)
-                ]
-            )
-        return coco_results
-
-
-    def _convert_to_xywh(self, boxes):
-        xmin, ymin, xmax, ymax = boxes.unbind(1)
-        return torch.stack((xmin, ymin, xmax - xmin, ymax - ymin), dim=1)
+    def get_eval_stats(self) -> list[float]:
+        return self.coco_eval.coco_eval["bbox"].stats
 
     def log_losses(self, losses: dict, stage: str):
         for loss, val in losses.items():
@@ -110,7 +62,8 @@ class COCODetectionModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=26,
-            devices=1,  # TODO: correct devices (4)
+            max_steps=381_134,
+            devices=4,
             target_metric="val_AP",
             target_metric_mode="max"
         )
