@@ -1,4 +1,3 @@
-from typing import Any
 from pathlib import Path
 import zipfile
 import wget
@@ -27,7 +26,7 @@ class COCODataModule(WorkloadDataModule):
             [
                 v2.ToImage(),
                 v2.RandomHorizontalFlip(p=0.5),
-                v2.ToDtype(torch.float32, scale=True),
+                v2.ToDtype(torch.float, scale=True),
                 v2.ConvertBoundingBoxFormat(tv_tensors.BoundingBoxFormat.XYXY),
                 v2.SanitizeBoundingBoxes(),
                 v2.ToPureTensor(),
@@ -36,7 +35,7 @@ class COCODataModule(WorkloadDataModule):
         self.val_transforms = v2.Compose(
             [
                 v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
+                v2.ToDtype(torch.float, scale=True),
                 v2.ToPureTensor(),
             ]
         )
@@ -118,18 +117,19 @@ class COCODataModule(WorkloadDataModule):
         return self._dataloader_from_dataset(self.data_train)
 
     def val_dataloader(self) -> DataLoader:
-        return self._dataloader_from_dataset(self.data_val)
+        return self._dataloader_from_dataset(self.data_val, batch_size=1)
 
     def test_dataloader(self) -> DataLoader:
-        return self._dataloader_from_dataset(self.data_test)
+        return self._dataloader_from_dataset(self.data_test, batch_size=1)
 
     def predict_dataloader(self) -> DataLoader:
         return self._dataloader_from_dataset(self.data_predict)
 
-    def _dataloader_from_dataset(self, dataset: Dataset) -> DataLoader:
+    def _dataloader_from_dataset(self, dataset: Dataset, batch_size: int | None = None) -> DataLoader:
+        if batch_size is None:
+            batch_size = self.batch_size
         self.check_dataset(dataset)
-        # TODO: batch_size=1 for val/test?
-        return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(dataset, batch_size=batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
 
     def eval_gt_data(self) -> COCO:
         val_path = self.data_dir / "val2017"
