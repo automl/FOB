@@ -41,6 +41,7 @@ class TemplateModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=42,
+            max_steps=None,
             devices=1,
             target_metric="val_loss",
             target_metric_mode="min"

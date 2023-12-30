@@ -41,5 +41,13 @@ class AdamWBaseline(Submission):
             weight_decay=hparams["weight_decay"],
             fused=False
         )
-        scheduler = cosine_warmup(workload_specs.max_epochs, hparams["warmup_factor"], optimizer)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+        step_hint = workload_specs.max_steps if workload_specs.max_steps else workload_specs.max_epochs
+        interval = "step" if workload_specs.max_steps else "epoch"
+        scheduler = cosine_warmup(step_hint, hparams["warmup_factor"], optimizer)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": interval
+            }
+        }

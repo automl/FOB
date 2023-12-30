@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 from workloads import WorkloadModel
 from workloads.specs import RuntimeSpecs
@@ -63,6 +62,7 @@ class MNISTModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=42,
+            max_steps=4536,
             devices=1,
             target_metric="val_acc",
             target_metric_mode="max"

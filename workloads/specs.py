@@ -8,7 +8,7 @@ class SubmissionSpecs():
         `max_epochs`: number of epochs the workload is trained for. This will be changed to `max_steps` later.
     """
     max_epochs: int
-    # TODO: use max_steps instead
+    max_steps: int | None
 
 
 @dataclass
@@ -26,5 +26,6 @@ class RuntimeSpecs(SubmissionSpecs):
 
 def to_submission_specs(runtime_specs: RuntimeSpecs) -> SubmissionSpecs:
     return SubmissionSpecs(
-        max_epochs=runtime_specs.max_epochs
+        max_epochs=runtime_specs.max_epochs,
+        max_steps=runtime_specs.max_steps
     )

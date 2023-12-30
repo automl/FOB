@@ -1,9 +1,9 @@
 import argparse
+import json
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 import torch
-import json
 
 from bob.runtime import RuntimeArgs
 
@@ -28,11 +28,14 @@ def main(runtime_args: RuntimeArgs):
         monitor=specs.target_metric,
         mode=specs.target_metric_mode
     )
+    max_epochs = specs.max_epochs if specs.max_steps is None else None
+    max_steps = specs.max_steps if specs.max_steps else -1
     trainer = L.Trainer(
-        max_epochs=specs.max_epochs,
+        max_epochs=max_epochs,
+        max_steps=max_steps,
         callbacks=[
             *(workload.get_callbacks()),
-            LearningRateMonitor(),
+            LearningRateMonitor(logging_interval="step"),
             model_checkpoint
         ],
         devices=specs.devices
