@@ -3,9 +3,11 @@ import json
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
 
 from runtime import RuntimeArgs
+from runtime.callbacks import LogParamsAndGrads
 
 import workloads
 from workloads import WorkloadModel, WorkloadDataModule
@@ -33,10 +35,26 @@ def main(runtime_args: RuntimeArgs):
     trainer = L.Trainer(
         max_epochs=max_epochs,
         max_steps=max_steps,
+        logger=[
+            TensorBoardLogger(
+                save_dir=runtime_args.output_dir,
+                name="tb_logs"
+            ),
+            CSVLogger(
+                save_dir=runtime_args.output_dir,
+                name="csv_logs"
+            )
+        ],
         callbacks=[
             *(workload.get_callbacks()),
             LearningRateMonitor(logging_interval="step"),
-            model_checkpoint
+            model_checkpoint,
+            LogParamsAndGrads(
+                log_gradient=True,
+                log_params=True,
+                log_quantiles=True,
+                log_every_n_steps=100  # maybe add arg for this?
+            )
         ],
         devices=specs.devices
     )
