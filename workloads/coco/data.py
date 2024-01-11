@@ -9,7 +9,7 @@ from torchvision import datasets, tv_tensors
 from pycocotools.coco import COCO
 from tqdm import tqdm
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 
 class COCODataModule(WorkloadDataModule):

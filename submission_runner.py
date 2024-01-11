@@ -5,7 +5,7 @@ import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 import torch
 
-from bob.runtime import RuntimeArgs
+from runtime import RuntimeArgs
 
 import workloads
 from workloads import WorkloadModel, WorkloadDataModule

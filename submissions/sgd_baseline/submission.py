@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from workloads.specs import SubmissionSpecs
 from submissions import Submission
-from bob.runtime import RuntimeArgs
+from runtime import RuntimeArgs
 
 
 def get_submission(runtime_args: RuntimeArgs) -> Submission:

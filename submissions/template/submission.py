@@ -5,7 +5,7 @@ from torch.nn import Module
 from torch.optim import SGD
 from workloads.specs import SubmissionSpecs
 from submissions import Submission
-from bob.runtime import RuntimeArgs
+from runtime import RuntimeArgs
 
 
 def get_submission(runtime_args: RuntimeArgs) -> Submission:
