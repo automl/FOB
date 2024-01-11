@@ -17,7 +17,7 @@ class ShakespeareDataModule(WorkloadDataModule):
         self.data_dir = self.data_dir / "tinyshakespeare"
         self.seed = 42
         self.shuffle = True
-        self.batch_size = 0  # TODO
+        self.batch_size = 64
 
         # TODO do we need to normalize?
         # meanOfOpenWebText = torch.tensor(0)
