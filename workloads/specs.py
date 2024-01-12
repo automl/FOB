@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class SubmissionSpecs():
@@ -8,7 +9,7 @@ class SubmissionSpecs():
         `max_epochs`: number of epochs the workload is trained for. This will be changed to `max_steps` later.
     """
     max_epochs: int
-    max_steps: int | None
+    max_steps: Optional[int]
 
 
 @dataclass

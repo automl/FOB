@@ -8,6 +8,7 @@ import torch
 
 from runtime import RuntimeArgs
 from runtime.callbacks import LogParamsAndGrads
+from runtime.utils import some
 
 import workloads
 from workloads import WorkloadModel, WorkloadDataModule
@@ -32,7 +33,8 @@ def run_trial(runtime_args: RuntimeArgs):
         mode=specs.target_metric_mode
     )
     max_epochs = specs.max_epochs if specs.max_steps is None else None
-    max_steps = specs.max_steps if specs.max_steps else -1
+    max_steps = some(specs.max_steps, default=-1)
+    devices = some(runtime_args.devices, default=specs.devices)
     trainer = L.Trainer(
         max_epochs=max_epochs,
         max_steps=max_steps,
@@ -57,7 +59,7 @@ def run_trial(runtime_args: RuntimeArgs):
                 log_every_n_steps=100  # maybe add arg for this?
             )
         ],
-        devices=specs.devices
+        devices=devices
     )
     trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
     final_score = trainer.test(model, datamodule=data_module)
