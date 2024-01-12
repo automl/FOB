@@ -2,7 +2,7 @@ from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from workloads import WorkloadModel
-from workloads.specs import RuntimeSpecs
+from runtime.specs import RuntimeSpecs
 from submissions import Submission
 from .coco_eval import CocoEvaluator
 

@@ -1,13 +1,11 @@
-from typing import Optional
-from pathlib import Path
 from torch.nn import Module
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from workloads.specs import SubmissionSpecs
 from submissions import Submission
+from runtime.specs import SubmissionSpecs
 from runtime import RuntimeArgs
 
 
@@ -26,10 +24,6 @@ def cosine_warmup(step_hint: int, warmup_factor: float, optimizer):
 
 
 class AdamWBaseline(Submission):
-    def __init__(self, hyperparameter_path: Optional[Path] = None) -> None:
-        if hyperparameter_path is None:
-            hyperparameter_path = Path(__file__).parent.joinpath("hyperparameters.json")
-        super().__init__(hyperparameter_path)
 
     def configure_optimizers(self, model: Module, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()

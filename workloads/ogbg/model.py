@@ -1,6 +1,6 @@
 import torch
 from workloads import WorkloadModel
-from workloads.specs import RuntimeSpecs
+from runtime.specs import RuntimeSpecs
 from submissions import Submission
 
 class OGBGModel(WorkloadModel):

@@ -1,1 +1,1 @@
-from .submissions import submission_names, import_submission, Submission
+from .submissions import submission_names, submission_path, import_submission, Submission

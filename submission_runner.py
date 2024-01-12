@@ -18,6 +18,7 @@ import submissions
 def run_trial(runtime_args: RuntimeArgs):
     torch.set_float32_matmul_precision('high') # TODO: check if gpu has tensor cores
     L.seed_everything(runtime_args.seed)
+    runtime_args.export_settings()
     workload = workloads.import_workload(runtime_args.workload_name)
     submission = submissions.import_submission(runtime_args.submission_name)
 
@@ -65,14 +66,14 @@ def run_trial(runtime_args: RuntimeArgs):
     final_score = trainer.test(model, datamodule=data_module)
     best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
     with open(runtime_args.output_dir / "results_final_model.json", "w", encoding="utf8") as f:
-        json.dump(final_score, f)
+        json.dump(final_score, f, indent=4)
     with open(runtime_args.output_dir / "results_best_model.json", "w", encoding="utf8") as f:
-        json.dump(best_score, f)
+        json.dump(best_score, f, indent=4)
 
 
 def main(args: argparse.Namespace):
     for trial in range(args.start_trial, args.start_trial + args.trials):
-        print(f"Running trial #{trial}.")
+        print(f"Running trial {trial}.")
         runtime_args = RuntimeArgs(args)
         run_trial(runtime_args)
 
@@ -90,15 +91,15 @@ if __name__ == "__main__":
     parser.add_argument("--workload", "-w", required=True, type=str, choices=workloads.workload_names())
     parser.add_argument("--submission", "-s", required=True, type=str, choices=submissions.submission_names())
     parser.add_argument("--hyperparameters", type=Path, \
-                        help="path to hyperparameters file")
+                        help="path to hyperparameters file or a directory of files")
     parser.add_argument("--resume", "-r", type=Path, \
                         help="path to checkpoint file from which to resume")
     parser.add_argument("--workers", type=int, \
                         help="number of parallelism used for loading data, default: all available")
     parser.add_argument("--trials", type=int, default=1, \
                         help="number of trials, default: 1")
-    parser.add_argument("--start_trial", type=int, default=1, \
-                        help="the index of the first trial, default: 1")
+    parser.add_argument("--start_trial", type=int, default=0, \
+                        help="the index of the first trial to run, default: 0")
     parser.add_argument("--seed", type=int, default=42, \
                         help="the seed to use for the experiment if strategy is not 'random', default: 42")
     parser.add_argument("--seed_mode", type=str, default="increment", \

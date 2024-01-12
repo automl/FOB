@@ -6,7 +6,7 @@ import torch
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
 from workloads import WorkloadModel
-from workloads.specs import RuntimeSpecs
+from runtime.specs import RuntimeSpecs
 from submissions import Submission
 
 class OpenWebTextModel(WorkloadModel):

@@ -4,10 +4,14 @@ from pathlib import Path
 from typing import Any
 from torch.nn import Module
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from workloads.specs import SubmissionSpecs
+from runtime.specs import SubmissionSpecs
 
 def import_submission(name: str):
     return importlib.import_module(f"submissions.{name}.submission")
+
+
+def submission_path(name: str) -> Path:
+    return Path(__file__).resolve().parent / name
 
 
 def submission_names() -> list[str]:
