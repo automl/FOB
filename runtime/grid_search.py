@@ -38,9 +38,11 @@ def generate_hyperparameter_from_search_space(json_data: Path | str | dict[str, 
         yield json_data
 
 
-def write_hyperparameter(search_space: Path, output_dir: Path):
+def write_hyperparameter(search_space: Path, output_dir: Path) -> int:
+    """Write hyperparameter from search space to folder returning the number oif files generated"""
     hps = list(generate_hyperparameter_from_search_space(search_space))
     padding = floor(log10(len(hps) - 1)) + 1
     for i, hp in enumerate(hps):
         with open(output_dir / (str(i).zfill(padding) + ".json"), "w", encoding="utf8") as f:
             json.dump(hp, f, indent=4)
+    return len(hps)
