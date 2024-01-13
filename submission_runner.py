@@ -60,7 +60,8 @@ def run_trial(runtime_args: RuntimeArgs):
                 log_every_n_steps=100  # maybe add arg for this?
             )
         ],
-        devices=devices
+        devices=devices,
+        enable_progress_bar=(not runtime_args.silent)
     )
     trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
     final_score = trainer.test(model, datamodule=data_module)
@@ -107,5 +108,7 @@ if __name__ == "__main__":
                         help="the strategy for choosing seeds, default: 'increment'")
     parser.add_argument("--devices", type=int, \
                         help="overrides the predefined number of devices of the workload")
+    parser.add_argument("--silent", action="store_true", \
+                        help="Disable progress bars.")
     args = parser.parse_args()
     main(args)
