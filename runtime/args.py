@@ -29,6 +29,7 @@ class RuntimeArgs(DatasetArgs):
         self.submission_name: str = args.submission
         self.resume: Optional[Path] = args.resume
         self.devices: Optional[int] = args.devices
+        self.silent = args.silent
         self.trial: int = args.start_trial + next(self._id)
         self.seed: int
         if args.seed_mode == "fixed":
