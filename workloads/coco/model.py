@@ -52,9 +52,9 @@ class COCODetectionModel(WorkloadModel):
 
     def log_losses(self, losses: dict, stage: str):
         for loss, val in losses.items():
-            self.log(f"{stage}_{loss}", val)
+            self.log(f"{stage}_{loss}", val, sync_dist=True)
         total = sum(loss for loss in losses.values())
-        self.log(f"{stage}_loss_total", total)
+        self.log(f"{stage}_loss_total", total, sync_dist=True)
 
     def total_loss(self, losses: dict):
         return sum(loss for loss in losses.values())
