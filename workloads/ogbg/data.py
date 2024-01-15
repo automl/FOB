@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 # from torchvision import transforms
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 class OGBGDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):

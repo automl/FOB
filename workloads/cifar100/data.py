@@ -3,7 +3,7 @@ import torch
 from torchvision.datasets import CIFAR100
 from torchvision.transforms import v2
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 
 class CIFAR100DataModule(WorkloadDataModule):

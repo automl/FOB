@@ -2,7 +2,7 @@ from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from workloads import WorkloadModel
-from workloads.specs import RuntimeSpecs
+from runtime.specs import RuntimeSpecs
 from submissions import Submission
 from .coco_eval import CocoEvaluator
 
@@ -52,9 +52,9 @@ class COCODetectionModel(WorkloadModel):
 
     def log_losses(self, losses: dict, stage: str):
         for loss, val in losses.items():
-            self.log(f"{stage}_{loss}", val)
+            self.log(f"{stage}_{loss}", val, sync_dist=True)
         total = sum(loss for loss in losses.values())
-        self.log(f"{stage}_loss_total", total)
+        self.log(f"{stage}_loss_total", total, sync_dist=True)
 
     def total_loss(self, losses: dict):
         return sum(loss for loss in losses.values())

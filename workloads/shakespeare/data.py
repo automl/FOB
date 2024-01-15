@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 class ShakespeareDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):

@@ -3,7 +3,7 @@ from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 
 class MNISTDataModule(WorkloadDataModule):

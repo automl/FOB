@@ -8,7 +8,7 @@ python3 datasets/dataset_setup.py \
 import os
 import argparse
 from pathlib import Path
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 import workloads
 
 def download_single_data(args: argparse.Namespace):

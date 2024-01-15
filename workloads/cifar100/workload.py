@@ -1,5 +1,5 @@
 from lightning import Callback
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 from submissions import Submission
 from workloads import WorkloadModel, WorkloadDataModule
 from workloads.cifar100 import data

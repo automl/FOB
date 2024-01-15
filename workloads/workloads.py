@@ -5,9 +5,9 @@ from lightning import LightningModule, LightningDataModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
-from workloads.specs import RuntimeSpecs, to_submission_specs
 from submissions import Submission
-from bob.runtime import DatasetArgs
+from runtime.specs import RuntimeSpecs, to_submission_specs
+from runtime import DatasetArgs
 
 
 def import_workload(name: str):

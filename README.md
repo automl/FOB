@@ -49,7 +49,7 @@ We try to cover a large range of deep learning tasks in this benchmark.
 | OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
 | FFHQ | ? | image diffusion | ? | ? | ? | ? |
 | MNIST | MLP | Image classification | Validation Accuracy | 0.95 | 1 min | 1 gpu |
-| ? | FT Transformer | tabular regression | ? | ? | ? | ? |
+| California Housing | FT Transformer | tabular regression | Test MSE | 0.11 | 2 min | 1 gpu |
 | ? | ? | Finetuning | ? | ? | ? | ? |
 
 ## Submissions

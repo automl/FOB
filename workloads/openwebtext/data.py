@@ -19,7 +19,7 @@ from transformers import AutoTokenizer, GPT2Tokenizer, GPT2LMHeadModel
 from torch.utils.data import DataLoader
 from datasets import load_dataset, load_from_disk, DownloadConfig  # huggingface datasets
 from workloads import WorkloadDataModule
-from bob.runtime import DatasetArgs
+from runtime import DatasetArgs
 
 class OpenWebTextDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):
