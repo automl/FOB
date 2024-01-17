@@ -12,7 +12,7 @@ This benchmark aims to be fast while maintaining a wide selection of different t
 This repo was tested with python 3.10, but any version >= 3.8 should work.  
 Create conda environment:
 ```
-conda create -n fob python 3.10 -y
+conda create -n fob python=3.10 -y
 ```
 Activate and install requirements
 ```
