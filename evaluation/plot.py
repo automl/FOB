@@ -12,6 +12,16 @@ import numpy as np
 import multiprocessing as mp
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
+# TODO: these should probably all be made into parser args, or dynamically extracted
+SEED = "seed"
+METRIC = "test_acc"
+XAXIS = "weight_decay"
+YAXIS = "learning_rate"
+TARGET_METRIC_MODE = "max"
+
+HP_FILENAME = "hyperparameters.json"
+RESULT_FILENAME = "results_best_model.json"
+ARGS_FILENAME = "runtime_args.json"
 
 def draw_heatmap(df, ax, values, index, columns, std=False):
     pivot_table = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='mean')
@@ -56,22 +66,23 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
     """takes result from get_available_trials and packs them in a dataframe"""
     dfs = [] # an empty list to store the data frames
     for path in trial_dir_paths:
-        hyperparameters_file = path / "hyperparameters.json"
-        result_best_model_file = path / "results_best_model.json"
-        seed_file = path / "runtime_args.json"
+        hyperparameters_file = path / HP_FILENAME
+        result_best_model_file = path / RESULT_FILENAME
+        seed_file = path / ARGS_FILENAME
 
         with open(seed_file, 'r') as f:
-            seed = json.load(f)["seed"]
+            content = json.load(f)
+            seed = content[SEED]
         # print(seed)
 
         with open(result_best_model_file) as f:
-            accuracy = json.load(f)[0]["test_acc"]
+            accuracy = json.load(f)[0][METRIC]
         # print(accuracy)
 
         with open(hyperparameters_file) as f:
             data = pd.json_normalize(json.loads(f.read()))
-            data.at[0, "test_acc"] = accuracy  # will trim to 4 digits after comma
-            data.at[0, "seed"] = seed  # saved as float
+            data.at[0, METRIC] = accuracy  # will trim to 4 digits after comma
+            data.at[0, SEED] = seed  # saved as float
             # print(data)
             dfs.append(data) # append the data frame to the list
     df = pd.concat(dfs, sort=False)
@@ -80,7 +91,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
 
 def create_matrix_plot(dataframe):
-    pivot_table = pd.pivot_table(dataframe, index="learning_rate", columns="weight_decay", values= "test_acc", aggfunc='mean')
+    pivot_table = pd.pivot_table(dataframe, index=YAXIS, columns=XAXIS, values=METRIC, aggfunc='mean')
     pivot_table = (pivot_table * 100).round(0)
     if args.verbose:
         print(pivot_table)
@@ -110,6 +121,7 @@ def main(args: argparse.Namespace):
         print(f"{workloads}=")
     
     # name for outputfile
+    # we could also get this info out of args_file, but i only realized this after coding the directory extracting
     workflow = Path(workloads[0]).resolve()
     submission = Path(workflow).parent
     if args.verbose:
@@ -119,10 +131,7 @@ def main(args: argparse.Namespace):
     if args.output:
         output_filename = args.output
 
-    
     create_figure(workloads)
-
-    
 
     plt.savefig(output_filename)
 
