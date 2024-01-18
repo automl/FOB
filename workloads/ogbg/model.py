@@ -1,13 +1,14 @@
-# from https://github.com/Diego999/pyGAT/blob/master/train.py
-
 import torch
 from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
 from torch_geometric.nn import GAT
 
+from torch_geometric.nn import GAT
+
 
 class OGBGModel(WorkloadModel):
+    """GAT from pytorch geometric"""
     """GAT from pytorch geometric"""
     def __init__(self, submission: Submission):
         nfeat: int = 0  # TODO adapt for dataset
@@ -16,7 +17,6 @@ class OGBGModel(WorkloadModel):
         dropout: float = 0.6 # Dropout rate (1 - keep probability)
         nb_heads: int = 8  # Number of head attentions
         alpha: float = 0.2  # Alpha for the leaky_relu
-
 
         model = GAT(
             nfeat=nfeat, 
