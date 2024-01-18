@@ -36,7 +36,8 @@ def get_available_trials(dirname: Path):
     """finds all trials in the subfolder"""
     subdirs = [x for x in dirname.iterdir() if x.is_dir()]
     format_string = "\n  "
-    print(f"found the following directories:{format_string}{format_string.join(str(i) for i in subdirs)}.")
+    if args.verbose:
+        print(f"found the following directories:{format_string}{format_string.join(str(i) for i in subdirs)}.")
 
     def is_trial(path: Path):
         # here we could do additional checks to filter the subdirectories
@@ -46,7 +47,8 @@ def get_available_trials(dirname: Path):
         return False
     
     subdirs = list(filter(is_trial , subdirs[::-1]))
-    print(f"we assume the following to be trials:{format_string}{format_string.join(str(i) for i in subdirs)}.")
+    if args.verbose:
+        print(f"we assume the following to be trials:{format_string}{format_string.join(str(i) for i in subdirs)}.")
     return subdirs
 
 
@@ -80,7 +82,8 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 def create_matrix_plot(dataframe):
     pivot_table = pd.pivot_table(dataframe, index="learning_rate", columns="weight_decay", values= "test_acc", aggfunc='mean')
     pivot_table = (pivot_table * 100).round(0)
-    print(pivot_table)
+    if args.verbose:
+        print(pivot_table)
     # left bottom width height
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
@@ -101,15 +104,42 @@ def create_figure(workload_paths: List[Path]):
         current_plot = create_matrix_plot(dataframe)
 
 
-if __name__ == "__main__":
-    print("Plotting script was started.")
-    # todo, take these as args
-    data_dir = Path("/home/haeringz/bob/evaluation/sample-data")
-    submission_name = "test-submission"
-    workload_name = "test-workload"
-    output_file = "/home/haeringz/bob/evaluation/test-plot.pdf"
+def main(args: argparse.Namespace):
+    workloads: List[Path] = args.trials_dirs
+    if args.verbose:
+        print(f"{workloads}=")
+    
+    # name for outputfile
+    workflow = Path(workloads[0]).resolve()
+    submission = Path(workflow).parent
+    if args.verbose:
+        print(f"{workflow.name=}")
+        print(f"{submission.name=}")
+    output_filename = f"heatmap-{submission.name}-{workflow.name}.{args.output_type}"
+    if args.output:
+        output_filename = args.output
 
-    workloads: List[Path] = [data_dir / submission_name / workload_name]
     
     create_figure(workloads)
-    plt.savefig(output_file)
+
+    
+
+    plt.savefig(output_filename)
+
+
+if __name__ == "__main__":
+    # default paths
+    here = Path(__file__).parent.resolve()
+    trials_dirs_default = [here / "sample-data" / "test-submission" / "test-workload"]
+
+    # parsing
+    parser = argparse.ArgumentParser(description="Create a heatmap plot of benchmarking results.")
+    parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is here.")
+    parser.add_argument("--output_type", choices=["png", "pdf"], default="png")
+    parser.add_argument("--trials_dirs", "-d", default=trials_dirs_default, required=False, nargs='+', type=Path, help="Path to the experiment files (data to plot)")
+    parser.add_argument("--verbose", "-v", action="store_true", help="include debug prints")
+    # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
+    # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
+    args = parser.parse_args()
+
+    main(args)
