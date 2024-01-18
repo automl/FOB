@@ -36,10 +36,15 @@ class WMTDataModule(WorkloadDataModule):
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 4))
-        self.batch_size = 128
+        self.batch_size = 64
         self.tokenizer = {}
         self.vocab_transform = {}
-        self.vocab_size: dict[str, int] = {}
+        self.vocab_file = self.processed_data_dir / "vocab_size.json"
+        if self.vocab_file.exists():
+            with open(self.processed_data_dir / "vocab_size.json", "r", encoding="utf8") as f:
+                self.vocab_size = json.load(f)
+        else:
+            self.vocab_size: dict[str, int] = {}
 
     def _get_dataset(self) -> DatasetDict:
         ds = datasets.load_dataset("wmt17",
@@ -95,20 +100,18 @@ class WMTDataModule(WorkloadDataModule):
         ds = ds.map(transform_text, num_proc=self.prepare_workers, remove_columns="translation")
         ds.save_to_disk(self.processed_data_dir)
         with open(self.processed_data_dir / "vocab_size.json", "w", encoding="utf8") as f:
-            json.dump(self.vocab_size, f)
+            json.dump(self.vocab_size, f, indent=4)
         print("wmt preprocessed")
 
     def setup(self, stage):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
         ds = datasets.load_from_disk(str(self.processed_data_dir))
-        with open(self.processed_data_dir / "vocab_size.json", "r", encoding="utf8") as f:
-            self.vocab_size = json.load(f)
         def collate_fn(batch):
             src_batch, tgt_batch = [], []
             for sample in batch:
-                src_batch.append(sample["de"])
-                tgt_batch.append(sample["en"])
+                src_batch.append(torch.tensor(sample["de"]))
+                tgt_batch.append(torch.tensor(sample["en"]))
 
             src_batch = pad_sequence(src_batch, padding_value=PAD_IDX)
             tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)

@@ -112,11 +112,11 @@ class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
         self.vocab_size = data_module.vocab_size
         model = Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512)
-        for p in self.model.parameters():
+        for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        self.loss = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
         super().__init__(model, submission)
+        self.loss = nn.functional.cross_entropy
 
     def training_step(self, batch, batch_idx):
         return self.compute_and_log_loss(batch, "train_loss")
@@ -131,9 +131,11 @@ class WMTModel(WorkloadModel):
         src, tgt = batch
         tgt_input = tgt[:-1, :]
         src_mask, tgt_mask, src_padding_mask, tgt_padding_mask = create_mask(src, tgt_input)
-        logits = self.model(src, tgt_input, src_mask, tgt_mask,src_padding_mask, tgt_padding_mask, src_padding_mask)
+        src_mask = src_mask.to(self.device)
+        tgt_mask = tgt_mask.to(self.device)
+        logits = self.model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
         tgt_out = tgt[1:, :]
-        loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1))
+        loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1), ignore_index=PAD_IDX)
         self.log(log_name, loss)
         return loss
 
