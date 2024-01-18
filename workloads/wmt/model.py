@@ -111,6 +111,7 @@ class Seq2SeqTransformer(nn.Module):
 class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
         self.vocab_size = data_module.vocab_size
+        self.batch_size = data_module.batch_size
         model = Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512)
         for p in model.parameters():
             if p.dim() > 1:
@@ -136,14 +137,14 @@ class WMTModel(WorkloadModel):
         logits = self.model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
         tgt_out = tgt[1:, :]
         loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1), ignore_index=PAD_IDX)
-        self.log(log_name, loss)
+        self.log(log_name, loss, batch_size=self.batch_size)
         return loss
 
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
-            max_epochs=26,
+            max_epochs=20,
             max_steps=None,
-            devices=1,
+            devices=4,
             target_metric="val_loss",
             target_metric_mode="max"
         )
