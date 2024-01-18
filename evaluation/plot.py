@@ -14,14 +14,13 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 # TODO: these should probably all be made into parser args, or dynamically extracted
 SEED = "seed"
-METRIC = "test_acc"
-XAXIS = "weight_decay"
-YAXIS = "learning_rate"
-TARGET_METRIC_MODE = "max"
 
+# default file names
 HP_FILENAME = "hyperparameters.json"
-RESULT_FILENAME = "results_best_model.json"
+RESULT_BEST_FILENAME = "results_best_model.json"
+RESULT_LAST_FILENAME = "results_final_model.json"
 ARGS_FILENAME = "runtime_args.json"
+SPECS_FILENAME = "runtime_specs.json"
 
 def draw_heatmap(df, ax, values, index, columns, std=False):
     pivot_table = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='mean')
@@ -66,32 +65,42 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
     """takes result from get_available_trials and packs them in a dataframe"""
     dfs = [] # an empty list to store the data frames
     for path in trial_dir_paths:
-        hyperparameters_file = path / HP_FILENAME
-        result_best_model_file = path / RESULT_FILENAME
+        
         seed_file = path / ARGS_FILENAME
-
         with open(seed_file, 'r') as f:
             content = json.load(f)
             seed = content[SEED]
         # print(seed)
 
-        with open(result_best_model_file) as f:
-            accuracy = json.load(f)[0][METRIC]
+        specs_file = path / SPECS_FILENAME
+        with open(specs_file) as f:
+            content = json.load(f)
+            target_metric_mode = content["target_metric_mode"]
+            TARGET_METRIC_MODE = target_metric_mode  # max or min
+
+        result_file = path / RESULT_BEST_FILENAME
+        if args.last_instead_of_best:
+            result_file = path / RESULT_LAST_FILENAME
+        with open(result_file) as f:
+            accuracy = json.load(f)[0][args.metric]
         # print(accuracy)
 
+        hyperparameters_file = path / HP_FILENAME
         with open(hyperparameters_file) as f:
             data = pd.json_normalize(json.loads(f.read()))
-            data.at[0, METRIC] = accuracy  # will trim to 4 digits after comma
+            data.at[0, args.metric] = accuracy  # will trim to 4 digits after comma
             data.at[0, SEED] = seed  # saved as float
             # print(data)
+            
             dfs.append(data) # append the data frame to the list
+
     df = pd.concat(dfs, sort=False)
     # print(df)
     return df
 
 
 def create_matrix_plot(dataframe):
-    pivot_table = pd.pivot_table(dataframe, index=YAXIS, columns=XAXIS, values=METRIC, aggfunc='mean')
+    pivot_table = pd.pivot_table(dataframe, index=args.y_axis, columns=args.x_axis, values=args.metric, aggfunc='mean')
     pivot_table = (pivot_table * 100).round(0)
     if args.verbose:
         print(pivot_table)
@@ -143,10 +152,15 @@ if __name__ == "__main__":
 
     # parsing
     parser = argparse.ArgumentParser(description="Create a heatmap plot of benchmarking results.")
-    parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is here.")
-    parser.add_argument("--output_type", choices=["png", "pdf"], default="png")
     parser.add_argument("--trials_dirs", "-d", default=trials_dirs_default, required=False, nargs='+', type=Path, help="Path to the experiment files (data to plot)")
+    parser.add_argument("--metric", "-m", default="test_acc", required=False, type=str, help="name of metric that should be extracted from result json.")
+    parser.add_argument("--x_axis", "-x", required=False, type=str, default="weight_decay", help="parameter for x-axis of the heatmap.")
+    parser.add_argument("--y_axis", "-y", required=False, type=str, default="learning_rate", help="parameter for y-axis of the heatmap.")
+    parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is *here*.")
+    parser.add_argument("--output_type", choices=["png", "pdf"], default="png")
+    parser.add_argument("--last_instead_of_best", "-l", action="store_true", help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true", help="include debug prints")
+
     # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
     # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
     args = parser.parse_args()

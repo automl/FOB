@@ -1,0 +1,7 @@
+{
+    "max_epochs": 100,
+    "max_steps": null,
+    "devices": 1,
+    "target_metric": "val_acc",
+    "target_metric_mode": "max"
+}
