@@ -112,6 +112,8 @@ class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
         self.vocab_size = data_module.vocab_size
         self.batch_size = data_module.batch_size
+        if "de" not in self.vocab_size:
+            raise Exception("prepare dataset before running the model!")
         model = Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512)
         for p in model.parameters():
             if p.dim() > 1:

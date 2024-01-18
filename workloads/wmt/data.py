@@ -63,7 +63,8 @@ class WMTDataModule(WorkloadDataModule):
                 self._yield_token(train_data, ln),
                 min_freq=1,
                 specials=special_symbols,
-                special_first=True
+                special_first=True,
+                max_tokens=32_000
             )
             self.vocab_transform[ln].set_default_index(UNK_IDX)
             self.vocab_size[ln] = len(self.vocab_transform[ln])
