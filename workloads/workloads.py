@@ -36,13 +36,14 @@ class WorkloadModel(LightningModule):
 class WorkloadDataModule(LightningDataModule):
     def __init__(self, dataset_args: DatasetArgs) -> None:
         super().__init__()
-        self.workers = dataset_args.workers
+        self.workers = min(dataset_args.workers, 16)
         self.data_dir = dataset_args.data_dir
         self.data_train: Any
         self.data_val: Any
         self.data_test: Any
         self.data_predict: Any
         self.batch_size: int
+        self.collate_fn = None
 
     def check_dataset(self, data):
         """Make sure that all workloads have correctly configured their data sets"""
@@ -54,16 +55,16 @@ class WorkloadDataModule(LightningDataModule):
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)
-        return DataLoader(self.data_train, batch_size=self.batch_size, num_workers=self.workers)
+        return DataLoader(self.data_train, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
 
     def val_dataloader(self):
         self.check_dataset(self.data_val)
-        return DataLoader(self.data_val, batch_size=self.batch_size, num_workers=self.workers)
+        return DataLoader(self.data_val, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
 
     def test_dataloader(self):
         self.check_dataset(self.data_test)
-        return DataLoader(self.data_test, batch_size=self.batch_size, num_workers=self.workers)
+        return DataLoader(self.data_test, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
 
     def predict_dataloader(self):
         self.check_dataset(self.data_predict)
-        return DataLoader(self.data_predict, batch_size=self.batch_size)
+        return DataLoader(self.data_predict, batch_size=self.batch_size, collate_fn=self.collate_fn)
