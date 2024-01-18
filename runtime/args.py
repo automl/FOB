@@ -32,6 +32,7 @@ class RuntimeArgs(DatasetArgs):
         self.silent = args.silent
         self.trial: int = args.start_trial + next(self._id)
         self.seed: int
+        self.log_extra = args.log_extra
         if args.seed_mode == "fixed":
             self.seed = args.seed
         elif args.seed_mode == "increment":

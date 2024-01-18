@@ -55,9 +55,9 @@ def run_trial(runtime_args: RuntimeArgs):
             LearningRateMonitor(logging_interval="step"),
             model_checkpoint,
             LogParamsAndGrads(
-                log_gradient=True,
-                log_params=True,
-                log_quantiles=True,
+                log_gradient=runtime_args.log_extra,
+                log_params=runtime_args.log_extra,
+                log_quantiles=runtime_args.log_extra,
                 log_every_n_steps=100  # maybe add arg for this?
             )
         ],
@@ -110,6 +110,8 @@ if __name__ == "__main__":
     parser.add_argument("--devices", type=int, \
                         help="overrides the predefined number of devices of the workload")
     parser.add_argument("--silent", action="store_true", \
-                        help="Disable progress bars.")
+                        help="disable progress bars")
+    parser.add_argument("--log_extra", action="store_true", \
+                        help="log training behavior like gradients etc")
     args = parser.parse_args()
     main(args)
