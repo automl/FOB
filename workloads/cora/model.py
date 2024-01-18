@@ -7,11 +7,18 @@ import torch.nn.functional as F
 
 
 class CoraModel(WorkloadModel):
-    """GAT from pytorch geometric"""
+    """simple GCN implementation / GAT from pytorch geometric"""
     def __init__(self, submission: Submission):
-        model = GCN()
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        model_name = "GCN"
+        if model_name == "GCN":
+            model = GCN()
+        elif model_name == "GAT":
+            # TODO pytorch geometric GAT
+            model = GAT()
+        else:
+            NotImplementedError("model not available")
         super().__init__(model, submission)
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
 
     def forward(self, data: torch.Tensor, mode="train") -> torch.Tensor:
@@ -34,29 +41,33 @@ class CoraModel(WorkloadModel):
 
     def training_step(self, batch, batch_idx):
         loss, acc = self.forward(batch, mode="train")
-        self.log("train_loss", loss)
-        self.log("train_acc", acc)
+        self.log("train_loss", loss, on_epoch=True)
+        self.log("train_acc", acc, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, acc = self.forward(batch, mode="val")
-        self.log("val_acc", acc)
+        self.log("val_acc", acc, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         _, acc = self.forward(batch, mode="test")
-        self.log("test_acc", acc)
+        self.log("test_acc", acc, on_epoch=True)
 
     def get_specs(self) -> RuntimeSpecs:
-        raise NotImplementedError
+        # TODO set proper specs
+        return RuntimeSpecs(
+            max_epochs=100,
+            max_steps=None,
+            devices=1,
+            target_metric="val_acc",
+            target_metric_mode="max"
+        )
 
 class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels=16):
+    def __init__(self, hidden_channels=32):
         super().__init__()
-        # torch.manual_seed(1234567)
-        
+        self.dropout = 0.5
         # cora dataset:
-        #   Number of features: 1433
-        #   Number of classes: 7
         num_features = 1433
         num_classes = 7
         self.conv1 = GCNConv(num_features, hidden_channels)
@@ -65,6 +76,6 @@ class GCN(torch.nn.Module):
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
         x = x.relu()
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.conv2(x, edge_index)
         return x
