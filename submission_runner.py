@@ -28,6 +28,7 @@ def run_trial(runtime_args: RuntimeArgs):
     )
     model, data_module = wl
     specs = model.get_specs()
+    specs.export_settings(runtime_args.output_dir)
     model_checkpoint = ModelCheckpoint(
         dirpath=runtime_args.checkpoint_dir,
         monitor=specs.target_metric,
