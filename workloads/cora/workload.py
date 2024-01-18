@@ -11,7 +11,9 @@ def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
 
 
 def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
-    return model.CoraModel(submission), get_datamodule(dataset_args)
+    datamodule = get_datamodule(dataset_args)
+    batch_size = datamodule.batch_size
+    return model.CoraModel(submission, batch_size), datamodule
 
 def get_callbacks() -> list[Callback]:
     return []

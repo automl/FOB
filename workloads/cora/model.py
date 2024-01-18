@@ -8,8 +8,9 @@ import torch.nn.functional as F
 
 class CoraModel(WorkloadModel):
     """simple GCN implementation / GAT from pytorch geometric"""
-    def __init__(self, submission: Submission):
+    def __init__(self, submission: Submission, batch_size: int):
         model_name = "GCN"
+        self.batch_size = batch_size
         if model_name == "GCN":
             model = GCN()
         elif model_name == "GAT":
@@ -41,17 +42,17 @@ class CoraModel(WorkloadModel):
 
     def training_step(self, batch, batch_idx):
         loss, acc = self.forward(batch, mode="train")
-        self.log("train_loss", loss, on_epoch=True)
-        self.log("train_acc", acc, on_epoch=True)
+        self.log("train_loss", loss, on_epoch=True, batch_size=self.batch_size)
+        self.log("train_acc", acc, on_epoch=True, batch_size=self.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, acc = self.forward(batch, mode="val")
-        self.log("val_acc", acc, on_epoch=True)
+        self.log("val_acc", acc, on_epoch=True, batch_size=self.batch_size)
 
     def test_step(self, batch, batch_idx):
         _, acc = self.forward(batch, mode="test")
-        self.log("test_acc", acc, on_epoch=True)
+        self.log("test_acc", acc, on_epoch=True, batch_size=self.batch_size)
 
     def get_specs(self) -> RuntimeSpecs:
         # TODO set proper specs
