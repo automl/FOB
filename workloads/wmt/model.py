@@ -146,7 +146,7 @@ class WMTModel(WorkloadModel):
         return RuntimeSpecs(
             max_epochs=20,
             max_steps=None,
-            devices=4,
+            devices=1,
             target_metric="val_loss",
             target_metric_mode="max"
         )
