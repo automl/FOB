@@ -31,7 +31,7 @@ class RuntimeSpecs(SubmissionSpecs):
     def export_settings(self, output_dir: Path):
         output_dir.mkdir(parents=True, exist_ok=True)
         with open(output_dir / "runtime_specs.json", "w", encoding="utf8") as f:
-            json.dump(self, f, indent=4)
+            json.dump(self.__dict__, f, indent=4)
 
 
 def to_submission_specs(runtime_specs: RuntimeSpecs) -> SubmissionSpecs:
