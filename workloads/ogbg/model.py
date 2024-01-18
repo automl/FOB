@@ -4,13 +4,12 @@ import torch
 from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
-from gnn import GAT, SpGAT
+from torch_geometric.nn import GAT
+
 
 class OGBGModel(WorkloadModel):
-    """GAT https://arxiv.org/pdf/1710.10903.pdf, implementation from https://github.com/Diego999/pyGAT/"""
+    """GAT from pytorch geometric"""
     def __init__(self, submission: Submission):
-        cuda = True
-        sparse: bool = False  # GAT with sparse version or not
         nfeat: int = 0  # TODO adapt for dataset
         hidden: int = 8  # Number of hidden units
         nclass: int = 0  # TODO adapt for dataset
@@ -18,22 +17,14 @@ class OGBGModel(WorkloadModel):
         nb_heads: int = 8  # Number of head attentions
         alpha: float = 0.2  # Alpha for the leaky_relu
 
-        if sparse:
-            model = SpGAT(
-                nfeat=nfeat,
-                nhid=hidden, 
-                nclass=nclass, 
-                dropout=dropout, 
-                nheads=nb_heads, 
-                alpha=alpha)
-        else:
-            model = GAT(
-                nfeat=nfeat, 
-                nhid=hidden, 
-                nclass=nclass, 
-                dropout=dropout, 
-                nheads=nb_heads, 
-                alpha=alpha)
+
+        model = GAT(
+            nfeat=nfeat, 
+            nhid=hidden, 
+            nclass=nclass, 
+            dropout=dropout, 
+            nheads=nb_heads, 
+            alpha=alpha)
 
         # TODO: port to lightning
         """
