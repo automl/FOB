@@ -3,7 +3,7 @@ import evaluate
 import numpy as np
 import torch
 from torch.nn.functional import interpolate
-from transformers import SegformerForSemanticSegmentation
+from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
@@ -13,11 +13,25 @@ class SegmentationModel(WorkloadModel):
     """
     Lightning Module for SceneParse150 semantic segmentation task.
     Model architecture used is SegFormer from https://arxiv.org/abs/2105.15203.
+    Implementation inspired by 🤗 examples and tutorials:
+    - https://github.com/huggingface/transformers/tree/main/examples/pytorch/semantic-segmentation
+    - https://huggingface.co/blog/fine-tune-segformer
     """
-    def __init__(self, submission: Submission, cache_dir: Path):
-        model = SegformerForSemanticSegmentation.from_pretrained("nvidia/mit-b0", cache_dir=cache_dir)
+    def __init__(self, submission: Submission, data_dir: Path, id2label: dict[int, str], label2id: dict[str, int]):
+        model_name = "nvidia/mit-b0"
+        config = SegformerConfig.from_pretrained(
+            model_name,
+            cache_dir=data_dir,
+            id2label = id2label,
+            label2id = label2id
+        )
+        model = SegformerForSemanticSegmentation.from_pretrained(
+            model_name,
+            cache_dir=data_dir,
+            config=config
+        )
         super().__init__(model, submission)
-        self.metric = self._get_metric()
+        self.metric = self._get_metric(data_dir)
         self._reset_metrics()
 
     def forward(self, x):
@@ -26,13 +40,13 @@ class SegmentationModel(WorkloadModel):
     def training_step(self, batch, batch_idx) -> torch.Tensor:
         outputs = self.forward(batch)
         loss = outputs.loss
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, sync_dist=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         outputs = self.forward(batch)
         self._process_batch_metric(batch["labels"], outputs.logits)
-        self.log("val_loss", outputs.loss)
+        self.log("val_loss", outputs.loss, sync_dist=True)
 
     def test_step(self, batch, batch_idx):
         outputs = self.forward(batch)
@@ -67,7 +81,7 @@ class SegmentationModel(WorkloadModel):
             "mean_accuracy": []
         }
 
-    def _get_metric(self):
+    def _get_metric(self, data_dir: Path):
         specs = self.get_specs()
         if isinstance(specs.devices, int):
             num_process = specs.devices
@@ -75,12 +89,12 @@ class SegmentationModel(WorkloadModel):
             num_process = len(specs.devices)
         else:
             raise TypeError(f"could not infer num_process from {specs.devices=}")
-        return evaluate.load("mean_iou", num_process=num_process)
+        return evaluate.load("mean_iou", num_process=num_process, cache_dir=str(data_dir))
 
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=32,
-            max_steps=161_664,
+            max_steps=40_416,
             devices=4,
             target_metric="val_mean_accuracy",
             target_metric_mode="max"

@@ -1,6 +1,8 @@
+import json
 import numpy as np
 from datasets import load_dataset, Dataset
-from transformers import AutoImageProcessor
+from huggingface_hub import hf_hub_download
+from transformers import SegformerImageProcessor
 from torchvision.transforms import v2
 from workloads import WorkloadDataModule
 from runtime import DatasetArgs
@@ -9,25 +11,45 @@ from runtime import DatasetArgs
 class SegmentationDataModule(WorkloadDataModule):
     """
     DataModule for SceneParse150 semantic segmentation task.
+    Implementation inspired by 🤗 examples and tutorials:
+    - https://github.com/huggingface/transformers/tree/main/examples/pytorch/semantic-segmentation
+    - https://huggingface.co/blog/fine-tune-segformer
     """
     def __init__(self, dataset_args: DatasetArgs):
         super().__init__(dataset_args)
         self.data_dir = self.data_dir / "SceneParse150"
-        self.batch_size = 4
-        tv_train_transforms = v2.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.1)
+        self.batch_size = 16
+        image_processor = SegformerImageProcessor.from_pretrained(
+            "nvidia/mit-b0",
+            cache_dir=self.data_dir
+        )
+        tgt_size = (image_processor.size["width"], image_processor.size["height"])
+        print(f"{tgt_size=}")
+        tv_train_transforms = v2.Compose([
+            v2.RandomResizedCrop(
+                size=tgt_size,
+                scale=(0.5, 2.0)  # as stated in paper
+            ),
+            v2.RandomHorizontalFlip()
+        ])
         tv_val_transforms = v2.Identity()
-        image_processor = AutoImageProcessor.from_pretrained("nvidia/mit-b0", do_reduce_labels=True)
-        def train_transforms(batch):
-            images = list(map(tv_train_transforms, batch["image"]))
-            targets = batch["annotation"]
-            return image_processor(images, targets)
-        def val_transforms(batch):
-            images = list(map(tv_val_transforms, batch["image"]))
-            targets = batch["annotation"]
-            return image_processor(images, targets)
+        def trainval_transforms(tv_transforms):
+            def transforms_fn(batch):
+                images = []
+                targets = []
+                for image, target in zip(batch["image"], batch["annotation"]):
+                    img, tgt = tv_transforms(image, target)
+                    images.append(img)
+                    targets.append(tgt)
+                return image_processor(images, targets, do_reduce_labels=True)
+            return transforms_fn
 
-        self.train_transforms = train_transforms
-        self.val_transforms = val_transforms
+        self.train_transforms = trainval_transforms(tv_train_transforms)
+        self.val_transforms = trainval_transforms(tv_val_transforms)
+        id2label, label2id = self._get_label_dicts()
+        self.id2label = id2label
+        self.label2id = label2id
+        self.num_labels = len(id2label)
 
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
@@ -63,3 +85,13 @@ class SegmentationDataModule(WorkloadDataModule):
 
     def _remove_invalid_images(self, dataset: Dataset) -> Dataset:
         return dataset.filter(lambda d: np.array(d["image"]).ndim >= 3)
+
+    def _get_label_dicts(self) -> tuple[dict[int, str], dict[str, int]]:
+        repo_id = "huggingface/label-files"
+        filename = "ade20k-id2label.json"
+        dl = hf_hub_download(repo_id, filename, repo_type="dataset", cache_dir=self.data_dir)
+        with open(dl, "r", encoding="utf8") as f:
+            id2label = json.load(f)
+        id2label = {int(k): v for k, v in id2label.items()}
+        label2id = {v: k for k, v in id2label.items()}
+        return id2label, label2id  # type:ignore
