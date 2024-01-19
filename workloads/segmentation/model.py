@@ -46,6 +46,8 @@ class SegmentationModel(WorkloadModel):
             align_corners=False
         ).argmax(dim=1).detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
+        # currently compute is very slow, using _compute instead
+        # see: https://github.com/huggingface/evaluate/pull/328#issuecomment-1286866576
         metrics = self.metric._compute(
             predictions=preds,
             references=labels,
@@ -77,16 +79,16 @@ class SegmentationModel(WorkloadModel):
 
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
-            max_epochs=50,
-            max_steps=None,
-            devices=1,  # TODO: correct devices (4)
+            max_epochs=32,
+            max_steps=161_664,
+            devices=4,
             target_metric="val_mean_accuracy",
             target_metric_mode="max"
         )
 
     def _compute_and_log_metrics(self, stage: str):
         for k, v in self.metrics.items():
-            self.log(f"{stage}_{k}", np.mean(v))
+            self.log(f"{stage}_{k}", np.mean(v), sync_dist=True)
         self._reset_metrics()
 
     def on_validation_epoch_end(self) -> None:
