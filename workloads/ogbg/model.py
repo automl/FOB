@@ -5,11 +5,12 @@ from submissions import Submission
 from torch_geometric.nn import GAT
 from torchmetrics import Accuracy
 from torch_geometric.nn import GAT, GIN, MLP, global_add_pool
+from ogb.graphproppred import Evaluator
 
 
 class OGBGModel(WorkloadModel):
     """GIN from pytorch geometric"""
-    def __init__(self, submission: Submission, feature_dim: int, num_classes: int):
+    def __init__(self, submission: Submission, feature_dim: int, num_classes: int, dataset_name: str):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
         in_channels: int = feature_dim
         out_channels: int = num_classes
@@ -29,6 +30,14 @@ class OGBGModel(WorkloadModel):
         self.train_acc = Accuracy(task='multiclass', num_classes=out_channels)
         self.val_acc = Accuracy(task='multiclass', num_classes=out_channels)
         self.test_acc = Accuracy(task='multiclass', num_classes=out_channels)
+
+        # https://ogb.stanford.edu/docs/home/
+        self.evaluator = Evaluator(name=dataset_name)
+        # You can learn the input and output format specification of the evaluator as follows.
+        # print(evaluator.expected_input_format) 
+        # print(evaluator.expected_output_format) 
+        # input_dict = {"y_true": y_true, "y_pred": y_pred}
+        # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321} 
 
         # TODO find dataset and adapt for dataset
         # datasets:

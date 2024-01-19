@@ -14,7 +14,9 @@ def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[Wor
     datamodule = data.OGBGDataModule(dataset_args)
     node_feature_dim = datamodule.feature_dim
     num_classes = datamodule.num_classes
-    return model.OGBGModel(submission, node_feature_dim, num_classes), datamodule
+    dataset_name = datamodule.dataset_name
+    ogbg_model = model.OGBGModel(submission, node_feature_dim=node_feature_dim, num_classes=num_classes, dataset_name=dataset_name)
+    return ogbg_model, datamodule
 
 def get_callbacks() -> list[Callback]:
     return []
