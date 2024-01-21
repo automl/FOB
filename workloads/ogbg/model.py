@@ -10,9 +10,9 @@ from ogb.graphproppred import Evaluator
 
 class OGBGModel(WorkloadModel):
     """GIN from pytorch geometric"""
-    def __init__(self, submission: Submission, feature_dim: int, num_classes: int, dataset_name: str):
+    def __init__(self, submission: Submission, node_feature_dim: int, num_classes: int, dataset_name: str):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
-        in_channels: int = feature_dim
+        in_channels: int = node_feature_dim
         out_channels: int = num_classes
         hidden_channels: int = 64
         num_layers: int = 3
@@ -23,6 +23,8 @@ class OGBGModel(WorkloadModel):
             num_layers=num_layers,
             dropout=dropout,
             jk='cat')
+        super().__init__(model, submission)
+        
         self.classifier = MLP(
             [hidden_channels, hidden_channels, out_channels],
             norm="batch_norm",
@@ -39,16 +41,6 @@ class OGBGModel(WorkloadModel):
         # input_dict = {"y_true": y_true, "y_pred": y_pred}
         # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321} 
 
-        # TODO find dataset and adapt for dataset
-        # datasets:
-        #   ogbg-molhiv
-        #   https://ogb.stanford.edu/docs/graphprop/
-        # task:
-        #   graph property prediction
-        # metric:
-        #   ROC-AUC
-        # self.loss_fn = None # TODO
-        super().__init__(model, submission)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
 
