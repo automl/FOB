@@ -68,13 +68,20 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
     for path in trial_dir_paths:
         stat = {}
+
+        # checking for files
         args_file = path / ARGS_FILENAME
         specs_file = path / SPECS_FILENAME
         hyperparameters_file = path / HP_FILENAME
         result_file = path / RESULT_BEST_FILENAME
         if args.last_instead_of_best:
             result_file = path / RESULT_LAST_FILENAME
+        all_files_exist = args_file.is_file() and specs_file.is_file() and hyperparameters_file.is_file() and result_file.is_file()
+        if not all_files_exist:
+            print(f"WARNING: one or more files are missing; did your run crash? skipping this hyperparameter setting")
+            continue
         
+        # reading content
         with open(args_file, 'r') as f:
             content = json.load(f)
             stat["seed"] = content[SEED]
@@ -92,9 +99,9 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
             if args.metric in content[0]:
                 stat["score"] = content[0][args.metric]
             else:
-                print(f"WARNING: given metric '{args.metric}' does not exist, please check for typos!... " +
-                      f"Trying to rebuild metric from target metric '{stat['target_metric']}'")
                 stat["metric"] = stat["target_metric"].replace("val_", "test_")
+                print(f"WARNING: given metric '{args.metric}' does not exist, please check for typos!... " +
+                      f"Using '{stat['metric']}' because '{stat['target_metric']}' was the target metric.")
                 stat["score"] = content[0][stat["metric"]]
 
         with open(hyperparameters_file) as f:
