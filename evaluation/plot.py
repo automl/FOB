@@ -64,42 +64,55 @@ def get_available_trials(dirname: Path):
 def dataframe_from_trials(trial_dir_paths: List[Path]):
     """takes result from get_available_trials and packs them in a dataframe"""
     dfs = [] # an empty list to store the data frames
+    stats: list[dict] = []
+
     for path in trial_dir_paths:
-        
-        seed_file = path / ARGS_FILENAME
-        with open(seed_file, 'r') as f:
-            content = json.load(f)
-            seed = content[SEED]
-        # print(seed)
-
+        stat = {}
+        args_file = path / ARGS_FILENAME
         specs_file = path / SPECS_FILENAME
-        with open(specs_file) as f:
-            content = json.load(f)
-            target_metric_mode = content["target_metric_mode"]
-            TARGET_METRIC_MODE = target_metric_mode  # max or min
-
+        hyperparameters_file = path / HP_FILENAME
         result_file = path / RESULT_BEST_FILENAME
         if args.last_instead_of_best:
             result_file = path / RESULT_LAST_FILENAME
-        with open(result_file) as f:
-            accuracy = json.load(f)[0][args.metric]
-        # print(accuracy)
+        
+        with open(args_file, 'r') as f:
+            content = json.load(f)
+            stat["seed"] = content[SEED]
+            stat["workload_name"] = content["workload_name"]
+            stat["submission_name"] = content["submission_name"]
 
-        hyperparameters_file = path / HP_FILENAME
+        with open(specs_file) as f:
+            content = json.load(f)
+            stat["target_metric_mode"] = content["target_metric_mode"]
+            stat["target_metric"] = content["target_metric"]
+            TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
+
+        with open(result_file) as f:
+            content = json.load(f)
+            if args.metric in content[0]:
+                stat["score"] = content[0][args.metric]
+            else:
+                print(f"WARNING: given metric '{args.metric}' does not exist, please check for typos!... " +
+                      f"Trying to rebuild metric from target metric '{stat['target_metric']}'")
+                stat["metric"] = stat["target_metric"].replace("val_", "test_")
+                stat["score"] = content[0][stat["metric"]]
+
         with open(hyperparameters_file) as f:
             data = pd.json_normalize(json.loads(f.read()))
-            data.at[0, args.metric] = accuracy  # will trim to 4 digits after comma
-            data.at[0, SEED] = seed  # saved as float
-            # print(data)
-            
+            data.at[0, args.metric] = stat["score"]  # will trim to 4 digits after comma
+            data.at[0, SEED] = stat["seed"]  # saved as float
             dfs.append(data) # append the data frame to the list
+        
+        if args.verbose:
+            print(stat)
+        stats.append(stat)
 
     df = pd.concat(dfs, sort=False)
     # print(df)
-    return df
+    return df, stats
 
 
-def create_matrix_plot(dataframe):
+def create_matrix_plot(dataframe, ax=None, lower_is_better:bool = False):
     pivot_table = pd.pivot_table(dataframe, index=args.y_axis, columns=args.x_axis, values=args.metric, aggfunc='mean')
     pivot_table = (pivot_table * 100).round(0)
     if args.verbose:
@@ -107,8 +120,11 @@ def create_matrix_plot(dataframe):
     # left bottom width height
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
-    ax = None
-    return sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax, annot_kws={'fontsize': 8}, cbar_ax=cbar_ax, vmin=60, vmax=80)
+    colormap_name = "rocket"
+    if lower_is_better:
+        colormap_name += "_r"
+    colormap = sns.color_palette(colormap_name, as_cmap=True)
+    return sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax, annot_kws={'fontsize': 8}, cbar_ax=cbar_ax, vmin=60, vmax=80, cmap=colormap_name)
 
 
 def create_figure(workload_paths: List[Path]):
@@ -116,12 +132,44 @@ def create_figure(workload_paths: List[Path]):
     and plots them together in one figure side by side"""
     num_subfigures: int = len(workload_paths)
 
+
+    # Create a 1x2 subplot layout
+    n_rows = 1
+    n_cols = num_subfigures
+    
+    # TODO, figsize is just hardcoded for (1, 2) grid and left to default for (1, 1) grid
+    #       probably not worth the hazzle to create something dynamic (atleast not now)
+    # margin = (num_subfigures - 1) * 0.3
+    # figsize=(5*n_cols + margin, 2.5)
+    figsize = None
+    if num_subfigures == 2:
+        figsize = (6 * args.scale, 2.3 * args.scale)
+
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=figsize)
+    if num_subfigures == 1:
+        axs=[axs]  # adapt for special case so we have unified types
+    # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)  # Adjust left and right margins as needed
+
     # create list of subfigures
     # for each create a matrix plot
     for i in range(num_subfigures):
         available_trials = get_available_trials(workload_paths[i])
-        dataframe = dataframe_from_trials(available_trials)
-        current_plot = create_matrix_plot(dataframe)
+        dataframe, stats = dataframe_from_trials(available_trials)
+        lower_is_better = stats[0]["target_metric_mode"] == "min"
+        current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
+
+        # axs[i].set_xlabel('Warm start steps', fontsize=8,labelpad=3)
+        # axs[i].set_ylabel('', fontsize=8,labelpad=8)
+        # axs[i].set_yticklabels(['1e-4.0', '1e-3.5','1e-3.0','1e-2.5','1e-2.0','1e-1.5','1e-1.0'])
+        # x_ticks = current_plot.axes[i].values
+        # axs[i].set_xticklabels([int(tick) for tick in x_ticks ], rotation=0)
+        s_name = stats[0]['submission_name']
+        axs[i].set_title(f"{s_name}")
+
+def plotstyle():
+    plt.rcParams["text.usetex"] = True
+    plt.rcParams["font.family"] = "serif"  # You can adjust the font family as needed
+    plt.rcParams["font.size"] = 8  # Adjust the font size as needed
 
 
 def main(args: argparse.Namespace):
@@ -130,6 +178,7 @@ def main(args: argparse.Namespace):
         print(f"{workloads}=")
     
     # name for outputfile
+    # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
     workflow = Path(workloads[0]).resolve()
     submission = Path(workflow).parent
@@ -137,11 +186,15 @@ def main(args: argparse.Namespace):
         print(f"{workflow.name=}")
         print(f"{submission.name=}")
     output_filename = f"heatmap-{submission.name}-{workflow.name}.{args.output_type}"
+    output_filename = here / output_filename
     if args.output:
         output_filename = args.output
 
-    create_figure(workloads)
+    plotstyle()
 
+    create_figure(workloads)
+    if args.verbose:
+        print(f"saving figure as {output_filename}")
     plt.savefig(output_filename)
 
 
@@ -157,7 +210,8 @@ if __name__ == "__main__":
     parser.add_argument("--x_axis", "-x", required=False, type=str, default="weight_decay", help="parameter for x-axis of the heatmap.")
     parser.add_argument("--y_axis", "-y", required=False, type=str, default="learning_rate", help="parameter for y-axis of the heatmap.")
     parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is *here*.")
-    parser.add_argument("--output_type", choices=["png", "pdf"], default="png")
+    parser.add_argument("--output_type", choices=["png", "pdf"], default="pdf")
+    parser.add_argument("--scale", default=1.0, type=float, help="scales *figsize* argument by this value")
     parser.add_argument("--last_instead_of_best", "-l", action="store_true", help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true", help="include debug prints")
 
