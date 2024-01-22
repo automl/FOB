@@ -15,5 +15,6 @@ def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[Wor
     dm = COCODataModule(dataset_args)
     return COCODetectionModel(submission, dm.eval_gt_data()), dm
 
+
 def get_callbacks() -> list[Callback]:
     return [COCOEvalSummarize()]
