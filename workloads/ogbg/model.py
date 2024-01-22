@@ -26,8 +26,19 @@ class OGBGModel(WorkloadModel):
         # https://ogb.stanford.edu/docs/home/
         self.evaluator = Evaluator(name=dataset_name)
         # You can learn the input and output format specification of the evaluator as follows.
-        print(self.evaluator.expected_input_format) 
-        print(self.evaluator.expected_output_format) 
+        # print(self.evaluator.expected_input_format)
+            # ==== Expected input format of Evaluator for ogbg-molhiv
+            # {'y_true': y_true, 'y_pred': y_pred}
+            # - y_true: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
+            # - y_pred: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
+            # where y_pred stores score values (for computing AUC score),
+            # num_task is 1, and each row corresponds to one graph.
+            # nan values in y_true are ignored during evaluation.
+        # print(self.evaluator.expected_output_format)
+            # ==== Expected output format of Evaluator for ogbg-molhiv
+            # {'rocauc': rocauc}
+            # - rocauc (float): ROC-AUC score averaged across 1 task(s)
+
         # input_dict = {"y_true": y_true, "y_pred": y_pred}
         # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321} 
 
@@ -56,9 +67,20 @@ class OGBGModel(WorkloadModel):
     def validation_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
         # import pdb; pdb.set_trace()
+        # TODO: use softmax fpr loss?
         loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-        self.log("val_loss", loss, batch_size=self.batch_size)
         # import pdb; pdb.set_trace()
+        # y_hat.shape:                                      torch.Size([32, 2])
+        # data.y.shape:                                     torch.Size([32, 1])
+        # y_hat.argmax(dim=-1).unsqueeze(dim=-1).shape:     torch.Size([32, 1])
+        try:
+            ogb_score = self.evaluator.eval({"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)})
+            self.log("val_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
+        except RuntimeError:  # No positively labeled data available. Cannot compute ROC-AUC.
+            ogb_score = {"rocauc": 0}  # TODO: what to do here? righ now we simply do not log it
+            print("\nexception caught\n")
+        
+        self.log("val_loss", loss, batch_size=self.batch_size)
         # self.val_acc(y_hat.softmax(dim=-1), data.y)
         #self.val_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
         #self.log('val_acc', self.val_acc, prog_bar=True, on_step=False, on_epoch=True)
@@ -69,20 +91,27 @@ class OGBGModel(WorkloadModel):
         #self.test_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
         #self.log('test_acc', self.test_acc, prog_bar=True, on_step=False, on_epoch=True)
         loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
+        try:
+            ogb_score = self.evaluator.eval({"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)})
+        except RuntimeError:  # No positively labeled data available. Cannot compute ROC-AUC.
+            ogb_score = {"rocauc": 0}  # TODO: what to do here?
+            print("\nexception caught\n")
+        
         self.log("test_loss", loss, batch_size=self.batch_size)
+        self.log("test_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
 
     def get_specs(self) -> RuntimeSpecs:
         # TODO have another look at epochs etc
         return RuntimeSpecs(
-            max_epochs=10,
+            max_epochs=50,
             max_steps=None,
             devices=1,
-            target_metric="val_loss",
+            target_metric="val_rocauc",
             target_metric_mode="max"
         )
 
 class GINwithClassifier(torch.nn.Module):
-    def __init__(self, node_feature_dim, num_classes, hidden_channels=64, num_layers=3, dropout=0.3, jumping_knowledge="cat"):
+    def __init__(self, node_feature_dim, num_classes, hidden_channels=64, num_layers=5, dropout=0.3, jumping_knowledge="cat"):
         super().__init__()
         self.gin = GIN(
             in_channels = node_feature_dim,
