@@ -143,7 +143,8 @@ def create_figure(workload_paths: List[Path]):
     # figsize=(5*n_cols + margin, 2.5)
     figsize = None
     if num_subfigures == 2:
-        figsize = (6 * args.scale, 2.3 * args.scale)
+        figsize = None
+        figsize = (6 * args.scale, 2.7 * args.scale)
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=figsize)
     if num_subfigures == 1:
@@ -158,13 +159,21 @@ def create_figure(workload_paths: List[Path]):
         lower_is_better = stats[0]["target_metric_mode"] == "min"
         current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
 
+        if i > 0:
+            # remove y_label of all but first one
+            axs[i].set_ylabel('', fontsize=8,labelpad=8)
+        else:
+            pass
+            # TODO format parameter just as in submission name
+            # axs[i].set_ylabel
+        
         # axs[i].set_xlabel('Warm start steps', fontsize=8,labelpad=3)
-        # axs[i].set_ylabel('', fontsize=8,labelpad=8)
         # axs[i].set_yticklabels(['1e-4.0', '1e-3.5','1e-3.0','1e-2.5','1e-2.0','1e-1.5','1e-1.0'])
         # x_ticks = current_plot.axes[i].values
         # axs[i].set_xticklabels([int(tick) for tick in x_ticks ], rotation=0)
         s_name = stats[0]['submission_name']
-        axs[i].set_title(f"{s_name}")
+        axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
+    fig.tight_layout()
 
 def plotstyle():
     plt.rcParams["text.usetex"] = True
