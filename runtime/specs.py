@@ -13,6 +13,10 @@ class SubmissionSpecs():
     max_epochs: int
     max_steps: Optional[int]
 
+    def __post_init__(self):
+        if not self.max_steps:
+            raise Exception("Warning: not setting max_steps can lead to bad learning rates!")
+
 
 @dataclass
 class RuntimeSpecs(SubmissionSpecs):

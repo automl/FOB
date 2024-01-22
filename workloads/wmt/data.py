@@ -37,6 +37,7 @@ class WMTDataModule(WorkloadDataModule):
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 5))
         self.batch_size = 64
+        self.train_data_len = 5906184
         self.tokenizer = {}
         self.vocab_transform = {}
         self.vocab_file = self.processed_data_dir / "vocab_size.json"
@@ -108,6 +109,7 @@ class WMTDataModule(WorkloadDataModule):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
         ds = datasets.load_from_disk(str(self.processed_data_dir))
+
         def collate_fn(batch):
             src_batch, tgt_batch = [], []
             for sample in batch:
@@ -122,7 +124,7 @@ class WMTDataModule(WorkloadDataModule):
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            self.data_train = ds["train"].select(range(100000))
+            self.data_train = ds["train"]
             self.data_val = ds["validation"]
 
         if stage == "validate":

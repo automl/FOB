@@ -112,6 +112,7 @@ class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
         self.vocab_size = data_module.vocab_size
         self.batch_size = data_module.batch_size
+        self.train_data_len = data_module.train_data_len
         if "de" not in self.vocab_size:
             raise Exception("prepare dataset before running the model!")
         model = Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512)
@@ -143,9 +144,10 @@ class WMTModel(WorkloadModel):
         return loss
 
     def get_specs(self) -> RuntimeSpecs:
+        epochs = 12
         return RuntimeSpecs(
-            max_epochs=20,
-            max_steps=None,
+            max_epochs=epochs,
+            max_steps=math.ceil(self.train_data_len / self.batch_size * epochs),
             devices=4,
             target_metric="val_loss",
             target_metric_mode="max"
