@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+import sys
 
 @dataclass
 class SubmissionSpecs():
@@ -15,7 +16,7 @@ class SubmissionSpecs():
 
     def __post_init__(self):
         if not self.max_steps:
-            raise Exception("Warning: not setting max_steps can lead to bad learning rates!")
+            print("Warning: not setting max_steps can lead to bad learning rates!", file=sys.stderr)
 
 
 @dataclass
