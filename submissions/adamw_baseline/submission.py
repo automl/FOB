@@ -1,13 +1,13 @@
 import math
-from torch.nn import Module
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
-from runtime.specs import SubmissionSpecs
 from runtime import RuntimeArgs
+from runtime.specs import SubmissionSpecs
+from runtime.parameter_groups import GroupedModel
 
 
 def get_submission(runtime_args: RuntimeArgs) -> Submission:
@@ -31,10 +31,10 @@ def cosine_warmup(step_hint: int, warmup_factor: float, optimizer):
 
 class AdamWBaseline(Submission):
 
-    def configure_optimizers(self, model: Module, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
+    def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()
         optimizer = AdamW(
-            model.parameters(),
+            model.grouped_parameters(lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"]),
             lr=hparams["learning_rate"],
             eps=1e-8,
             betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),

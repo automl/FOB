@@ -6,6 +6,7 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
 from submissions import Submission
+from runtime.parameter_groups import GroupedModel
 from runtime.specs import RuntimeSpecs, to_submission_specs
 from runtime import DatasetArgs
 
@@ -20,10 +21,10 @@ def workload_names() -> list[str]:
 
 
 class WorkloadModel(LightningModule):
-    def __init__(self, model: nn.Module, submission: Submission, **kwargs: Any) -> None:
+    def __init__(self, model: nn.Module | GroupedModel, submission: Submission, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.submission = submission
-        self.model = model
+        self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         specs = to_submission_specs(self.get_specs())
@@ -50,21 +51,41 @@ class WorkloadDataModule(LightningDataModule):
         if not data:
             raise NotImplementedError("Each workload has its own data set")
         if not self.batch_size or self.batch_size < 1:
-            raise NotImplementedError("Each workload configures its own batch_size. Please set it explicitely, to avoid confusion.")
-
+            raise NotImplementedError("Each workload configures its own batch_size. \
+                                      Please set it explicitely, to avoid confusion.")
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)
-        return DataLoader(self.data_train, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(
+            self.data_train,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def val_dataloader(self):
         self.check_dataset(self.data_val)
-        return DataLoader(self.data_val, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(
+            self.data_val,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def test_dataloader(self):
         self.check_dataset(self.data_test)
-        return DataLoader(self.data_test, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(
+            self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def predict_dataloader(self):
         self.check_dataset(self.data_predict)
-        return DataLoader(self.data_predict, batch_size=self.batch_size, collate_fn=self.collate_fn)
+        return DataLoader(
+            self.data_predict,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )

@@ -24,7 +24,6 @@ class SegmentationDataModule(WorkloadDataModule):
             cache_dir=self.data_dir
         )
         tgt_size = (image_processor.size["width"], image_processor.size["height"])
-        print(f"{tgt_size=}")
         tv_train_transforms = v2.Compose([
             v2.RandomResizedCrop(
                 size=tgt_size,
@@ -33,6 +32,7 @@ class SegmentationDataModule(WorkloadDataModule):
             v2.RandomHorizontalFlip()
         ])
         tv_val_transforms = v2.Identity()
+
         def trainval_transforms(tv_transforms):
             def transforms_fn(batch):
                 images = []
@@ -81,7 +81,7 @@ class SegmentationDataModule(WorkloadDataModule):
             split=split,
             trust_remote_code=True
         )
-        return self._remove_invalid_images(ds) # type:ignore
+        return self._remove_invalid_images(ds)  # type:ignore
 
     def _remove_invalid_images(self, dataset: Dataset) -> Dataset:
         return dataset.filter(lambda d: np.array(d["image"]).ndim >= 3)

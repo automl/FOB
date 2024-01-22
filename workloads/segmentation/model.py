@@ -5,8 +5,28 @@ import torch
 from torch.nn.functional import interpolate
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from workloads import WorkloadModel
+from runtime.parameter_groups import GroupedModel, ParameterGroup
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
+
+
+class SegFormerGroupedModel(GroupedModel):
+    def __init__(self, model: SegformerForSemanticSegmentation) -> None:
+        super().__init__(model)
+
+    def parameter_groups(self) -> list[ParameterGroup]:
+        default_params = ParameterGroup(
+            parameters=(param for name, param in self.model.segformer.named_parameters() if "norm" not in name)
+        )
+        decoder_params = ParameterGroup(
+            parameters=(param for name, param in self.model.decode_head.named_parameters() if "norm" not in name),
+            lr_multiplier=10.
+        )
+        norm_params = ParameterGroup(
+            parameters=(param for name, param in self.model.named_parameters() if "norm" in name),
+            weight_decay_multiplier=0.
+        )
+        return [default_params, decoder_params, norm_params]
 
 
 class SegmentationModel(WorkloadModel):
@@ -22,15 +42,15 @@ class SegmentationModel(WorkloadModel):
         config = SegformerConfig.from_pretrained(
             model_name,
             cache_dir=data_dir,
-            id2label = id2label,
-            label2id = label2id
+            id2label=id2label,
+            label2id=label2id
         )
         model = SegformerForSemanticSegmentation.from_pretrained(
             model_name,
             cache_dir=data_dir,
             config=config
         )
-        super().__init__(model, submission)
+        super().__init__(SegFormerGroupedModel(model), submission)
         self.metric = self._get_metric(data_dir)
         self._reset_metrics()
 
@@ -69,11 +89,10 @@ class SegmentationModel(WorkloadModel):
             ignore_index=255,
             reduce_labels=False
         )
-        if not metrics is None:
+        if metrics is not None:
             for metric in metrics.keys():
                 if metric.startswith("mean"):
                     self.metrics[metric].append(metrics[metric])
-
 
     def _reset_metrics(self):
         self.metrics = {
@@ -102,7 +121,7 @@ class SegmentationModel(WorkloadModel):
 
     def _compute_and_log_metrics(self, stage: str):
         for k, v in self.metrics.items():
-            self.log(f"{stage}_{k}", np.mean(v), sync_dist=True)
+            self.log(f"{stage}_{k}", np.mean(v), sync_dist=True)  # type:ignore
         self._reset_metrics()
 
     def on_validation_epoch_end(self) -> None:

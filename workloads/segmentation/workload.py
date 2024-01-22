@@ -14,5 +14,6 @@ def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[Wor
     dm = SegmentationDataModule(dataset_args)
     return SegmentationModel(submission, dm.data_dir, dm.id2label, dm.label2id), dm
 
+
 def get_callbacks() -> list[Callback]:
     return []

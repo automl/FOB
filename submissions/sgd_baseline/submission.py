@@ -1,8 +1,8 @@
-from torch.nn import Module
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
+from runtime.parameter_groups import GroupedModel
 from runtime.specs import SubmissionSpecs
 from runtime import RuntimeArgs
 
@@ -13,10 +13,10 @@ def get_submission(runtime_args: RuntimeArgs) -> Submission:
 
 class SGDBaseline(Submission):
 
-    def configure_optimizers(self, model: Module, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
+    def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()
         optimizer = SGD(
-            params=model.parameters(),
+            params=model.grouped_parameters(lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"]),
             lr=hparams["learning_rate"],
             momentum=hparams["momentum"],
             weight_decay=hparams["weight_decay"],
