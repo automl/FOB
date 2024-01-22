@@ -1,3 +1,4 @@
+import math
 from torch.nn import Module
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -7,7 +8,6 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
 from runtime.specs import SubmissionSpecs
 from runtime import RuntimeArgs
-import math
 
 
 def get_submission(runtime_args: RuntimeArgs) -> Submission:
@@ -15,8 +15,8 @@ def get_submission(runtime_args: RuntimeArgs) -> Submission:
 
 
 def cosine_warmup(step_hint: int, warmup_factor: float, optimizer):
-    if step_hint == 0:
-        raise Exception("step hint should be at least 1!")
+    if step_hint < 1:
+        raise ValueError("step hint should be at least 1!")
     warmup_steps = math.ceil(warmup_factor * step_hint)
     if warmup_steps == 0:
         print("warmup = 0: using CosineAnnealingLR only")
