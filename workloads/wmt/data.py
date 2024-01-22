@@ -122,7 +122,7 @@ class WMTDataModule(WorkloadDataModule):
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
-            self.data_train = ds["train"]
+            self.data_train = ds["train"].select(range(100000))
             self.data_val = ds["validation"]
 
         if stage == "validate":
