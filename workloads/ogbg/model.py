@@ -103,7 +103,7 @@ class OGBGModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         # TODO have another look at epochs etc
         return RuntimeSpecs(
-            max_epochs=50,
+            max_epochs=100,
             max_steps=None,
             devices=1,
             target_metric="val_rocauc",
