@@ -66,24 +66,38 @@ class OGBGModel(WorkloadModel):
 
     def validation_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
-        # import pdb; pdb.set_trace()
-        # TODO: use softmax fpr loss?
+
+        # TODO: use softmax for loss?
         loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-        # import pdb; pdb.set_trace()
-        # y_hat.shape:                                      torch.Size([32, 2])
-        # data.y.shape:                                     torch.Size([32, 1])
-        # y_hat.argmax(dim=-1).unsqueeze(dim=-1).shape:     torch.Size([32, 1])
-        try:
-            ogb_score = self.evaluator.eval({"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)})
-            self.log("val_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
-        except RuntimeError:  # No positively labeled data available. Cannot compute ROC-AUC.
-            ogb_score = {"rocauc": 0}  # TODO: what to do here? righ now we simply do not log it
-            print("\nexception caught\n")
-        
         self.log("val_loss", loss, batch_size=self.batch_size)
-        # self.val_acc(y_hat.softmax(dim=-1), data.y)
-        #self.val_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
-        #self.log('val_acc', self.val_acc, prog_bar=True, on_step=False, on_epoch=True)
+        
+        # y_hat.shape:                                      torch.Size([batch_size, 2])
+        # data.y.shape:                                     torch.Size([batch_size, 1])
+        # y_hat.argmax(dim=-1).unsqueeze(dim=-1).shape:     torch.Size([batch_size, 1])
+        
+        # Validation of single step in theory, but this throws an exception if there is no positive label
+        # step_dict = {"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)}
+        # return step_dict
+        # shape torch.Size([2, batch_size, 1])
+        return torch.stack((data.y, y_hat.argmax(dim=-1).unsqueeze(dim=-1)))
+    
+    def on_validation_epoch_end(self):
+        """
+        https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#validation-epoch-level-metrics
+        """
+        # self.validation_step_outputs is a list of whatever we returned in `validation_step`
+        all_preds = torch.stack(self.validation_step_outputs)  # torch.Size([n_eval_steps, 2, batch_size, 1])
+
+        # build aggregated dictionary with all results
+        eval_steps, _, batch_size, _ = all_preds.size()
+        reshaped_preds = all_preds.view(2, eval_steps * batch_size, 1)
+        ys, y_hats = reshaped_preds.split(1, dim=0)
+        validation_dict = {"y_true": ys, "y_pred": y_hats}
+        
+        ogb_score = self.evaluator.eval(validation_dict)
+        self.log("val_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
+
+        self.validation_step_outputs.clear()  # free memory
 
     def test_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
@@ -111,7 +125,7 @@ class OGBGModel(WorkloadModel):
         )
 
 class GINwithClassifier(torch.nn.Module):
-    def __init__(self, node_feature_dim, num_classes, hidden_channels=64, num_layers=5, dropout=0.3, jumping_knowledge="cat"):
+    def __init__(self, node_feature_dim, num_classes, hidden_channels=300, num_layers=5, dropout=0.5, jumping_knowledge="last"):
         super().__init__()
         self.gin = GIN(
             in_channels = node_feature_dim,
