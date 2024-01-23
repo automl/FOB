@@ -124,6 +124,8 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better:bool = False):
     pivot_table = (pivot_table * 100).round(0)
     if args.verbose:
         print(pivot_table)
+    vmin = args.limits and min(args.limits)
+    vmax = args.limits and max(args.limits)
     # left bottom width height
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
@@ -131,7 +133,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better:bool = False):
     if lower_is_better:
         colormap_name += "_r"
     colormap = sns.color_palette(colormap_name, as_cmap=True)
-    return sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax, annot_kws={'fontsize': 8}, cbar_ax=cbar_ax, vmin=60, vmax=80, cmap=colormap_name)
+    return sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax, annot_kws={'fontsize': 8}, cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, cmap=colormap_name)
 
 
 def create_figure(workload_paths: List[Path]):
@@ -227,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument("--y_axis", "-y", required=False, type=str, default="learning_rate", help="parameter for y-axis of the heatmap.")
     parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is *here*.")
     parser.add_argument("--output_type", choices=["png", "pdf"], default="pdf")
+    parser.add_argument("--limits", required=False, type=int, nargs=2, help="sets the limits for the colormap, 2 ints, order does not matter")
     parser.add_argument("--scale", default=1.0, type=float, help="scales *figsize* argument by this value")
     parser.add_argument("--last_instead_of_best", "-l", action="store_true", help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true", help="include debug prints")
