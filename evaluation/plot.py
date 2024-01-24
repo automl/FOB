@@ -21,6 +21,7 @@ RESULT_BEST_FILENAME = "results_best_model.json"
 RESULT_LAST_FILENAME = "results_final_model.json"
 ARGS_FILENAME = "runtime_args.json"
 SPECS_FILENAME = "runtime_specs.json"
+DEFAULT_FILE_ENDING = "png"
 
 def draw_heatmap(df, ax, values, index, columns, std=False):
     pivot_table = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='mean')
@@ -153,7 +154,7 @@ def create_figure(workload_paths: List[Path]):
     figsize = None
     if num_subfigures == 2:
         figsize = None
-        figsize = (6 * args.scale, 2.7 * args.scale)
+        figsize = (12 * args.scale, 5.4 * args.scale)
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=figsize)
     if num_subfigures == 1:
@@ -203,7 +204,8 @@ def main(args: argparse.Namespace):
     if args.verbose:
         print(f"{workflow.name=}")
         print(f"{submission.name=}")
-    output_filename = f"heatmap-{submission.name}-{workflow.name}.{args.output_type}"
+    file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
+    output_filename = f"heatmap-{submission.name}-{workflow.name}.{file_type}"
     output_filename = here / output_filename
     if args.output:
         output_filename = args.output
@@ -228,7 +230,7 @@ if __name__ == "__main__":
     parser.add_argument("--x_axis", "-x", required=False, type=str, default="weight_decay", help="parameter for x-axis of the heatmap.")
     parser.add_argument("--y_axis", "-y", required=False, type=str, default="learning_rate", help="parameter for y-axis of the heatmap.")
     parser.add_argument("--output", "-o", required=False, type=Path, help="Filename of the generated output plot. default is *here*.")
-    parser.add_argument("--output_type", choices=["png", "pdf"], default="pdf")
+    parser.add_argument("--pdf", action="store_true", help="create a pdf instead of a png file")
     parser.add_argument("--limits", required=False, type=int, nargs=2, help="sets the limits for the colormap, 2 ints, order does not matter")
     parser.add_argument("--scale", default=1.0, type=float, help="scales *figsize* argument by this value")
     parser.add_argument("--last_instead_of_best", "-l", action="store_true", help="use the final model instead of the best one for the plot")
