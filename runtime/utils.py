@@ -24,3 +24,16 @@ def gpu_suited_for_compile():
     if torch.cuda.is_available():
         device_cap = torch.cuda.get_device_capability()
         return device_cap in ((7, 0), (8, 0), (9, 0))
+
+
+def begin_timeout(delay=10, show_threads=False):
+    if show_threads:
+        import sys, traceback, threading
+        thread_names = {t.ident: t.name for t in threading.enumerate()}
+        for thread_id, frame in sys._current_frames().items():
+            print("Thread %s:" % thread_names.get(thread_id, thread_id))
+            traceback.print_stack(frame)
+            print()
+    import signal
+    print("submission_runner.py finished! Setting a manual timeout signal of 10 seconds, as tqdm sometimes is stuck in a deadlock")
+    signal.alarm(delay)  # Timeout after 10 seconds

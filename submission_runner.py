@@ -8,7 +8,7 @@ import torch
 
 from runtime import RuntimeArgs
 from runtime.callbacks import LogParamsAndGrads
-from runtime.utils import some, trainer_strategy
+from runtime.utils import some, trainer_strategy, begin_timeout
 
 import workloads
 from workloads import WorkloadModel, WorkloadDataModule
@@ -69,19 +69,23 @@ def run_trial(runtime_args: RuntimeArgs):
     trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
     final_score = trainer.test(model, datamodule=data_module)
     best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
-    print("Scores are calculated, writing reults in json...")
-    with open(runtime_args.output_dir / "results_final_model.json", "w", encoding="utf8") as f:
+    final_file = runtime_args.output_dir / "results_final_model.json"
+    best_file = runtime_args.output_dir / "results_best_model.json"
+    print(f"Scores are calculated, writing results in {final_file} and {best_file} ... ", end="")
+    with open(final_file, "w", encoding="utf8") as f:
         json.dump(final_score, f, indent=4)
-    with open(runtime_args.output_dir / "results_best_model.json", "w", encoding="utf8") as f:
+    with open(best_file, "w", encoding="utf8") as f:
         json.dump(best_score, f, indent=4)
-    print("... finished writing reults in json")
-
+    print("finished writing results in json!")
 
 def main(args: argparse.Namespace):
     for trial in range(args.start_trial, args.start_trial + args.trials):
         print(f"Running trial {trial}.")
         runtime_args = RuntimeArgs(args)
         run_trial(runtime_args)
+
+    if args.send_timeout:
+        begin_timeout()
 
 
 if __name__ == "__main__":
@@ -117,5 +121,6 @@ if __name__ == "__main__":
                         help="disable progress bars")
     parser.add_argument("--log_extra", action="store_true", \
                         help="log training behavior like gradients etc")
+    parser.add_argument("--send_timeout", action="store_true", help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
     args = parser.parse_args()
     main(args)
