@@ -69,10 +69,12 @@ def run_trial(runtime_args: RuntimeArgs):
     trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
     final_score = trainer.test(model, datamodule=data_module)
     best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
+    print("Scores are calculated, writing reults in json...")
     with open(runtime_args.output_dir / "results_final_model.json", "w", encoding="utf8") as f:
         json.dump(final_score, f, indent=4)
     with open(runtime_args.output_dir / "results_best_model.json", "w", encoding="utf8") as f:
         json.dump(best_score, f, indent=4)
+    print("... finished writing reults in json")
 
 
 def main(args: argparse.Namespace):
