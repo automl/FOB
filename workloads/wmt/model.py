@@ -140,7 +140,7 @@ class WMTModel(WorkloadModel):
         logits = self.model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
         tgt_out = tgt[1:, :]
         loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1), ignore_index=PAD_IDX)
-        self.log(log_name, loss, batch_size=self.batch_size)
+        self.log(log_name, loss, batch_size=self.batch_size, sync_dist=True)
         return loss
 
     def get_specs(self) -> RuntimeSpecs:
