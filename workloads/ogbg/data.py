@@ -14,7 +14,7 @@ from torch_geometric.loader.dataloader import DataLoader as GeomDataLoader
 class OGBGDataModule(WorkloadDataModule):
     """ogbg-molhiv https://ogb.stanford.edu/docs/graphprop/#ogbg-mol
     graph: molecule, nodes: atoms, edges: chemical bonds
-    features can be found here https://github.com/snap-stanford/ogb/blob/master/ogb/utils/features.py 
+    features can be found here https://github.com/snap-stanford/ogb/blob/master/ogb/utils/features.py
     """
     def __init__(self, dataset_args: DatasetArgs):
         super().__init__(dataset_args)
@@ -45,20 +45,34 @@ class OGBGDataModule(WorkloadDataModule):
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)
-        return GeomDataLoader(self.data_train, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return GeomDataLoader(
+            self.data_train,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def val_dataloader(self):
         self.check_dataset(self.data_val)
-        return GeomDataLoader(self.data_val, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return GeomDataLoader(
+            self.data_val,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def test_dataloader(self):
         self.check_dataset(self.data_test)
-        return GeomDataLoader(self.data_test, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return GeomDataLoader(
+            self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
 
     def predict_dataloader(self):
         self.check_dataset(self.data_predict)
         return GeomDataLoader(self.data_predict, batch_size=self.batch_size, collate_fn=self.collate_fn)
-
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.

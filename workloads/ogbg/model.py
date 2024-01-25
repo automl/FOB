@@ -5,9 +5,6 @@ from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
 
-"""
-python submission_runner.py --data_dir $(ws_find bigdata)/data -s adamw_baseline -w ogbg -o $(ws_find bigdata)/experiments/debug --workers 1
-"""
 
 class OGBGModel(WorkloadModel):
     """GIN from pytorch geometric"""
@@ -18,7 +15,7 @@ class OGBGModel(WorkloadModel):
             num_classes: int,
             dataset_name: str,
             batch_size: int
-        ):
+    ):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
         self.batch_size = batch_size
 
@@ -34,23 +31,22 @@ class OGBGModel(WorkloadModel):
         self.evaluator = Evaluator(name=dataset_name)
         # You can learn the input and output format specification of the evaluator as follows.
         # print(self.evaluator.expected_input_format)
-            # ==== Expected input format of Evaluator for ogbg-molhiv
-            # {'y_true': y_true, 'y_pred': y_pred}
-            # - y_true: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
-            # - y_pred: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
-            # where y_pred stores score values (for computing AUC score),
-            # num_task is 1, and each row corresponds to one graph.
-            # nan values in y_true are ignored during evaluation.
+        # ==== Expected input format of Evaluator for ogbg-molhiv
+        # {'y_true': y_true, 'y_pred': y_pred}
+        # - y_true: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
+        # - y_pred: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
+        # where y_pred stores score values (for computing AUC score),
+        # num_task is 1, and each row corresponds to one graph.
+        # nan values in y_true are ignored during evaluation.
         # print(self.evaluator.expected_output_format)
-            # ==== Expected output format of Evaluator for ogbg-molhiv
-            # {'rocauc': rocauc}
-            # - rocauc (float): ROC-AUC score averaged across 1 task(s)
+        # ==== Expected output format of Evaluator for ogbg-molhiv
+        # {'rocauc': rocauc}
+        # - rocauc (float): ROC-AUC score averaged across 1 task(s)
 
         # input_dict = {"y_true": y_true, "y_pred": y_pred}
         # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321}
 
         self.loss_fn = torch.nn.BCELoss()
-
 
     def forward(self, data) -> torch.Tensor:
         return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
@@ -113,18 +109,18 @@ class OGBGModel(WorkloadModel):
 
 class GINwithClassifier(torch.nn.Module):
     def __init__(
-            self,
-            node_feature_dim,
-            num_classes,
-            hidden_channels=300,
-            num_layers=5,
-            dropout=0.5,
-            jumping_knowledge="last"
-        ):
+        self,
+        node_feature_dim,
+        num_classes,
+        hidden_channels=300,
+        num_layers=5,
+        dropout=0.5,
+        jumping_knowledge="last"
+    ):
         super().__init__()
         self.gin = GIN(
-            in_channels = node_feature_dim,
-            hidden_channels = hidden_channels,
+            in_channels=node_feature_dim,
+            hidden_channels=hidden_channels,
             num_layers=num_layers,
             dropout=dropout,
             jk=jumping_knowledge
