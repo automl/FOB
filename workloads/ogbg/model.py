@@ -8,7 +8,7 @@ from torch_geometric.nn import GAT, GIN, MLP, global_add_pool
 from ogb.graphproppred import Evaluator
 
 """
-python submission_runner.py --data_dir $(ws_find bigdata)/data -s adamw_baseline -w ogbg -o $(ws_find bigdata)/experiments --workers 1
+python submission_runner.py --data_dir $(ws_find bigdata)/data -s adamw_baseline -w ogbg -o $(ws_find bigdata)/experiments/debug --workers 1
 """
 
 class OGBGModel(WorkloadModel):
@@ -22,8 +22,10 @@ class OGBGModel(WorkloadModel):
             num_classes=num_classes
             )
         super().__init__(model, submission)
-        self.validation_step_outputs: list[torch.tensor] = []
-        self.test_step_outputs: list[torch.tensor] = []
+        self.validation_step_trues: list[torch.tensor] = []
+        self.validation_step_preds: list[torch.tensor] = []
+        self.test_step_trues: list[torch.tensor] = []
+        self.test_step_preds: list[torch.tensor] = []
 
         # https://ogb.stanford.edu/docs/home/
         self.evaluator = Evaluator(name=dataset_name)
@@ -75,48 +77,36 @@ class OGBGModel(WorkloadModel):
         
         # y_hat.shape:                                      torch.Size([batch_size, 2])
         # data.y.shape:                                     torch.Size([batch_size, 1])
-        # y_hat.argmax(dim=-1).unsqueeze(dim=-1).shape:     torch.Size([batch_size, 1])
+        mask = data.y.squeeze(dim=-1)
+        prediction_for_correct_class = y_hat.softmax(dim=-1)[torch.arange(y_hat.size(0)), mask].unsqueeze(dim=-1)
+        self.validation_step_preds.append(prediction_for_correct_class)
+        self.validation_step_trues.append(data.y)
         
-        # Validation of single step in theory, but this throws an exception if there is no positive label
-        # step_dict = {"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)}
-        # return step_dict
-        # shape torch.Size([2, batch_size, 1])
-        pred = torch.stack((data.y, y_hat.argmax(dim=-1).unsqueeze(dim=-1)))
-        self.validation_step_outputs.append(pred)
-        
-        # TODO: what do we want to return? loss? dict with loss and pred?
-        return 
+        # we do not test single epochs, as not having positive labels
+        # (which will happen in small batches makes it impossible to calculate the rocauc)
+        # dic = {"y_true": data.y, "y_pred": prediction_for_correct_class}
+        # import pdb; pdb.set_trace()
+        # self.evaluator.eval(dic)
+        return
     
     def on_validation_epoch_end(self):
         """
         https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#validation-epoch-level-metrics
         """
-        # self.validation_step_outputs is a list of whatever we set in *validation_step*
-        almost_all_preds = torch.stack(self.validation_step_outputs[:-1])  # torch.Size([n_eval_steps, 2, batch_size, 1])
-        last_pred = self.validation_step_outputs[-1]
-        last_y, last_y_hat = last_pred.split(1, dim=0)
-        last_y = last_y.squeeze(dim=0)
-        last_y_hat = last_y_hat.squeeze(dim=0)
+        # import pdb; pdb.set_trace()
 
-        # build aggregated dictionary with all results
-        eval_steps, _, batch_size, _ = almost_all_preds.size()
-        reshaped_preds = almost_all_preds.view(2, eval_steps * batch_size, 1)
-        ys: torch.tensor
-        y_hats: torch.tensor
-        ys, y_hats = reshaped_preds.split(1, dim=0)
-        # todo, is this performant?
-        ys = ys.squeeze(dim=0)
-        y_hats = y_hats.squeeze(dim=0)
+        all_trues = torch.cat(self.validation_step_trues)
+        all_preds = torch.cat(self.validation_step_preds)
 
-        ys = torch.cat((ys, last_y))
-        y_hats = torch.cat((y_hats, last_y_hat))
-        
-        validation_dict = {"y_true": ys, "y_pred": y_hats}
+        validation_dict = {"y_true": all_trues, "y_pred": all_preds}
 
         ogb_score = self.evaluator.eval(validation_dict)
         # self.log("val_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
         self.log("val_rocauc", ogb_score["rocauc"])
-        self.validation_step_outputs.clear()  # free memory
+        
+        # free memory
+        self.validation_step_trues.clear()
+        self.validation_step_preds.clear()
 
     def test_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
@@ -124,53 +114,32 @@ class OGBGModel(WorkloadModel):
         # self.test_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
         # self.log('test_acc', self.test_acc, prog_bar=True, on_step=False, on_epoch=True)
         loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-
-        res = torch.stack((data.y, y_hat.argmax(dim=-1).unsqueeze(dim=-1)))
-        self.test_step_outputs.append(res)
-
-        # TODO: what do we want to return? loss? dict with loss and pred?
-        return
-    
-        try:
-            ogb_score = self.evaluator.eval({"y_true": data.y, "y_pred": y_hat.argmax(dim=-1).unsqueeze(dim=-1)})
-        except RuntimeError:  # No positively labeled data available. Cannot compute ROC-AUC.
-            ogb_score = {"rocauc": 0}  # TODO: what to do here?
-            print("\nexception caught\n")
         
-        self.log("test_loss", loss, batch_size=self.batch_size)
-        self.log("test_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
+        mask = data.y.squeeze(dim=-1)
+        prediction_for_correct_class = y_hat.softmax(dim=-1)[torch.arange(y_hat.size(0)), mask].unsqueeze(dim=-1)
+        self.test_step_preds.append(prediction_for_correct_class)
+        self.test_step_trues.append(data.y)
+
 
     def on_test_epoch_end(self) -> None:
-        almost_all_preds = torch.stack(self.test_step_outputs[:-1])  # torch.Size([n_eval_steps, 2, batch_size, 1])
-        last_pred = self.test_step_outputs[-1]
-        last_y, last_y_hat = last_pred.split(1, dim=0)
-        last_y = last_y.squeeze(dim=0)
-        last_y_hat = last_y_hat.squeeze(dim=0)
+        """aggregate all the test steps
+        """
+        all_trues = torch.cat(self.test_step_trues)
+        all_preds = torch.cat(self.test_step_preds)
 
-        # build aggregated dictionary with all results
-        eval_steps, _, batch_size, _ = almost_all_preds.size()
-        reshaped_preds = almost_all_preds.view(2, eval_steps * batch_size, 1)
-        ys: torch.tensor
-        y_hats: torch.tensor
-        ys, y_hats = reshaped_preds.split(1, dim=0)
-        # todo, is this performant?
-        ys = ys.squeeze(dim=0)
-        y_hats = y_hats.squeeze(dim=0)
-
-        ys = torch.cat((ys, last_y))
-        y_hats = torch.cat((y_hats, last_y_hat))
-
-        test_dict = {"y_true": ys, "y_pred": y_hats}
+        test_dict = {"y_true": all_trues, "y_pred": all_preds}
 
         ogb_score = self.evaluator.eval(test_dict)
         self.log("test_rocauc", ogb_score["rocauc"])
 
-        self.test_step_outputs.clear()  # free memory
+        # free memory
+        self.test_step_trues.clear()
+        self.test_step_preds.clear()
 
     def get_specs(self) -> RuntimeSpecs:
         # TODO have another look at epochs etc
         return RuntimeSpecs(
-            max_epochs=100,
+            max_epochs=50,
             max_steps=None,
             devices=1,
             target_metric="val_rocauc",

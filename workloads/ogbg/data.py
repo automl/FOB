@@ -20,6 +20,7 @@ class OGBGDataModule(WorkloadDataModule):
         super().__init__(dataset_args)
         self.data_dir = self.data_dir / "ogbg-molhiv"
         self.batch_size = 128*2
+        self.print_dataset_info = False
         # ogbg-molhiv is small (41,127 graphs)
         # ogbg-molpcba is medium size (437,929 graphs)
         self.dataset_name = "ogbg-molhiv"
@@ -27,18 +28,20 @@ class OGBGDataModule(WorkloadDataModule):
 
         # TODO, checkl if we need those, get them from model
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
-        print(f"{dataset.num_node_features=}")
-        print(f"{dataset.num_classes=}")
-        print(f"{dataset.num_features=}")
+        if self.print_dataset_info:
+            print(f"{dataset.num_node_features=}")
+            print(f"{dataset.num_classes=}")
+            print(f"{dataset.num_features=}")
         self.feature_dim: int = dataset.num_features
         self.num_classes: int = dataset.num_classes
 
     def prepare_data(self):
         """Load citation network dataset (cora only for now)"""
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
-        print(f"{dataset.num_node_features=}")
-        print(f"{dataset.num_classes=}")
-        print(f"{dataset.num_features=}")
+        if self.print_dataset_info:
+            print(f"{dataset.num_node_features=}")
+            print(f"{dataset.num_classes=}")
+            print(f"{dataset.num_features=}")
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)
