@@ -24,6 +24,7 @@ class RuntimeArgs(DatasetArgs):
     Hold runtime specific arguments which is globally available information
     """
     _id = count(0)
+
     def __init__(self, args: argparse.Namespace) -> None:
         super().__init__(args)
         self.submission_name: str = args.submission
@@ -42,7 +43,7 @@ class RuntimeArgs(DatasetArgs):
         else:
             raise ValueError(f"unknown option for seed_mode, got: {args.seed_mode}.")
         output_dir = some(args.output, default=Path.cwd() / "experiments")
-        self.output_dir: Path  = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
+        self.output_dir: Path = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.checkpoint_dir: Path = self.output_dir / "checkpoints"
         default_hparam_path = submission_path(self.submission_name) / "hyperparameters.json"

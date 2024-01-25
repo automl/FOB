@@ -28,12 +28,14 @@ def gpu_suited_for_compile():
 
 def begin_timeout(delay=10, show_threads=False):
     if show_threads:
-        import sys, traceback, threading
+        import sys
+        import traceback
+        import threading
         thread_names = {t.ident: t.name for t in threading.enumerate()}
         for thread_id, frame in sys._current_frames().items():
             print("Thread %s:" % thread_names.get(thread_id, thread_id))
             traceback.print_stack(frame)
             print()
     import signal
-    print("submission_runner.py finished! Setting a manual timeout signal of 10 seconds, as tqdm sometimes is stuck in a deadlock")
+    print("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck")
     signal.alarm(delay)  # Timeout after 10 seconds
