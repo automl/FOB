@@ -10,9 +10,10 @@ from runtime.specs import RuntimeSpecs
 from submissions import Submission
 from nanogpt import GPT as NanoGPT
 
+
 class ShakespeareModel(WorkloadModel):
     def __init__(self, submission: Submission):
-        
+
         ...
 
         super().__init__(model, submission)
@@ -34,4 +35,3 @@ class ShakespeareModel(WorkloadModel):
 
     def get_specs(self) -> RuntimeSpecs:
         raise NotImplementedError
-

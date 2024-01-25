@@ -7,9 +7,9 @@ import requests
 import numpy as np
 from tqdm import tqdm
 
-
 from workloads import WorkloadDataModule
 from runtime import DatasetArgs
+
 
 class ShakespeareDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):
@@ -22,8 +22,9 @@ class ShakespeareDataModule(WorkloadDataModule):
         # TODO do we need to normalize?
         # meanOfOpenWebText = torch.tensor(0)
         # stdOfOpenWebText = torch.tensor(1)
-        # self.transform  = transforms.Compose([transforms.ToTensor(),transforms.Normalize(meanOfOpenWebText, stdOfOpenWebText)])  
-
+        # self.transform  = transforms.Compose([transforms.ToTensor(),
+        #                                       transforms.Normalize(meanOfOpenWebText, stdOfOpenWebText)]
+        #                                     )
 
     def prepare_data(self):
         """thanks to https://github.com/karpathy/nanoGPT/blob/master/data/shakespeare_char/prepare.py"""
@@ -31,7 +32,7 @@ class ShakespeareDataModule(WorkloadDataModule):
         input_file_path = self.data_dir / 'input.txt'
         if not os.path.exists(input_file_path):
             # make sure folder exists
-            Path(self.data_dir).mkdir(parents=False, exist_ok=True) 
+            Path(self.data_dir).mkdir(parents=False, exist_ok=True)
             data_url = 'https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt'
             with open(input_file_path, 'w') as f:
                 f.write(requests.get(data_url).text)
@@ -44,15 +45,17 @@ class ShakespeareDataModule(WorkloadDataModule):
         chars = sorted(list(set(data)))
         vocab_size = len(chars)
         print("all the unique characters:", ''.join(chars))
-        print(f"vocab size: {vocab_size:,}")
+        print(f"vocab size: {vocab_size: ,}")
 
         # create a mapping from characters to integers
-        stoi = { ch:i for i,ch in enumerate(chars) }
-        itos = { i:ch for i,ch in enumerate(chars) }
+        stoi = {ch: i for i, ch in enumerate(chars)}
+        itos = {i: ch for i, ch in enumerate(chars)}
+
         def encode(s):
-            return [stoi[c] for c in s] # encoder: take a string, output a list of integers
-        def decode(l):
-            return ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
+            return [stoi[c] for c in s]  # encoder: take a string, output a list of integers
+
+        def decode(ls):
+            return ''.join([itos[i] for i in ls])  # decoder: take a list of integers, output a string
 
         # create the train and test splits
         n = len(data)
@@ -100,8 +103,7 @@ class ShakespeareDataModule(WorkloadDataModule):
         self.dataset_train = split_dataset["train"]
         self.dataset_val = split_dataset["val"]
         # self.dataset_test = split_dataset["test"]  # TODO
-        
-        
+
         if stage == "fit":
             return self.train_dataloader()
         if stage == "test":
@@ -111,4 +113,3 @@ class ShakespeareDataModule(WorkloadDataModule):
 
     def get_specs(self) -> dict[str, Any]:
         return {"batch_size": self.batch_size}
-    

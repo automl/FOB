@@ -13,5 +13,6 @@ def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
 def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
     return model.ShakespeareModel(submission), get_datamodule(dataset_args)
 
+
 def get_callbacks() -> list[Callback]:
     return []
