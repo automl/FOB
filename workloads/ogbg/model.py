@@ -46,39 +46,37 @@ class OGBGModel(WorkloadModel):
         # input_dict = {"y_true": y_true, "y_pred": y_pred}
         # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321} 
 
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        self.loss_fn = torch.nn.BCELoss()
 
 
     def forward(self, x, edge_index, batch) -> torch.Tensor:
         x = self.model.forward(x, edge_index, batch)
-        # TODO maybe bring back later
-        # x = global_add_pool(x, batch)
-        # x = self.classifier(x)
         return x
 
     def training_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
-        # import pdb; pdb.set_trace()
-        loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-        # self.train_acc(y_hat.softmax(dim=-1), data.y)
-        #self.train_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
-        #self.log('train_acc', self.train_acc, prog_bar=True, on_step=False, on_epoch=True)
-        
+        mask = data.y.squeeze(dim=-1)
+        prediction_for_correct_class = y_hat.softmax(dim=-1)[torch.arange(y_hat.size(0)), mask].unsqueeze(dim=-1)
+        labels = data.y.to(torch.float32)  # floats for BCE but int for rocauc
+        loss = self.loss_fn(prediction_for_correct_class, labels)
         # TODO read batch_size from data instead?
         self.log("loss", loss, batch_size=self.batch_size)
         return loss
 
     def validation_step(self, data, batch_idx):
         y_hat = self.forward(data.x, data.edge_index, data.batch)
-
-        # TODO: use softmax for loss?
-        loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-        self.log("val_loss", loss, batch_size=self.batch_size)
+        # import pdb; pdb.set_trace()
         
         # y_hat.shape:                                      torch.Size([batch_size, 2])
         # data.y.shape:                                     torch.Size([batch_size, 1])
         mask = data.y.squeeze(dim=-1)
         prediction_for_correct_class = y_hat.softmax(dim=-1)[torch.arange(y_hat.size(0)), mask].unsqueeze(dim=-1)
+        labels = data.y.to(torch.float32)  # floats for BCE but int for rocauc
+        # import pdb; pdb.set_trace()
+        loss = self.loss_fn(prediction_for_correct_class, labels)
+        self.log("val_loss", loss, batch_size=self.batch_size)
+
+        # those are aggregated after all steps
         self.validation_step_preds.append(prediction_for_correct_class)
         self.validation_step_trues.append(data.y)
         
@@ -101,7 +99,6 @@ class OGBGModel(WorkloadModel):
         validation_dict = {"y_true": all_trues, "y_pred": all_preds}
 
         ogb_score = self.evaluator.eval(validation_dict)
-        # self.log("val_rocauc", ogb_score["rocauc"], batch_size=self.batch_size)
         self.log("val_rocauc", ogb_score["rocauc"])
         
         # free memory
@@ -109,14 +106,10 @@ class OGBGModel(WorkloadModel):
         self.validation_step_preds.clear()
 
     def test_step(self, data, batch_idx):
-        y_hat = self.forward(data.x, data.edge_index, data.batch)
-        # self.test_acc(y_hat.softmax(dim=-1), data.y)
-        # self.test_acc(y_hat.softmax(dim=-1), data.y.squeeze(dim=-1))
-        # self.log('test_acc', self.test_acc, prog_bar=True, on_step=False, on_epoch=True)
-        loss = self.loss_fn(y_hat, data.y.squeeze(dim=-1))
-        
+        y_hat = self.forward(data.x, data.edge_index, data.batch)        
         mask = data.y.squeeze(dim=-1)
         prediction_for_correct_class = y_hat.softmax(dim=-1)[torch.arange(y_hat.size(0)), mask].unsqueeze(dim=-1)
+        # aggregate over this data in on_test_epoch_end
         self.test_step_preds.append(prediction_for_correct_class)
         self.test_step_trues.append(data.y)
 
