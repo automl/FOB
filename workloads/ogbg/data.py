@@ -19,7 +19,7 @@ class OGBGDataModule(WorkloadDataModule):
     def __init__(self, dataset_args: DatasetArgs):
         super().__init__(dataset_args)
         self.data_dir = self.data_dir / "ogbg-molhiv"
-        self.batch_size = 128*2
+        self.batch_size = 32
         self.print_dataset_info = False
         # ogbg-molhiv is small (41,127 graphs)
         # ogbg-molpcba is medium size (437,929 graphs)
@@ -75,4 +75,4 @@ class OGBGDataModule(WorkloadDataModule):
         if stage == "test":
             self.data_test = dataset[split_idx["test"]]
         if stage == "predict":
-            NotImplementedError()
+            raise NotImplementedError()
