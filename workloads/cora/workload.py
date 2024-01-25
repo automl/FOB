@@ -15,5 +15,6 @@ def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[Wor
     batch_size = datamodule.batch_size
     return model.CoraModel(submission, batch_size), datamodule
 
+
 def get_callbacks() -> list[Callback]:
     return []

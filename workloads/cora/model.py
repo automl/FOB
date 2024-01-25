@@ -21,7 +21,6 @@ class CoraModel(WorkloadModel):
         super().__init__(model, submission)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
-
     def forward(self, data: torch.Tensor, mode="train") -> torch.Tensor:
         x, edge_index = data.x, data.edge_index
         x = self.model(x, edge_index)
@@ -35,7 +34,7 @@ class CoraModel(WorkloadModel):
             mask = data.test_mask
         else:
             assert False, "Unknown forward mode: %s" % mode
-        
+
         loss = self.loss_fn(x[mask], data.y[mask])
         acc = (x[mask].argmax(dim=-1) == data.y[mask]).sum().float() / mask.sum()
         return loss, acc
@@ -63,6 +62,7 @@ class CoraModel(WorkloadModel):
             target_metric="val_acc",
             target_metric_mode="max"
         )
+
 
 class GCN(torch.nn.Module):
     def __init__(self, hidden_channels=32):
