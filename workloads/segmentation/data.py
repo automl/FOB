@@ -23,6 +23,10 @@ class SegmentationDataModule(WorkloadDataModule):
             "nvidia/mit-b0",
             cache_dir=self.data_dir
         )
+        # image_processor = SegformerImageProcessor.from_pretrained(
+        #     "nvidia/segformer-b0-finetuned-ade-512-512",
+        #     cache_dir=self.data_dir
+        # )
         tgt_size = (image_processor.size["width"], image_processor.size["height"])
         tv_train_transforms = v2.Compose([
             v2.RandomResizedCrop(

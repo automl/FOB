@@ -16,17 +16,13 @@ class SegFormerGroupedModel(GroupedModel):
 
     def parameter_groups(self) -> list[ParameterGroup]:
         default_params = ParameterGroup(
-            parameters=(param for name, param in self.model.segformer.named_parameters() if "norm" not in name)
+            named_parameters=(np for np in self.model.named_parameters() if np[0].startswith("segformer"))
         )
         decoder_params = ParameterGroup(
-            parameters=(param for name, param in self.model.decode_head.named_parameters() if "norm" not in name),
+            named_parameters=(np for np in self.model.named_parameters() if np[0].startswith("decode_head")),
             lr_multiplier=10.
         )
-        norm_params = ParameterGroup(
-            parameters=(param for name, param in self.model.named_parameters() if "norm" in name),
-            weight_decay_multiplier=0.
-        )
-        return [default_params, decoder_params, norm_params]
+        return [default_params, decoder_params]
 
 
 class SegmentationModel(WorkloadModel):
@@ -36,6 +32,8 @@ class SegmentationModel(WorkloadModel):
     Implementation inspired by 🤗 examples and tutorials:
     - https://github.com/huggingface/transformers/tree/main/examples/pytorch/semantic-segmentation
     - https://huggingface.co/blog/fine-tune-segformer
+    This workload reaches a performance similar to this pretrained model:
+    https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512
     """
     def __init__(self, submission: Submission, data_dir: Path, id2label: dict[int, str], label2id: dict[str, int]):
         model_name = "nvidia/mit-b0"
@@ -50,6 +48,10 @@ class SegmentationModel(WorkloadModel):
             cache_dir=data_dir,
             config=config
         )
+        # model = SegformerForSemanticSegmentation.from_pretrained(
+        #     "nvidia/segformer-b0-finetuned-ade-512-512",
+        #     cache_dir=data_dir
+        # )
         super().__init__(SegFormerGroupedModel(model), submission)
         self.metric = self._get_metric(data_dir)
         self._reset_metrics()
