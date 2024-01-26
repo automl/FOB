@@ -10,9 +10,11 @@ from datasets import DatasetDict, Dataset
 import os
 from tqdm import tqdm
 import json
+import pickle
 
 # code inspired by: https://pytorch.org/tutorials/beginner/translation_transformer.html
 UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
+MAX_TOKENS_PER_SENTENCE = 256
 special_symbols = ['<unk>', '<pad>', '<bos>', '<eos>']
 
 def sequential_transforms(*transforms):
@@ -37,15 +39,17 @@ class WMTDataModule(WorkloadDataModule):
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 5))
         self.batch_size = 64
-        self.train_data_len = 5906184
         self.tokenizer = {}
         self.vocab_transform = {}
-        self.vocab_file = self.processed_data_dir / "vocab_size.json"
-        if self.vocab_file.exists():
-            with open(self.processed_data_dir / "vocab_size.json", "r", encoding="utf8") as f:
-                self.vocab_size = json.load(f)
+        info_file = self.processed_data_dir / "info.json"
+        if info_file.exists():
+            with open(info_file, "r", encoding="utf8") as f:
+                info = json.load(f)
+                self.vocab_size = info["vocab_size"]
+                self.train_data_len = info["train_data_len"]
         else:
             self.vocab_size: dict[str, int] = {}
+            self.train_data_len = 0
 
     def _get_dataset(self) -> DatasetDict:
         ds = datasets.load_dataset("wmt17",
@@ -100,9 +104,21 @@ class WMTDataModule(WorkloadDataModule):
                     tensor_transform)(data["translation"][ln])
             return res
         ds = ds.map(transform_text, num_proc=self.prepare_workers, remove_columns="translation")
+
+        print("filtering sentences with too many tokens...")
+        ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE
+                  and len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
+
+        print("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
-        with open(self.processed_data_dir / "vocab_size.json", "w", encoding="utf8") as f:
-            json.dump(self.vocab_size, f, indent=4)
+        print("saving vocabulary...")
+        with open(self.processed_data_dir / "vocabulary.pkl", "wb") as f:
+            pickle.dump(self.vocab_transform, f)
+        print("saving additional information...")
+        with open(self.processed_data_dir / "info.json", "w", encoding="utf8") as f:
+            json.dump({"vocab_size": self.vocab_size,
+                       "max_tokens": MAX_TOKENS_PER_SENTENCE,
+                       "train_data_len": len(ds["train"])}, f, indent=4)
         print("wmt preprocessed")
 
     def setup(self, stage):
