@@ -125,7 +125,9 @@ class WMTDataModule(WorkloadDataModule):
         with open(self.processed_data_dir / "info.json", "w", encoding="utf8") as f:
             json.dump({"vocab_size": self.vocab_size,
                        "max_tokens": MAX_TOKENS_PER_SENTENCE,
-                       "train_data_len": len(ds["train"])}, f, indent=4)
+                       "train_data_len": len(ds["train"]),
+                       "val_data_len": len(ds["validation"]),
+                       "test_data_len": len(ds["test"])}, f, indent=4)
         print("wmt preprocessed")
 
     def setup(self, stage):
