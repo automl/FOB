@@ -58,6 +58,7 @@ class WorkloadDataModule(LightningDataModule):
         self.check_dataset(self.data_train)
         return DataLoader(
             self.data_train,
+            shuffle=True,
             batch_size=self.batch_size,
             num_workers=self.workers,
             collate_fn=self.collate_fn
