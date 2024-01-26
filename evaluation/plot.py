@@ -79,7 +79,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
                                hyperparameters_file.is_file(),
                                result_file.is_file()])
         if not all_files_exist:
-            print(f"WARNING: one or more files are missing; did your run crash? skipping this hyperparameter setting")
+            print(f"WARNING: one or more files are missing in {path}; did your run crash? skipping this hyperparameter setting")
             continue
 
         # reading content
