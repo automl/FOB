@@ -17,7 +17,7 @@ import submissions
 
 def run_trial(runtime_args: RuntimeArgs):
     torch.set_float32_matmul_precision('high')  # TODO: check if gpu has tensor cores
-    L.seed_everything(runtime_args.seed)
+    L.seed_everything(runtime_args.seed, workers=True)
     runtime_args.export_settings()
     workload = workloads.import_workload(runtime_args.workload_name)
     submission = submissions.import_submission(runtime_args.submission_name)
@@ -64,7 +64,8 @@ def run_trial(runtime_args: RuntimeArgs):
         ],
         devices=devices,
         strategy=trainer_strategy(devices),
-        enable_progress_bar=(not runtime_args.silent)
+        enable_progress_bar=(not runtime_args.silent),
+        deterministic=True
     )
     trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
     final_score = trainer.test(model, datamodule=data_module)
