@@ -41,9 +41,9 @@ class WMTDataModule(WorkloadDataModule):
         self.batch_size = 64
         self.tokenizer = {}
         self.vocab_transform = {}
-        info_file = self.processed_data_dir / "info.json"
-        if info_file.exists():
-            with open(info_file, "r", encoding="utf8") as f:
+        self.info_file = self.processed_data_dir / "info.json"
+        if self.info_file.exists():
+            with open(self.info_file, "r", encoding="utf8") as f:
                 info = json.load(f)
                 self.vocab_size = info["vocab_size"]
                 self.train_data_len = info["train_data_len"]
@@ -62,17 +62,24 @@ class WMTDataModule(WorkloadDataModule):
     def _prepare_data_transform(self, train_data: Dataset):
         self.tokenizer["de"] = get_tokenizer('spacy', language='de_core_news_sm')
         self.tokenizer["en"] = get_tokenizer('spacy', language='en_core_web_sm')
-        for ln in ("de", "en"):
-            print(f"building vocabulary for {ln}...")
-            self.vocab_transform[ln] = build_vocab_from_iterator(
-                self._yield_token(train_data, ln),
-                min_freq=1,
-                specials=special_symbols,
-                special_first=True,
-                max_tokens=32_000
-            )
-            self.vocab_transform[ln].set_default_index(UNK_IDX)
-            self.vocab_size[ln] = len(self.vocab_transform[ln])
+        if (self.processed_data_dir / "vocabulary.pkl").exists():
+            print("loading vocabulary from disk...")
+            with open(self.processed_data_dir / "vocabulary.pkl", "rb") as f:
+                self.vocab_transform = pickle.load(f)
+                for ln in ("de", "en"):
+                    self.vocab_size[ln] = len(self.vocab_transform[ln])
+        else:
+            for ln in ("de", "en"):
+                print(f"building vocabulary for {ln}...")
+                self.vocab_transform[ln] = build_vocab_from_iterator(
+                    self._yield_token(train_data, ln),
+                    min_freq=1,
+                    specials=special_symbols,
+                    special_first=True,
+                    max_tokens=32_000
+                )
+                self.vocab_transform[ln].set_default_index(UNK_IDX)
+                self.vocab_size[ln] = len(self.vocab_transform[ln])
 
     def _yield_token(self, data_iter: Iterable, language: str) -> Iterator[str]:
         for data in tqdm(data_iter):
@@ -82,7 +89,7 @@ class WMTDataModule(WorkloadDataModule):
         # download, IO, etc. Useful with shared filesystems
         # only called on 1 GPU/TPU in distributed
         self.data_dir.mkdir(exist_ok=True)
-        if self.processed_data_dir.exists():
+        if self.info_file.exists():
             print("wmt already preprocessed")
             return
         ds = self._get_dataset()
@@ -106,8 +113,8 @@ class WMTDataModule(WorkloadDataModule):
         ds = ds.map(transform_text, num_proc=self.prepare_workers, remove_columns="translation")
 
         print("filtering sentences with too many tokens...")
-        ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE
-                  and len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
+        ds = ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE
+                       and len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
 
         print("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
