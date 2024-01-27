@@ -5,7 +5,7 @@ import torch
 from torch.nn.functional import interpolate
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from workloads import WorkloadModel
-from runtime.parameter_groups import GroupedModel, ParameterGroup
+from runtime.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
 
@@ -16,13 +16,16 @@ class SegFormerGroupedModel(GroupedModel):
 
     def parameter_groups(self) -> list[ParameterGroup]:
         default_params = ParameterGroup(
-            named_parameters=(np for np in self.model.named_parameters() if np[0].startswith("segformer"))
+            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("segformer"))
         )
         decoder_params = ParameterGroup(
-            named_parameters=(np for np in self.model.named_parameters() if np[0].startswith("decode_head")),
+            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("decode_head")),
             lr_multiplier=10.
         )
-        return [default_params, decoder_params]
+        assert len(default_params) + len(decoder_params) == len(list(self.model.named_parameters()))
+        split1 = [default_params, decoder_params]
+        split2 = wd_group_named_parameters(self.model)
+        return merge_parameter_splits(split1, split2)
 
 
 class SegmentationModel(WorkloadModel):

@@ -1,32 +1,58 @@
 
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Optional
+from typing import Any, Optional
+from torch import nn
 from torch.nn import Module
 from torch.nn.parameter import Parameter
+from .utils import some
 
 
 @dataclass
 class ParameterGroup():
-    named_parameters: Iterator[tuple[str, Parameter]]
-    lr_multiplier: float = field(default=1.)
-    weight_decay_multiplier: float = field(default=1.)
+    named_parameters: dict[str, Parameter]
+    lr_multiplier: Optional[float] = field(default=None)
+    weight_decay_multiplier: Optional[float] = field(default=None)
     optimizer_kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def __and__(self, other) -> "ParameterGroup":
+        assert isinstance(other, ParameterGroup)
+        n1 = set(self.named_parameters.keys())
+        n2 = set(other.named_parameters.keys())
+        all_params = self.named_parameters | other.named_parameters
+        n12 = n1 & n2
+        new_params = {n: all_params[n] for n in n12}
+        return ParameterGroup(
+            named_parameters=new_params,
+            lr_multiplier=some(other.lr_multiplier, default=self.lr_multiplier),
+            weight_decay_multiplier=some(other.weight_decay_multiplier, default=self.weight_decay_multiplier),
+            optimizer_kwargs=self.optimizer_kwargs | other.optimizer_kwargs
+        )
+
+    def __len__(self) -> int:
+        return len(self.named_parameters)
+
+    def __bool__(self) -> bool:
+        return not self.empty()
+
+    def empty(self) -> bool:
+        return len(self.named_parameters) == 0
 
     def to_optimizer_dict(
             self,
             lr: Optional[float] = None,
             weight_decay: Optional[float] = None
-    ) -> dict[str, Iterator[Parameter] | Any]:
-        np = sorted(self.named_parameters)
+    ) -> dict[str, list[Parameter] | Any]:
+        names = sorted(self.named_parameters)
         d = {
-            "params": list(map(lambda x: x[1], np)),
-            "names": list(map(lambda x: x[0], np)),
+            "params": [self.named_parameters[n] for n in names],
+            "names": names,
             **self.optimizer_kwargs
         }
         if lr is not None:
-            d["lr"] = self.lr_multiplier * lr
+            d["lr"] = self.lr_multiplier * lr if self.lr_multiplier is not None else lr
         if weight_decay is not None:
-            d["weight_decay"] = self.weight_decay_multiplier * weight_decay
+            d["weight_decay"] = self.weight_decay_multiplier * weight_decay \
+            if self.weight_decay_multiplier is not None else weight_decay
         return d
 
 
@@ -44,14 +70,86 @@ class GroupedModel(Module):
         return self.model.forward(*args, **kwargs)
 
     def parameter_groups(self) -> list[ParameterGroup]:
-        return [ParameterGroup(self.model.named_parameters())]
+        return wd_group_named_parameters(self.model)
 
     def grouped_parameters(
             self,
             lr: Optional[float] = None,
             weight_decay: Optional[float] = None
-    ) -> list[dict[str, Iterator[Parameter] | Any]]:
+    ) -> list[dict[str, list[Parameter] | Any]]:
         return [pg.to_optimizer_dict(lr, weight_decay) for pg in self.parameter_groups()]
+
+
+def merge_parameter_splits(split1: list[ParameterGroup], split2: list[ParameterGroup]) -> list[ParameterGroup]:
+    groups = []
+    for pg1 in split1:
+        for pg2 in split2:
+            pg12 = pg1 & pg2
+            if not pg12.empty():
+                groups.append(pg12)
+    return groups
+
+
+def wd_group_named_parameters(model: Module):
+    apply_decay = set()
+    apply_no_decay = set()
+    special = set()
+    whitelist_weight_modules = (nn.Linear, nn.Conv2d)
+    ignore_modules = (nn.Sequential, )
+    blacklist_weight_modules = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
+                                nn.Embedding,
+                                nn.LazyBatchNorm1d, nn.LazyBatchNorm2d, nn.LazyBatchNorm3d,
+                                nn.GroupNorm, nn.SyncBatchNorm,
+                                nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d,
+                                nn.LayerNorm, nn.LocalResponseNorm)
+
+    param_dict = {pn: p for pn, p in model.named_parameters() if p.requires_grad}
+    for mn, m in model.named_modules():
+        for pn, p in m.named_parameters():
+            fpn = f"{mn}.{pn}" if mn else pn  # full param name
+            if not p.requires_grad or fpn not in param_dict:
+                continue  # frozen weights
+            if isinstance(m, ignore_modules):
+                continue  # parameters of sequential are added from their own modules
+            if hasattr(p, '_optim'):
+                special.add(fpn)
+            elif pn.endswith('bias'):
+                apply_no_decay.add(fpn)
+            elif pn.endswith('weight') and isinstance(m, whitelist_weight_modules):
+                apply_decay.add(fpn)
+            elif isinstance(m, blacklist_weight_modules):
+                apply_no_decay.add(fpn)
+            else:
+                print("wd_group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
+
+    apply_decay |= (param_dict.keys() - apply_no_decay - special)
+
+    # validate that we considered every parameter
+    inter_params = apply_decay & apply_no_decay
+    union_params = apply_decay | apply_no_decay
+    assert len(inter_params) == 0, f"Parameters {str(inter_params)} made it into both apply_decay/apply_no_decay sets!"
+    assert len(
+        param_dict.keys() - special - union_params) == 0, \
+            f"parameters {str(param_dict.keys() - union_params)} \
+                were not separated into either apply_decay/apply_no_decay set!"
+
+    if not apply_no_decay:
+        param_groups = [ParameterGroup(
+            named_parameters=dict(zip(sorted(union_params), (param_dict[pn] for pn in sorted(union_params)))),
+            weight_decay_multiplier=0.
+        )]
+    else:
+        param_groups = [
+            ParameterGroup(
+                named_parameters=dict(zip(sorted(apply_no_decay), (param_dict[pn] for pn in sorted(apply_no_decay)))),
+                weight_decay_multiplier=0.
+            ),
+            ParameterGroup(
+                named_parameters=dict(zip(sorted(apply_decay), (param_dict[pn] for pn in sorted(apply_decay))))
+            ),
+        ]
+
+    return param_groups
 
 
 def resolve_parameter_dicts( dict1: dict[str, Any], dict2: dict[str, Any]) -> list[dict[str, Any]]:
@@ -76,9 +174,11 @@ def resolve_parameter_dicts( dict1: dict[str, Any], dict2: dict[str, Any]) -> li
                  "names": sorted(n1_and_n2), **kwarg1, **kwarg2}
     return [outdict1, outdict2, outdict12]
 
+
 def intersect_parameter_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> Optional[dict[str, Any]]:
     d = resolve_parameter_dicts(dict1, dict2)[2]
     return d if len(d["params"]) > 0 else None
+
 
 def merge_parameter_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> list[dict[str, Any]]:
     d = resolve_parameter_dicts(dict1, dict2)

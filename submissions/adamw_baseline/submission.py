@@ -33,8 +33,9 @@ class AdamWBaseline(Submission):
 
     def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         hparams = self.get_hyperparameters()
+        parameter_groups = model.grouped_parameters(lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"])
         optimizer = AdamW(
-            model.grouped_parameters(lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"]),
+            parameter_groups,
             lr=hparams["learning_rate"],
             eps=1e-8,
             betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),
