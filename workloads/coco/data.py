@@ -119,7 +119,7 @@ class COCODataModule(WorkloadDataModule):
             )
 
     def train_dataloader(self) -> DataLoader:
-        return self._dataloader_from_dataset(self.data_train)
+        return self._dataloader_from_dataset(self.data_train, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
         return self._dataloader_from_dataset(self.data_val, batch_size=1)
@@ -130,11 +130,22 @@ class COCODataModule(WorkloadDataModule):
     def predict_dataloader(self) -> DataLoader:
         return self._dataloader_from_dataset(self.data_predict)
 
-    def _dataloader_from_dataset(self, dataset: Dataset, batch_size: int | None = None) -> DataLoader:
+    def _dataloader_from_dataset(
+            self,
+            dataset: Dataset,
+            batch_size: int | None = None,
+            shuffle: bool = False
+        ) -> DataLoader:
         if batch_size is None:
             batch_size = self.batch_size
         self.check_dataset(dataset)
-        return DataLoader(dataset, batch_size=batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(
+            dataset,
+            batch_size=batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn,
+            shuffle=shuffle
+        )
 
     def eval_gt_data(self) -> COCO:
         val_path = self.data_dir / "val2017"
