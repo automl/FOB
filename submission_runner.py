@@ -112,11 +112,13 @@ if __name__ == "__main__":
     parser.add_argument("--trials", type=int, default=1,
                         help="number of trials, default: 1")
     parser.add_argument("--start_trial", type=int, default=0,
-                        help="the index of the first trial to run, default: 0")
+                        help="the number which is used for the first trial, default: 0")
+    parser.add_argument("--start_hyperparameter", type=int, default=0,
+                        help="the index of the first hyperparameter to run, default: 0")
     parser.add_argument("--seed", type=int, default=42,
                         help="the seed to use for the experiment if strategy is not 'random', default: 42")
-    parser.add_argument("--seed_mode", type=str, default="increment", choices=["fixed", "increment", "random"],
-                        help="the strategy for choosing seeds, default: 'increment'")
+    parser.add_argument("--seed_mode", type=str, default="none", choices=["fixed", "increment", "random"],
+                        help="the strategy for choosing seeds, default: 'increment' on single hyperparameter, 'fixed' when using a search space")
     parser.add_argument("--devices", type=int,
                         help="overrides the predefined number of devices of the workload")
     parser.add_argument("--silent", action="store_true",

@@ -31,17 +31,9 @@ class RuntimeArgs(DatasetArgs):
         self.resume: Optional[Path] = args.resume
         self.devices: Optional[int] = args.devices
         self.silent = args.silent
-        self.trial: int = args.start_trial + next(self._id)
-        self.seed: int
+        self.run_index = next(self._id)
+        self.trial: int = args.start_trial + self.run_index
         self.log_extra = args.log_extra
-        if args.seed_mode == "fixed":
-            self.seed = args.seed
-        elif args.seed_mode == "increment":
-            self.seed = args.seed + self.trial
-        elif args.seed_mode == "random":
-            self.seed = random.randint(0, 2**31)
-        else:
-            raise ValueError(f"unknown option for seed_mode, got: {args.seed_mode}.")
         output_dir = some(args.output, default=Path.cwd() / "experiments")
         self.output_dir: Path = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -51,12 +43,23 @@ class RuntimeArgs(DatasetArgs):
         self.hyperparameter_path: Path
         if hparam_path.is_dir():
             try:
-                self.hyperparameter_path = list(hparam_path.iterdir())[self.trial]
+                self.hyperparameter_path = list(hparam_path.iterdir())[args.start_hyperparameter + self.run_index]
             except IndexError as ie:
                 print("Not enough hyperparameter files in specified folder.")
                 raise ie
         else:
             self.hyperparameter_path = hparam_path
+        if args.seed_mode == "fixed":
+            self.seed = args.seed
+        elif args.seed_mode == "increment":
+            self.seed = args.seed + self.run_index
+        elif args.seed_mode == "random":
+            self.seed = random.randint(0, 2**31)
+        else:
+            if hparam_path.is_dir():
+                self.seed = args.seed
+            else:
+                self.seed = args.seed + self.run_index
 
     def export_settings(self):
         # copy hyperparameters to outdir
