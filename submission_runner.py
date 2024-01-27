@@ -72,12 +72,12 @@ def run_trial(runtime_args: RuntimeArgs):
     best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
     final_file = runtime_args.output_dir / "results_final_model.json"
     best_file = runtime_args.output_dir / "results_best_model.json"
-    print(f"Scores are calculated, writing results in {final_file} and {best_file} ... ", end="")
+    print(f"Writing results into\n  {final_file} and\n  {best_file} ... ", end="")
     with open(final_file, "w", encoding="utf8") as f:
         json.dump(final_score, f, indent=4)
     with open(best_file, "w", encoding="utf8") as f:
         json.dump(best_score, f, indent=4)
-    print("finished writing results in json!")
+    print("finished writing results in json!\n")
 
 
 def main(args: argparse.Namespace):
@@ -87,6 +87,7 @@ def main(args: argparse.Namespace):
         run_trial(runtime_args)
 
     if args.send_timeout:
+        print("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck\n")
         begin_timeout()
 
 

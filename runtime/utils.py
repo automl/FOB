@@ -1,5 +1,5 @@
 import torch
-
+import signal
 
 def some(*args, default):
     """
@@ -36,6 +36,4 @@ def begin_timeout(delay=10, show_threads=False):
             print("Thread %s:" % thread_names.get(thread_id, thread_id))
             traceback.print_stack(frame)
             print()
-    import signal
-    print("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck")
     signal.alarm(delay)  # Timeout after 10 seconds
