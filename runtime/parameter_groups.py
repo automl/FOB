@@ -119,8 +119,8 @@ def wd_group_named_parameters(model: Module):
                 apply_decay.add(fpn)
             elif isinstance(m, blacklist_weight_modules):
                 apply_no_decay.add(fpn)
-            else:
-                print("wd_group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
+            # else:  # for debug purposes
+            #     print("wd_group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
 
     apply_decay |= (param_dict.keys() - apply_no_decay - special)
 
