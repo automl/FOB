@@ -7,7 +7,7 @@ from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
 
 from runtime import RuntimeArgs
-from runtime.callbacks import LogParamsAndGrads
+from runtime.callbacks import LogParamsAndGrads, PrintEpoch
 from runtime.utils import some, trainer_strategy, begin_timeout
 
 import workloads
@@ -60,7 +60,8 @@ def run_trial(runtime_args: RuntimeArgs):
                 log_params=runtime_args.log_extra,
                 log_quantiles=runtime_args.log_extra,
                 log_every_n_steps=100  # maybe add arg for this?
-            )
+            ),
+            PrintEpoch(runtime_args.silent)  # TODO: verbosity level
         ],
         devices=devices,
         strategy=trainer_strategy(devices),
