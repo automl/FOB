@@ -145,10 +145,11 @@ class WMTModel(WorkloadModel):
 
     def get_specs(self) -> RuntimeSpecs:
         epochs = 12
+        devices = 4
         return RuntimeSpecs(
             max_epochs=epochs,
-            max_steps=math.ceil(self.train_data_len / self.batch_size * epochs),
-            devices=4,
+            max_steps=math.ceil(self.train_data_len / self.batch_size / devices * epochs),
+            devices=devices,
             target_metric="val_loss",
             target_metric_mode="max"
         )
