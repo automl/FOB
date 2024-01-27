@@ -151,5 +151,5 @@ class WMTModel(WorkloadModel):
             max_steps=math.ceil(self.train_data_len / self.batch_size / devices) * epochs,
             devices=devices,
             target_metric="val_loss",
-            target_metric_mode="max"
+            target_metric_mode="min"
         )
