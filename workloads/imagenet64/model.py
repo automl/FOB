@@ -53,7 +53,7 @@ class ImagenetModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=40,
-            max_steps=400_400,
+            max_steps=100_120,
             devices=4,
             target_metric="val_top5_err",
             target_metric_mode="min"
