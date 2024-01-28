@@ -15,7 +15,8 @@ class PrintEpoch(Callback):
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule):
         # TODO: better logging (with time spent on epoch and stuff)
         if self.active:
-            print(f"Finished training epoch {trainer.current_epoch} of {trainer.max_epochs}.")
+            max_epochs = pl_module.get_specs().max_epochs
+            print(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
 
 
 class LogParamsAndGrads(Callback):
