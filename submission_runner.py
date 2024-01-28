@@ -66,14 +66,14 @@ def run_trial(runtime_args: RuntimeArgs):
         devices=devices,
         strategy=trainer_strategy(devices),
         enable_progress_bar=(not runtime_args.silent),
-        deterministic=True,
+        deterministic="warn",
         precision="bf16-mixed"
     )
     tester = Trainer(
         callbacks=[*(workload.get_callbacks())],
         devices=1,
         enable_progress_bar=(not runtime_args.silent),
-        deterministic=True,
+        deterministic="warn",
         precision="bf16-mixed"
     )
     if runtime_args.test_only:
