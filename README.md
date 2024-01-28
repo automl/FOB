@@ -40,7 +40,8 @@ We try to cover a large range of deep learning tasks in this benchmark.
  
 | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
-| [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Validation Accuracy | 0.74 | 10 min | 1 gpu |
+| [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Top-1 Accuracy | 0.74 | 10 min | 1 gpu |
+| [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [DaViT](https://arxiv.org/abs/2204.03645) | Image classification | Top-1 Accuracy | 0.57 | 5h | 4 gpu |
 | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Average Precision (IoU) | 0.26 | 4h | 1 gpu |
 | WMT17(de-en) | transformer | machine translation | cross-entropy loss / BLEU score | ? | 4h | 4 gpus |
