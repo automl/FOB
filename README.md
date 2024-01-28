@@ -43,7 +43,7 @@ We try to cover a large range of deep learning tasks in this benchmark.
 | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Validation Accuracy | 0.74 | 10 min | 1 gpu |
 | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Average Precision (IoU) | 0.26 | 4h | 1 gpu |
-| WMT | transformer | machine translation | cross-entropy loss / BLEU score | ? | 18h | 2 gpus |
+| WMT17(de-en) | transformer | machine translation | cross-entropy loss / BLEU score | ? | 4h | 4 gpus |
 | openwebtext | transformer | unsupervised pretraining | ? | ? | ? | ? |
 | librispeech | conformer | speech recognition | ? | ? | ? | ? |
 | OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
