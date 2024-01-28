@@ -118,7 +118,7 @@ class SegmentationModel(WorkloadModel):
     def get_specs(self) -> RuntimeSpecs:
         return RuntimeSpecs(
             max_epochs=32,
-            max_steps=40_416,
+            max_steps=10_112,
             devices=4,
             target_metric="val_mean_accuracy",
             target_metric_mode="max"
