@@ -1,5 +1,4 @@
 import argparse
-import json
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -8,7 +7,7 @@ import torch
 
 from runtime import RuntimeArgs
 from runtime.callbacks import LogParamsAndGrads, PrintEpoch
-from runtime.utils import some, trainer_strategy, begin_timeout
+from runtime.utils import some, trainer_strategy, begin_timeout, write_results
 
 import workloads
 from workloads import WorkloadModel, WorkloadDataModule
@@ -31,13 +30,14 @@ def run_trial(runtime_args: RuntimeArgs):
     specs.export_settings(runtime_args.output_dir)
     model_checkpoint = ModelCheckpoint(
         dirpath=runtime_args.checkpoint_dir,
+        filename="best-{epoch}-{step}",
         monitor=specs.target_metric,
-        mode=specs.target_metric_mode
+        mode=specs.target_metric_mode,
+        save_last=True
     )
     max_epochs = specs.max_epochs if specs.max_steps is None else None
     max_steps = some(specs.max_steps, default=-1)
     devices = some(runtime_args.devices, default=specs.devices)
-    n_devices = devices if isinstance(devices, int) else len(devices)
     trainer = L.Trainer(
         max_epochs=max_epochs,
         max_steps=max_steps,
@@ -66,19 +66,20 @@ def run_trial(runtime_args: RuntimeArgs):
         devices=devices,
         strategy=trainer_strategy(devices),
         enable_progress_bar=(not runtime_args.silent),
-        deterministic=True
+        deterministic=True,
+        precision="bf16-mixed"
     )
-    trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
-    final_score = trainer.test(model, datamodule=data_module)
-    best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
-    final_file = runtime_args.output_dir / "results_final_model.json"
-    best_file = runtime_args.output_dir / "results_best_model.json"
-    print(f"Writing results into\n  {final_file} and\n  {best_file} ... ", end="")
-    with open(final_file, "w", encoding="utf8") as f:
-        json.dump(final_score, f, indent=4)
-    with open(best_file, "w", encoding="utf8") as f:
-        json.dump(best_score, f, indent=4)
-    print("finished writing results in json!\n")
+    if runtime_args.test_only:
+        ckpt_path = runtime_args.resume
+        mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"
+        score = trainer.test(model, datamodule=data_module, ckpt_path=ckpt_path)
+        write_results(score, runtime_args.output_dir / f"results_{mode}_model.json")
+    else:
+        trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
+        final_score = trainer.test(model, datamodule=data_module)
+        best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
+        write_results(final_score, runtime_args.output_dir / "results_final_model.json")
+        write_results(best_score, runtime_args.output_dir / "results_best_model.json")
 
 
 def main(args: argparse.Namespace):
@@ -128,5 +129,7 @@ if __name__ == "__main__":
                         help="log training behavior like gradients etc")
     parser.add_argument("--send_timeout", action="store_true",
                         help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
+    parser.add_argument("--test_only", action="store_true",
+                        help="Skip training and only evaluate the model (provide checkpoint with the '--resume' arg).")
     args = parser.parse_args()
     main(args)

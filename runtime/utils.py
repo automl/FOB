@@ -1,5 +1,14 @@
-import torch
+from pathlib import Path
+import json
 import signal
+import torch
+
+
+def write_results(results, filepath: Path):
+    with open(filepath, "w", encoding="utf8") as f:
+        json.dump(results, f, indent=4)
+    print(f"Saved results into {filepath}.")
+
 
 def some(*args, default):
     """

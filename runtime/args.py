@@ -38,6 +38,7 @@ class RuntimeArgs(DatasetArgs):
         self.output_dir: Path = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.checkpoint_dir: Path = self.output_dir / "checkpoints"
+        self.test_only = args.test_only
         default_hparam_path = submission_path(self.submission_name) / "hyperparameters.json"
         hparam_path = some(args.hyperparameters, default=default_hparam_path)
         self.hyperparameter_path: Path
