@@ -174,6 +174,10 @@ def create_figure(workload_paths: List[Path]):
         lower_is_better = stats[0]["target_metric_mode"] == "min"
         current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
 
+        # Pretty name for label "learning_rate" => "Learning Rate"
+        current_plot.set_xlabel(current_plot.get_xlabel().replace('_', ' ').title())
+        current_plot.set_ylabel(current_plot.get_ylabel().replace('_', ' ').title())
+
         if i > 0:
             # remove y_label of all but first one
             axs[i].set_ylabel('', fontsize=8, labelpad=8)
