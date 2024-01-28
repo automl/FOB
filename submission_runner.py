@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-import lightning as L
+from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
@@ -16,7 +16,7 @@ import submissions
 
 def run_trial(runtime_args: RuntimeArgs):
     torch.set_float32_matmul_precision('high')  # TODO: check if gpu has tensor cores
-    L.seed_everything(runtime_args.seed, workers=True)
+    seed_everything(runtime_args.seed, workers=True)
     runtime_args.export_settings()
     workload = workloads.import_workload(runtime_args.workload_name)
     submission = submissions.import_submission(runtime_args.submission_name)
@@ -38,7 +38,7 @@ def run_trial(runtime_args: RuntimeArgs):
     max_epochs = specs.max_epochs if specs.max_steps is None else None
     max_steps = some(specs.max_steps, default=-1)
     devices = some(runtime_args.devices, default=specs.devices)
-    trainer = L.Trainer(
+    trainer = Trainer(
         max_epochs=max_epochs,
         max_steps=max_steps,
         logger=[
@@ -69,15 +69,22 @@ def run_trial(runtime_args: RuntimeArgs):
         deterministic=True,
         precision="bf16-mixed"
     )
+    tester = Trainer(
+        callbacks=[*(workload.get_callbacks())],
+        devices=1,
+        enable_progress_bar=(not runtime_args.silent),
+        deterministic=True,
+        precision="bf16-mixed"
+    )
     if runtime_args.test_only:
         ckpt_path = runtime_args.resume
         mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"
-        score = trainer.test(model, datamodule=data_module, ckpt_path=ckpt_path)
+        score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)
         write_results(score, runtime_args.output_dir / f"results_{mode}_model.json")
     else:
         trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
-        final_score = trainer.test(model, datamodule=data_module)
-        best_score = trainer.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
+        final_score = tester.test(model, datamodule=data_module)
+        best_score = tester.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
         write_results(final_score, runtime_args.output_dir / "results_final_model.json")
         write_results(best_score, runtime_args.output_dir / "results_best_model.json")
 
