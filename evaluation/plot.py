@@ -126,7 +126,10 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
 def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     pivot_table = pd.pivot_table(dataframe, index=args.y_axis, columns=args.x_axis, values=args.metric, aggfunc='mean')
-    pivot_table = (pivot_table * 100).round(0)
+    pre, after = args.format.split(".")
+    pre = int(pre)
+    after = int(after)
+    pivot_table = (pivot_table * (10 ** pre)).round(after)
     if args.verbose:
         print(pivot_table)
     vmin = args.limits and min(args.limits)
@@ -138,7 +141,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     if lower_is_better:
         colormap_name += "_r"
     colormap = sns.color_palette(colormap_name, as_cmap=True)
-    return sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax, annot_kws={'fontsize': 8},
+    return sns.heatmap(pivot_table, annot=True, fmt=f".{after}f", ax=ax, annot_kws={'fontsize': 8},
                        cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, cmap=colormap_name)
 
 
@@ -254,6 +257,8 @@ if __name__ == "__main__":
                         help="sets the limits for the colormap, 2 ints, order does not matter")
     parser.add_argument("--scale", default=1.0, type=float,
                         help="scales *figsize* argument by this value")
+    parser.add_argument("--format", default="2.3", type=str,
+                        help="how many digits to display, expects a value seperated by a dot (e.g. 2.3): multiply by 10^2 and display 3 digits after decimal point")
     parser.add_argument("--last_instead_of_best", "-l", action="store_true",
                         help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true",
