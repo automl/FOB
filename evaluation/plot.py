@@ -16,6 +16,10 @@ RESULT_LAST_FILENAME = "results_final_model.json"
 ARGS_FILENAME = "runtime_args.json"
 SPECS_FILENAME = "runtime_specs.json"
 DEFAULT_FILE_ENDING = "png"
+WORKLOAD_TO_TITLE = {
+    "adamw_baseline": "AdamW",
+    "sgd_baseline": "SGD"
+}
 
 
 def draw_heatmap(df, ax, values, index, columns, std=False):
@@ -79,7 +83,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
                                hyperparameters_file.is_file(),
                                result_file.is_file()])
         if not all_files_exist:
-            print(f"WARNING: one or more files are missing in {path}; did your run crash? skipping this hyperparameter setting")
+            print(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting.")
             continue
 
         # reading content
@@ -183,7 +187,10 @@ def create_figure(workload_paths: List[Path]):
         # x_ticks = current_plot.axes[i].values
         # axs[i].set_xticklabels([int(tick) for tick in x_ticks ], rotation=0)
         s_name = stats[0]['submission_name']
-        axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
+        if s_name in WORKLOAD_TO_TITLE.keys():
+            axs[i].set_title(WORKLOAD_TO_TITLE[s_name])
+        else:
+            axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
     fig.tight_layout()
 
 
