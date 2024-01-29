@@ -3,5 +3,6 @@
     "one_minus_beta1": 0.1,
     "beta2": 0.999,
     "warmup_factor": 0.01,
+    "eta_min_factor": 0.01,
     "weight_decay": [0.0, 1e-4, 1e-3, 1e-2, 1e-1]
 }
