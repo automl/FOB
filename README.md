@@ -58,3 +58,28 @@ We try to cover a large range of deep learning tasks in this benchmark.
 A submission contains the deep learning training algorithm to benchmark. Each submission has its own subfolder in the `submissions` folder. It can then be selected by the name of that folder with tha `-w` flag of the `submission_runner.py` script.  
 Inside this folder you can put all the code necessary for your submission. It is required to put a `submission.py` file which contains two things. First, a class to encapsulate the submission. It must inherit from the `Submission` base class in `submissions/submissions.py` and provide a method `configure_optimizers` which returns the optimizers and LR schedulers to be used. The methods return type must adhere to the [API](https://lightning.ai/docs/pytorch/stable/api/lightning.pytorch.core.LightningModule.html#lightning.pytorch.core.LightningModule.configure_optimizers) of a `LightningModule`. Second, a function `get_submission`, which returns an instance of your submission class.  
 Have a look at the template and baseline submissions for examples of how to structure a submission.
+
+## Usage Instructions
+
+### How to run a workload on a suite of hyperparameters
+Make sure you have the conda environment set up and activated. Then run the following commands.  
+The dataset setup should be run beforehand. You can restrict the number of workers with `--workers` if you dont have a lot of cpus available (e.g. on the login node of a cluster).
+```
+python dataset_setup.py -w <WORKLOAD> -d <DATA_DIR>
+```
+Where `<DATA_DIR>` will be the folder where the data is stored.
+
+If you want to cover a search space, you need to generate the hyperparameter files.
+```
+python suite_generator.py -s <SEARCH_SPACE> -o <HYPERPARAMETER_DIR>
+```
+Where `<SEARCH_SPACE>` is a json file (as in the baseline submissions) and `<HYPERPARAMETER_DIR>` is the folder where the hyperparameter files will be stored.
+
+The command for actually running the workload is as follows (you can omit `srun` if you do not use SLURM).
+```
+srun python submission_runner.py -d <DATA_DIR> -o <OUTPUT_DIR> -w <WORKLOAD> -s <SUBMISSION> --hyperparameters <HYPERPARAMETER_DIR> --trials <TRIALS>
+```
+Where `<DATA_DIR>`, `<WORKLOAD>` and `<SUBMISSION>` and `<HYPERPARAMETER_DIR>` are the same as before, while
+- `<OUTPUT_DIR>` is the directory where the results are stored
+- `<TRIALS>` is the number of trials to run (needs to be equal to the number of hyperparameter files).
+If you want to run an array job, with one job per hyperparameter, you need to adjust the `--start_trial` and `--start_hyperparameter` flags instead.
