@@ -125,6 +125,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
 
 def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
+    # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe, index=args.y_axis, columns=args.x_axis, values=args.metric, aggfunc='mean')
     pre, after = args.format.split(".")
     pre = int(pre)
@@ -132,17 +133,25 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     pivot_table = (pivot_table * (10 ** pre)).round(after)
     if args.verbose:
         print(pivot_table)
-    vmin = args.limits and min(args.limits)
-    vmax = args.limits and max(args.limits)
+
+    # setting the COLORMAP and the RANGE of the values for the colors (legend bar)
+    vmin = args.limits and min(args.limits)  # lower limit (or None if not given)
+    vmax = args.limits and max(args.limits)  # upper limit (or None if not given)
+    colormap_name = "rocket"
+    if lower_is_better:
+        colormap_name += "_r"  # this will "inver" / "flip" the colorbar
+    colormap = sns.color_palette(colormap_name, as_cmap=True)
+
+    # FINETUNE POSITION
     # left bottom width height
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
-    colormap_name = "rocket"
-    if lower_is_better:
-        colormap_name += "_r"
-    colormap = sns.color_palette(colormap_name, as_cmap=True)
-    return sns.heatmap(pivot_table, annot=True, fmt=f".{after}f", ax=ax, annot_kws={'fontsize': 8},
-                       cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, cmap=colormap_name)
+
+    if not args.std:
+        return sns.heatmap(pivot_table, annot=True, fmt=f".{after}f", ax=ax, annot_kws={'fontsize': 8},
+                           cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, cmap=colormap_name)
+    else:
+        pass # pivot_table_std = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='std')
 
 
 def create_figure(workload_paths: List[Path]):
@@ -264,6 +273,8 @@ if __name__ == "__main__":
                         help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="include debug prints")
+    parser.add_argument("--std", action="store_true",
+                        help="include standard deviation")
 
     # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
     # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
