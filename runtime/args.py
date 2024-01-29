@@ -30,8 +30,8 @@ class RuntimeArgs(DatasetArgs):
         self.submission_name: str = args.submission
         self.resume: Optional[Path] = args.resume
         self.devices: Optional[int] = args.devices
-        self.silent = args.silent
-        self.run_index = next(self._id)
+        self.silent: bool = some(args.silent, default=False)
+        self.run_index: int = next(self._id)
         self.trial: int = args.start_trial + self.run_index
         self.log_extra = args.log_extra
         output_dir = some(args.output, default=Path.cwd() / "experiments")
@@ -40,6 +40,7 @@ class RuntimeArgs(DatasetArgs):
         self.checkpoint_dir: Path = self.output_dir / "checkpoints"
         self.test_only: bool = some(args.test_only, default=False)
         self.deterministic: bool = args.deterministic
+        self.optimize_memory: bool = some(args.optimize_memory, default=False)
         default_hparam_path = submission_path(self.submission_name) / "hyperparameters.json"
         hparam_path = some(args.hyperparameters, default=default_hparam_path)
         self.hyperparameter_path: Path

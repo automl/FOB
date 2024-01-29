@@ -85,7 +85,7 @@ def run_trial(runtime_args: RuntimeArgs):
         with torch.backends.cuda.sdp_kernel(
             enable_flash=True,
             enable_math=True,
-            enable_mem_efficient=(not runtime_args.deterministic)
+            enable_mem_efficient=(runtime_args.optimize_memory or not runtime_args.deterministic)
         ):
             trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
         final_score = tester.test(model, datamodule=data_module)
@@ -145,5 +145,7 @@ if __name__ == "__main__":
                         help="Skip training and only evaluate the model (provide checkpoint with the '--resume' arg).")
     parser.add_argument("--deterministic", type=bool, default=True,
                         help="Whether to use deterministic algorithms if possible.")
+    parser.add_argument("--optimize_memory", action="store_true",
+                        help="Use memory efficient attention, which is non-deterministic.")
     args = parser.parse_args()
     main(args)
