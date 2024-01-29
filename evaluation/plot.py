@@ -258,7 +258,8 @@ if __name__ == "__main__":
     parser.add_argument("--scale", default=1.0, type=float,
                         help="scales *figsize* argument by this value")
     parser.add_argument("--format", default="2.3", type=str,
-                        help="how many digits to display, expects a value seperated by a dot (e.g. 2.3): multiply by 10^2 and display 3 digits after decimal point")
+                        help="how many digits to display, expects a value seperated by a dot (e.g. 2.3):\
+                            multiply by 10^2 and display 3 digits after decimal point. 2.0 for percent")
     parser.add_argument("--last_instead_of_best", "-l", action="store_true",
                         help="use the final model instead of the best one for the plot")
     parser.add_argument("--verbose", "-v", action="store_true",
