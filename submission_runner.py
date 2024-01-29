@@ -66,14 +66,14 @@ def run_trial(runtime_args: RuntimeArgs):
         devices=devices,
         strategy=trainer_strategy(devices),
         enable_progress_bar=(not runtime_args.silent),
-        deterministic="warn",
+        deterministic="warn" if runtime_args.deterministic else False,
         precision="bf16-mixed"
     )
     tester = Trainer(
         callbacks=[*(workload.get_callbacks())],
         devices=1,
         enable_progress_bar=(not runtime_args.silent),
-        deterministic="warn",
+        deterministic="warn" if runtime_args.deterministic else False,
         precision="bf16-mixed"
     )
     if runtime_args.test_only:
@@ -82,7 +82,12 @@ def run_trial(runtime_args: RuntimeArgs):
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)
         write_results(score, runtime_args.output_dir / f"results_{mode}_model.json")
     else:
-        trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
+        with torch.backends.cuda.sdp_kernel(
+            enable_flash=True,
+            enable_math=True,
+            enable_mem_efficient=(not runtime_args.deterministic)
+        ):
+            trainer.fit(model, datamodule=data_module, ckpt_path=runtime_args.resume)
         final_score = tester.test(model, datamodule=data_module)
         best_score = tester.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
         write_results(final_score, runtime_args.output_dir / "results_final_model.json")
@@ -138,5 +143,7 @@ if __name__ == "__main__":
                         help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
     parser.add_argument("--test_only", action="store_true",
                         help="Skip training and only evaluate the model (provide checkpoint with the '--resume' arg).")
+    parser.add_argument("--deterministic", type=bool, default=True,
+                        help="Whether to use deterministic algorithms if possible.")
     args = parser.parse_args()
     main(args)

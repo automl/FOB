@@ -16,7 +16,7 @@ class DatasetArgs:
     def __init__(self, args: argparse.Namespace):
         self.data_dir: Path = args.data_dir
         self.workload_name: str = args.workload
-        self.workers: int = some(args.workers, default=cpu_count() - 1)
+        self.workers: int = min(16, some(args.workers, default=cpu_count() - 1))
 
 
 class RuntimeArgs(DatasetArgs):
@@ -38,7 +38,8 @@ class RuntimeArgs(DatasetArgs):
         self.output_dir: Path = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.checkpoint_dir: Path = self.output_dir / "checkpoints"
-        self.test_only = args.test_only
+        self.test_only: bool = some(args.test_only, default=False)
+        self.deterministic: bool = args.deterministic
         default_hparam_path = submission_path(self.submission_name) / "hyperparameters.json"
         hparam_path = some(args.hyperparameters, default=default_hparam_path)
         self.hyperparameter_path: Path
