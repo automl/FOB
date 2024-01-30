@@ -58,7 +58,7 @@ cd $fob_path
 
 # Running the job
 start=`date +%s`
-srun python submission_runner.py --workload=$workload --output=$output_dir --data_dir=$data_dir --submission=$submission --hyperparameters "/p/scratch/laionize/franke5/workspace/FOB/icml_related/hyperparameters/adamw_baseline/imagenet64/0.json" --workers=8 --seed $seed --trials 1 --start_trial $((first_trial + SLURM_ARRAY_TASK_ID)) --start_hyperparameter $SLURM_ARRAY_TASK_ID --silent
+srun python submission_runner.py --workload=$workload --output=$output_dir --data_dir=$data_dir --submission=$submission --hyperparameters "/p/scratch/laionize/franke5/workspace/FOB/icml_related/hyperparameters/adamw_baseline/imagenet64" --workers=8 --seed $seed --trials 1 --start_trial $((first_trial + SLURM_ARRAY_TASK_ID)) --start_hyperparameter 0 --silent
 exit_code=$?
 end=`date +%s`
 runtime=$((end-start))
