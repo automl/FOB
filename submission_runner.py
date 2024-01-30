@@ -5,7 +5,7 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
 
-from runtime import RuntimeArgs
+from runtime.args import RuntimeArgs, hyperparameters
 from runtime.callbacks import LogParamsAndGrads, PrintEpoch
 from runtime.utils import some, trainer_strategy, begin_timeout, write_results
 
@@ -22,7 +22,7 @@ def run_trial(runtime_args: RuntimeArgs):
     submission = submissions.import_submission(runtime_args.submission_name)
 
     wl: tuple[WorkloadModel, WorkloadDataModule] = workload.get_workload(
-        submission.get_submission(runtime_args),
+        submission.get_submission(runtime_args.hyperparameters),
         runtime_args
     )
     model, data_module = wl
@@ -36,7 +36,7 @@ def run_trial(runtime_args: RuntimeArgs):
         save_last=True
     )
     max_epochs = specs.max_epochs if specs.max_steps is None else None
-    max_steps = some(specs.max_steps, default=-1)
+    max_steps = some(runtime_args.max_steps, specs.max_steps, default=-1)
     devices = some(runtime_args.devices, default=specs.devices)
     trainer = Trainer(
         max_epochs=max_epochs,
@@ -117,8 +117,8 @@ if __name__ == "__main__":
                         help="where to store benchmark results, default: ./experiments")
     parser.add_argument("--workload", "-w", required=True, type=str, choices=workloads.workload_names())
     parser.add_argument("--submission", "-s", required=True, type=str, choices=submissions.submission_names())
-    parser.add_argument("--hyperparameters", type=Path,
-                        help="path to hyperparameters file or a directory of files")
+    parser.add_argument("--hyperparameters", type=hyperparameters,
+                        help="path to hyperparameters file, a directory of files or a string containing the hyperparameters.")
     parser.add_argument("--resume", "-r", type=Path,
                         help="path to checkpoint file from which to resume")
     parser.add_argument("--workers", type=int,
@@ -135,6 +135,8 @@ if __name__ == "__main__":
                         help="the strategy for choosing seeds, default: 'increment' on single hyperparameter, 'fixed' when using a search space")
     parser.add_argument("--devices", type=int,
                         help="overrides the predefined number of devices of the workload")
+    parser.add_argument("--max_steps", type=int,
+                        help="overrides the predefined number of steps of the workload")
     parser.add_argument("--silent", action="store_true",
                         help="disable progress bars")
     parser.add_argument("--log_extra", action="store_true",
