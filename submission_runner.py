@@ -36,7 +36,7 @@ def run_trial(runtime_args: RuntimeArgs):
         save_last=True
     )
     max_epochs = specs.max_epochs if specs.max_steps is None else None
-    max_steps = some(specs.max_steps, default=-1)
+    max_steps = some(runtime_args.max_steps, specs.max_steps, default=-1)
     devices = some(runtime_args.devices, default=specs.devices)
     trainer = Trainer(
         max_epochs=max_epochs,
@@ -135,6 +135,8 @@ if __name__ == "__main__":
                         help="the strategy for choosing seeds, default: 'increment' on single hyperparameter, 'fixed' when using a search space")
     parser.add_argument("--devices", type=int,
                         help="overrides the predefined number of devices of the workload")
+    parser.add_argument("--max_steps", type=int,
+                        help="overrides the predefined number of steps of the workload")
     parser.add_argument("--silent", action="store_true",
                         help="disable progress bars")
     parser.add_argument("--log_extra", action="store_true",

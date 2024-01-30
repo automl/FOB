@@ -31,6 +31,7 @@ class RuntimeArgs(DatasetArgs):
         self.submission_name: str = args.submission
         self.resume: Optional[Path] = args.resume
         self.devices: Optional[int] = args.devices
+        self.max_steps: Optional[int] = args.max_steps
         self.silent: bool = some(args.silent, default=False)
         self.run_index: int = next(self._id)
         self.trial: int = args.start_trial + self.run_index
