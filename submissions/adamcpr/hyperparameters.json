@@ -1,0 +1,13 @@
+{
+    "learning_rate": 1e-3,
+    "one_minus_beta1": 0.1,
+    "beta2": 0.999,
+    "warmup_factor": 0.01,
+    "eta_min_factor": 0.01,
+    "kappa_init_param": 1000,
+    "kappa_init_method": "warm_start",
+    "reg_function": "l2",
+    "kappa_adapt": false,
+    "kappa_update": 1.0,
+    "apply_lr": false
+}
