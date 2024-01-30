@@ -27,6 +27,8 @@ ml Python/3.11.3
 source /p/scratch/laionize/franke5/pt21r/bin/activate
 
 
+
+
 rsync -auv --progress --exclude *dict.pt --exclude *.ckpt -e 'ssh -A  frankej@aadlogin.informatik.uni-freiburg.de ssh -A franke5@judac.fz-juelich.de' :/p/scratch/laionize/franke5/experiments/fob/* ~/workspace/experiments/ICML2024/fob/
 
 tensorboard --logdir /home/joerg/workspace/experiments/ICML2024/fob/ --port 6051
