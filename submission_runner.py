@@ -67,14 +67,14 @@ def run_trial(runtime_args: RuntimeArgs):
         strategy=trainer_strategy(devices),
         enable_progress_bar=(not runtime_args.silent),
         deterministic="warn" if runtime_args.deterministic else False,
-        precision="bf16-mixed"
+        precision="bf16-true"
     )
     tester = Trainer(
         callbacks=[*(workload.get_callbacks())],
         devices=1,
         enable_progress_bar=(not runtime_args.silent),
         deterministic="warn" if runtime_args.deterministic else False,
-        precision="bf16-mixed"
+        precision="bf16-true"
     )
     if runtime_args.test_only:
         ckpt_path = runtime_args.resume
