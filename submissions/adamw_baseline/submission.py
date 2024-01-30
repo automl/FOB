@@ -1,17 +1,17 @@
 import math
+from typing import Any
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
-from runtime import RuntimeArgs
 from runtime.specs import SubmissionSpecs
 from runtime.parameter_groups import GroupedModel
 
 
-def get_submission(runtime_args: RuntimeArgs) -> Submission:
-    return AdamWBaseline(runtime_args.hyperparameter_path)
+def get_submission(hyperparameters: dict[str, Any]) -> Submission:
+    return AdamWBaseline(hyperparameters)
 
 
 def cosine_warmup(

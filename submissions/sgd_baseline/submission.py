@@ -1,14 +1,14 @@
+from typing import Any
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from submissions import Submission
 from runtime.parameter_groups import GroupedModel
 from runtime.specs import SubmissionSpecs
-from runtime import RuntimeArgs
 
 
-def get_submission(runtime_args: RuntimeArgs) -> Submission:
-    return SGDBaseline(runtime_args.hyperparameter_path)
+def get_submission(hyperparameters: dict[str, Any]) -> Submission:
+    return SGDBaseline(hyperparameters)
 
 
 class SGDBaseline(Submission):
