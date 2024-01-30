@@ -34,6 +34,8 @@ rsync -auv --progress --exclude *dict.pt --exclude *.ckpt -e 'ssh -A  frankej@aa
 tensorboard --logdir /home/joerg/workspace/experiments/ICML2024/fob/ --port 6051
 
 
+
+
 Dataset setup:
 ```
 python dataset_setup.py -w imagenet64 -d /p/fastdata/mmlaion/franke5/model/cache/fob
