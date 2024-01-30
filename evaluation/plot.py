@@ -23,7 +23,7 @@ WORKLOAD_TO_TITLE = {
 
 
 def get_available_trials(dirname: Path, depth: int = 1):
-    """finds all trials in the subfolder"""
+    """finds the path for all trials in the *dirname* directory"""
     # RECURSIVELY FIND ALL DIRS IN DIRNAME (up to depth)
     subdirs: list[Path] = [dirname]
     all_results_must_be_same_depth = True
@@ -36,8 +36,9 @@ def get_available_trials(dirname: Path, depth: int = 1):
         else:
             for subdir in subdirs:
                 subdirs += [x for x in subdir.iterdir() if x.is_dir()]
-    format_string = "\n  "
+
     if args.verbose:
+        format_string = "\n  "
         print(f"found the following directories:{format_string}{format_string.join(str(i) for i in subdirs)}.")
 
     def is_trial(path: Path):
@@ -169,10 +170,10 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
                            vmin=vmin, vmax=vmax, cmap=colormap_name)
 
 
-def create_figure(workload_paths: List[Path]):
+def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
     """Takes a list of workloads Paths (submission + workload)
     and plots them together in one figure side by side"""
-    num_subfigures: int = len(workload_paths)
+    num_subfigures: int = len(dataframe_list)
 
     # Create a 1x2 subplot layout
     n_rows = 1
@@ -196,13 +197,12 @@ def create_figure(workload_paths: List[Path]):
     # create list of subfigures
     # for each create a matrix plot
     for i in range(num_subfigures):
-        depth = args.depth
-        available_trials = get_available_trials(workload_paths[i], depth)
-        dataframe, stats = dataframe_from_trials(available_trials)
-        if args.csv:
-            here = Path(__file__).parent.resolve()
-            dataframe.to_csv(path_or_buf=here / "data.csv")
-        lower_is_better = stats[0]["target_metric_mode"] == "min"
+        dataframe, stats = dataframe_list[i], stats_list[i]
+        some_stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
+        s_name = some_stat_entry['submission_name']
+        s_target_metric_mode = some_stat_entry["target_metric_mode"]
+        lower_is_better = s_target_metric_mode == "min"
+
         current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
@@ -221,12 +221,26 @@ def create_figure(workload_paths: List[Path]):
         # axs[i].set_yticklabels(['1e-4.0', '1e-3.5','1e-3.0','1e-2.5','1e-2.0','1e-1.5','1e-1.0'])
         # x_ticks = current_plot.axes[i].values
         # axs[i].set_xticklabels([int(tick) for tick in x_ticks ], rotation=0)
-        s_name = stats[0]['submission_name']
+
         if s_name in WORKLOAD_TO_TITLE.keys():
             axs[i].set_title(WORKLOAD_TO_TITLE[s_name])
         else:
             axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
     fig.tight_layout()
+
+
+def extract_dataframes(workload_paths: List[Path], depth: int = 1) -> tuple[list[pd.DataFrame], list[dict]]:
+    df_list: list[pd.DataFrame] = []
+    stats_list: list[dict] = []
+    num_dataframes: int = len(workload_paths)
+
+    for i in range(num_dataframes):
+        available_trials = get_available_trials(workload_paths[i], depth)
+        dataframe, stats = dataframe_from_trials(available_trials)
+        df_list.append(dataframe)
+        stats_list.append(stats)
+
+    return df_list, stats_list
 
 
 def plotstyle():
@@ -249,17 +263,25 @@ def main(args: argparse.Namespace):
         print(f"{workflow.name=}")
         print(f"{submission.name=}")
     file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
-    output_filename = f"heatmap-{submission.name}-{workflow.name}.{file_type}"
+    output_filename = f"{submission.name}-{workflow.name}"
+    plot_output_filename = f"heatmap-{output_filename}.{file_type}"
+
     output_filename = here / output_filename
     if args.output:
         output_filename = args.output
 
     plotstyle()
 
-    create_figure(workloads)
+    dfs, stats = extract_dataframes(workloads, depth=args.depth)
+    create_figure(dfs, stats)
+
+    if args.csv:
+        for i, df in enumerate(dfs):
+            csv_output_filename = f"{output_filename}-{i}.csv"
+            df.to_csv(path_or_buf=csv_output_filename)
     if args.verbose:
-        print(f"saving figure as {output_filename}")
-    plt.savefig(output_filename)
+        print(f"saving figure as {plot_output_filename}")
+    plt.savefig(plot_output_filename)
 
 
 if __name__ == "__main__":
