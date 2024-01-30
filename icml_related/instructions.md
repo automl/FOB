@@ -3,11 +3,9 @@ Assumes you have a conda environment with python >= 3.10
 ```bash
 git clone git@github.com:automl-private/FOB.git
 cd FOB
-git checkout dev
+git checkout ICML_experiment
 pip install -r requirements.txt
 pip install pytorch_cpr
-mkdir submissions/adamcpr
-cp <path/to/submission.py> submissions/adamcpr/submission.py
 
 ```
 cache dir: /p/fastdata/mmlaion/franke5/model/cache/fob
@@ -46,3 +44,5 @@ Where
 - `<SEED>` is different from 42
 
 Make sure to match the SLURM array range to the number of hyperparameters.
+
+The default `max_steps` is `50080` for 80 epochs on 4 gpus. You can adjust the number of gpus with the `--devices` flag and the number of steps with `--max_steps`. So to train 80 epochs on 1 gpu, set `--devices=1 --max_steps=200240`.
