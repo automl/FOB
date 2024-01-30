@@ -1,25 +1,51 @@
-# folder structure of results
+# Plotting
 
-outputdir
-    - <submission> (e.g. adamw)
-        - <workloads> (e.g. mnist)
-            - <trial_nr>
+In the sample-data directory you can see which files are expected for creating plots.
 
-in the trial dir one can find a file for results and hyperparameter;  
-aggregate over the seeds and hyperparameter found to create the matrix plot
+Usually it is enough to call the plotting script with a path those results
 
+```python plot.py -d sample-data/test-submission/test-workload/```
 
-# example image
+The script will (often succesfully) try to infer as many options as possible automatically from the given information. If it has to extrapolate information it will return a warning. 
+for additional functionality see below and refer to
+```python plot.py --help``` to see how to give the information if it cannot be inferred correctly.
 
-It should look somethine like this
-![Alt text](image.png)
+# Usage Examples
 
-python path_to_workload_of_submission_1 path_to_workload_of_submission_2
-
-# Usage
+the following will create a plot for all the trials of *sgd_baseline* on *cora* (all the trials in that directory), by default output will be placed in this directory
 
 ```
 python plot.py -d $(ws_find bigdata)/experiments/sgd_baseline/cora 
 ```
 
-this will create a plot for all the trials of *sgd_baseline* on *cora* (all the trials in that directory), by default output will be placed in this directory
+-------------------------
+
+The ```--depth``` flag can be used when your trials are not in the same directory. If they are organized as they are in the ```sorted_folder_example``` the search for trials can be set to a depth of 2 
+```
+python plot.py -d sample-data/example_submission/sorted_folder_example/ --depth 2
+```
+
+-------------------------
+
+The ```--csv``` flag will create a file with the raw data
+
+```
+python plot.py -d sample-data/example_submission/ --csv
+```
+
+-------------------------
+
+The ```--format``` flag changes the *precision* of the displayed result. default is ```2.3``` where the 2 changes the result to % and the number after the *dot* are the decimal places to display.
+e.g. ```0.5``` will show the same digits but as accuracy instead of %
+
+```
+python plot.py -d sample-data/example_submission/ --format 0.5
+```
+
+-------------------------
+
+The ```--std``` flag will add the standard deviation to the plot.
+
+```
+python plot.py -d sample-data/example_submission/ --std
+```

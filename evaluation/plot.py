@@ -22,30 +22,20 @@ WORKLOAD_TO_TITLE = {
 }
 
 
-def draw_heatmap(df, ax, values, index, columns, std=False):
-    pivot_table = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='mean')
-    pivot_table = pivot_table * 100
-    pivot_table = pivot_table.round(0)
-    if not std:
-        sns.heatmap(pivot_table, annot=True, fmt=".0f", ax=ax,
-                    annot_kws={'fontsize': 8}, cbar_ax=cbar_ax, vmin=60, vmax=80)
-    else:
-        pivot_table_std = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='std')
-        pivot_table_std = pivot_table_std * 100
-        annot_matrix = pivot_table.copy()
-        for i in pivot_table.index:
-            for j in pivot_table.columns:
-                mean = pivot_table.loc[i, j]
-                std = pivot_table_std.loc[i, j]
-                annot_matrix.loc[i, j] = f"{mean:.1f}\n±{std:.2f}"
-        sns.heatmap(pivot_table, annot=annot_matrix, fmt="",
-                    annot_kws={'fontsize': 5}, ax=ax, cbar_ax=cbar_ax, vmin=60, vmax=80)
-    return pivot_table
-
-
-def get_available_trials(dirname: Path):
+def get_available_trials(dirname: Path, depth: int = 1):
     """finds all trials in the subfolder"""
-    subdirs = [x for x in dirname.iterdir() if x.is_dir()]
+    # RECURSIVELY FIND ALL DIRS IN DIRNAME (up to depth)
+    subdirs: list[Path] = [dirname]
+    all_results_must_be_same_depth = True
+    for _ in range(depth):
+        if all_results_must_be_same_depth:
+            new_subdirs: list[Path] = []
+            for subdir in subdirs:
+                new_subdirs += [x for x in subdir.iterdir() if x.is_dir()]
+            subdirs = new_subdirs
+        else:
+            for subdir in subdirs:
+                subdirs += [x for x in subdir.iterdir() if x.is_dir()]
     format_string = "\n  "
     if args.verbose:
         print(f"found the following directories:{format_string}{format_string.join(str(i) for i in subdirs)}.")
@@ -64,7 +54,8 @@ def get_available_trials(dirname: Path):
 
 
 def dataframe_from_trials(trial_dir_paths: List[Path]):
-    """takes result from get_available_trials and packs them in a dataframe"""
+    """takes result from get_available_trials and packs them in a dataframe,
+    does not filter duplicate hyperparameter settings."""
     dfs: List[pd.DataFrame] = []
     stats: list[dict] = []
 
@@ -126,11 +117,13 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
 def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     # create pivot table and format the score result
-    pivot_table = pd.pivot_table(dataframe, index=args.y_axis, columns=args.x_axis, values=args.metric, aggfunc='mean')
-    pre, after = args.format.split(".")
-    pre = int(pre)
-    after = int(after)
-    pivot_table = (pivot_table * (10 ** pre)).round(after)
+    pivot_table = pd.pivot_table(dataframe,
+                                 columns=args.x_axis, index=args.y_axis, values=args.metric,
+                                 aggfunc='mean')
+    value_exp_factor, decimal_points = args.format.split(".")
+    value_exp_factor = int(value_exp_factor)
+    decimal_points = int(decimal_points)
+    pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
     if args.verbose:
         print(pivot_table)
 
@@ -148,10 +141,32 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     cbar_ax = None
 
     if not args.std:
-        return sns.heatmap(pivot_table, annot=True, fmt=f".{after}f", ax=ax, annot_kws={'fontsize': 8},
-                           cbar_ax=cbar_ax, vmin=vmin, vmax=vmax, cmap=colormap_name)
+        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
+                           annot=True, fmt=f".{decimal_points}f", annot_kws={'fontsize': 8},
+                           vmin=vmin, vmax=vmax, cmap=colormap_name)
     else:
-        pass # pivot_table_std = pd.pivot_table(df, values=values, index=index, columns=columns, aggfunc='std')
+        # PRECISION TO DISPLAY
+        std_decimal_points = 2
+        mean_decimal_points = 1
+        # TODO overwrite with user args if given
+        # fmt = f".{decimal_points}f"
+
+        # BUILD STD TABLE
+        pivot_table_std = pd.pivot_table(dataframe,
+                                         columns=args.x_axis, index=args.y_axis, values=args.metric,
+                                         aggfunc='std')
+        pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
+        annot_matrix = pivot_table.copy()
+        for i in pivot_table.index:
+            for j in pivot_table.columns:
+                mean = pivot_table.loc[i, j]
+                std = pivot_table_std.loc[i, j]
+                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}\n±({round(std, std_decimal_points)})"
+
+        fmt = ""  # cannot format like before, as we do not only have a number
+        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
+                           annot=annot_matrix, fmt=fmt, annot_kws={'fontsize': 5},
+                           vmin=vmin, vmax=vmax, cmap=colormap_name)
 
 
 def create_figure(workload_paths: List[Path]):
@@ -181,8 +196,12 @@ def create_figure(workload_paths: List[Path]):
     # create list of subfigures
     # for each create a matrix plot
     for i in range(num_subfigures):
-        available_trials = get_available_trials(workload_paths[i])
+        depth = args.depth
+        available_trials = get_available_trials(workload_paths[i], depth)
         dataframe, stats = dataframe_from_trials(available_trials)
+        if args.csv:
+            here = Path(__file__).parent.resolve()
+            dataframe.to_csv(path_or_buf=here / "data.csv")
         lower_is_better = stats[0]["target_metric_mode"] == "min"
         current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
 
@@ -252,6 +271,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a heatmap plot of benchmarking results.")
     parser.add_argument("--trials_dirs", "-d", default=trials_dirs_default, required=False, nargs='+', type=Path,
                         help="Path to the experiment files (data to plot)")
+    parser.add_argument("--depth", default=1, type=int,
+                        help="the depth of the trial dirs relative to the given trial_dirs")
     parser.add_argument("--metric", "-m", default="test_acc", required=False, type=str,
                         help="name of metric that should be extracted from result json.")
     parser.add_argument("--x_axis", "-x", required=False, type=str, default="weight_decay",
@@ -275,6 +296,8 @@ if __name__ == "__main__":
                         help="include debug prints")
     parser.add_argument("--std", action="store_true",
                         help="include standard deviation")
+    parser.add_argument("--csv", action="store_true",
+                        help="additionaly save data as csv")
 
     # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
     # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
