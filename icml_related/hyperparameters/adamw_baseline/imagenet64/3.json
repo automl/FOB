@@ -1,0 +1,8 @@
+{
+    "weight_decay": 1.0,
+    "learning_rate": 0.001,
+    "one_minus_beta1": 0.1,
+    "beta2": 0.999,
+    "warmup_factor": 0.01,
+    "eta_min_factor": 0.01
+}

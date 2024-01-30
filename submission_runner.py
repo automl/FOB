@@ -15,7 +15,7 @@ import submissions
 
 
 def run_trial(runtime_args: RuntimeArgs):
-    torch.set_float32_matmul_precision('high')  # TODO: check if gpu has tensor cores
+    torch.set_float32_matmul_precision('medium')  # TODO: check if gpu has tensor cores
     seed_everything(runtime_args.seed, workers=True)
     runtime_args.export_settings()
     workload = workloads.import_workload(runtime_args.workload_name)
