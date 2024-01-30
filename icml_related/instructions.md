@@ -12,7 +12,7 @@ cp <path/to/submission.py> submissions/adamcpr/submission.py
 ```
 cache dir: /p/fastdata/mmlaion/franke5/model/cache/fob
 
-cd /p/scratch/laionize/franke5/workspace/ICML2024_experiments
+cd /p/scratch/laionize/franke5/workspace/FOB
 
 ml Stages/2024
 ml CUDA/12
@@ -25,6 +25,11 @@ ml CUDA/12
 ml GCC/12.3.0
 ml Python/3.11.3
 source /p/scratch/laionize/franke5/pt21r/bin/activate
+
+
+rsync -auv --progress --exclude *dict.pt --exclude *.ckpt -e 'ssh -A  frankej@aadlogin.informatik.uni-freiburg.de ssh -A franke5@judac.fz-juelich.de' :/p/scratch/laionize/franke5/experiments/fob/* ~/workspace/experiments/ICML2024/fob/
+
+tensorboard --logdir /home/joerg/workspace/experiments/ICML2024/fob/ --port 6051
 
 
 Dataset setup:
