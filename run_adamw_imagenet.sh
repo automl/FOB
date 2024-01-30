@@ -8,7 +8,7 @@
 #SBATCH --output=/p/scratch/laionize/franke5/experiments/output/mpi-out.%j
 #SBATCH --error=/p/scratch/laionize/franke5/experiments/error/mpi-err.%j
 #SBATCH --time=6:00:00  # 6 TODO
-#SBATCH --partition=dc-gpu #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
+#SBATCH --partition=booster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
 #SBATCH --job-name=fob
 #SBATCH --array=0-3
 
@@ -49,8 +49,8 @@ export OMP_NUM_THREADS=${SLURM_NTASKS}
 #first_trial=0
 #seed=43
 
-first_trial=4
-seed=44
+first_trial=8
+seed=45
 
 fob_path="/p/scratch/laionize/franke5/workspace/FOB"
 workload="imagenet64"
