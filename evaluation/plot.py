@@ -274,7 +274,7 @@ def save_csv(do_save: bool, dfs: list[pd.DataFrame], output_filename: str, verbo
         csv_output_filename = f"{output_filename}-{i}.csv"
         if verbose:
             print(f"saving raw data as {csv_output_filename}")
-        df.to_csv(path_or_buf=csv_output_filename)
+        df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
 def save_plot(fig, axs, output_filename: str, file_type: str):
