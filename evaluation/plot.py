@@ -227,6 +227,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
         else:
             axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
     fig.tight_layout()
+    return fig, axs
 
 
 def extract_dataframes(workload_paths: List[Path], depth: int = 1) -> tuple[list[pd.DataFrame], list[dict]]:
@@ -243,10 +244,44 @@ def extract_dataframes(workload_paths: List[Path], depth: int = 1) -> tuple[list
     return df_list, stats_list
 
 
-def plotstyle():
+def get_output_filename(workloads: list[Path]) -> tuple[str, str]:
+    some_workload = workloads[0]
+    # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
+    # we could also get this info out of args_file, but i only realized this after coding the directory extracting
+    workload = Path(some_workload).resolve()
+    submission = Path(workload).parent
+    if args.verbose:
+        print(f"{workload.name=}")
+        print(f"{submission.name=}")
+    file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
+    output_filename = f"{submission.name}-{workload.name}"
+    output_filename = here / output_filename
+    if args.output:
+        output_filename = args.output
+    return output_filename, file_type
+
+
+def set_plotstyle():
     plt.rcParams["text.usetex"] = True
     plt.rcParams["font.family"] = "serif"  # You can adjust the font family as needed
     plt.rcParams["font.size"] = 8  # Adjust the font size as needed
+
+
+def save_csv(do_save: bool, dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
+    if not do_save:
+        return
+    for i, df in enumerate(dfs):
+        csv_output_filename = f"{output_filename}-{i}.csv"
+        if verbose:
+            print(f"saving raw data as {csv_output_filename}")
+        df.to_csv(path_or_buf=csv_output_filename)
+
+
+def save_plot(fig, axs, output_filename: str, file_type: str):
+    plot_output_filename = f"{output_filename}-heatmap.{file_type}"
+    if args.verbose:
+        print(f"saving figure as {plot_output_filename}")
+    plt.savefig(plot_output_filename)
 
 
 def main(args: argparse.Namespace):
@@ -254,34 +289,15 @@ def main(args: argparse.Namespace):
     if args.verbose:
         print(f"{workloads}=")
 
-    # name for outputfile
-    # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
-    # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    workflow = Path(workloads[0]).resolve()
-    submission = Path(workflow).parent
-    if args.verbose:
-        print(f"{workflow.name=}")
-        print(f"{submission.name=}")
-    file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
-    output_filename = f"{submission.name}-{workflow.name}"
-    plot_output_filename = f"heatmap-{output_filename}.{file_type}"
+    output_filename, file_type = get_output_filename(workloads)
 
-    output_filename = here / output_filename
-    if args.output:
-        output_filename = args.output
-
-    plotstyle()
+    set_plotstyle()
 
     dfs, stats = extract_dataframes(workloads, depth=args.depth)
-    create_figure(dfs, stats)
+    fig, axs = create_figure(dfs, stats)
 
-    if args.csv:
-        for i, df in enumerate(dfs):
-            csv_output_filename = f"{output_filename}-{i}.csv"
-            df.to_csv(path_or_buf=csv_output_filename)
-    if args.verbose:
-        print(f"saving figure as {plot_output_filename}")
-    plt.savefig(plot_output_filename)
+    save_csv(args.csv, dfs, output_filename, args.verbose)
+    save_plot(fig, axs, output_filename, file_type)
 
 
 if __name__ == "__main__":
