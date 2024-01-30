@@ -5,7 +5,7 @@ from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
 
-from runtime import RuntimeArgs
+from runtime.args import RuntimeArgs, hyperparameters
 from runtime.callbacks import LogParamsAndGrads, PrintEpoch
 from runtime.utils import some, trainer_strategy, begin_timeout, write_results
 
@@ -22,7 +22,7 @@ def run_trial(runtime_args: RuntimeArgs):
     submission = submissions.import_submission(runtime_args.submission_name)
 
     wl: tuple[WorkloadModel, WorkloadDataModule] = workload.get_workload(
-        submission.get_submission(runtime_args),
+        submission.get_submission(runtime_args.hyperparameters),
         runtime_args
     )
     model, data_module = wl
@@ -117,8 +117,8 @@ if __name__ == "__main__":
                         help="where to store benchmark results, default: ./experiments")
     parser.add_argument("--workload", "-w", required=True, type=str, choices=workloads.workload_names())
     parser.add_argument("--submission", "-s", required=True, type=str, choices=submissions.submission_names())
-    parser.add_argument("--hyperparameters", type=Path,
-                        help="path to hyperparameters file or a directory of files")
+    parser.add_argument("--hyperparameters", type=hyperparameters,
+                        help="path to hyperparameters file, a directory of files or a string containing the hyperparameters.")
     parser.add_argument("--resume", "-r", type=Path,
                         help="path to checkpoint file from which to resume")
     parser.add_argument("--workers", type=int,
