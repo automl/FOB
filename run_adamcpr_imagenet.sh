@@ -10,7 +10,7 @@
 #SBATCH --time=1:00:00  # 6 TODO
 #SBATCH --partition=develbooster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
 #SBATCH --job-name=fob
-
+#SBATCH --array=0-2
 
 export NCCL_IB_TIMEOUT=50
 export UCX_RC_TIMEOUT=4s
@@ -48,6 +48,10 @@ export OMP_NUM_THREADS=${SLURM_NTASKS}
 # set these variables to select which experiment to run
 first_trial=0
 seed=43
+
+#first_trial=3
+#seed=44
+
 fob_path="/p/scratch/laionize/franke5/workspace/FOB"
 workload="imagenet64"
 data_dir="/p/fastdata/mmlaion/franke5/model/cache/fob"
