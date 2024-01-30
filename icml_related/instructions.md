@@ -10,9 +10,22 @@ mkdir submissions/adamcpr
 cp <path/to/submission.py> submissions/adamcpr/submission.py
 
 ```
-
-
 cache dir: /p/fastdata/mmlaion/franke5/model/cache/fob
+
+cd /p/scratch/laionize/franke5/workspace/ICML2024_experiments
+
+ml Stages/2024
+ml CUDA/12
+ml GCC/12.3.0
+ml Python/3.11.3
+source /p/scratch/laionize/franke5/pt21/bin/activate
+
+ml Stages/2024
+ml CUDA/12
+ml GCC/12.3.0
+ml Python/3.11.3
+source /p/scratch/laionize/franke5/pt21r/bin/activate
+
 
 Dataset setup:
 ```
