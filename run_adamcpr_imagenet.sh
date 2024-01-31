@@ -49,8 +49,8 @@ export OMP_NUM_THREADS=${SLURM_NTASKS}
 #first_trial=0
 #seed=43
 
-first_trial=0
-seed=1
+first_trial=3
+seed=2
 
 fob_path="/p/scratch/laionize/franke5/workspace/FOB"
 workload="imagenet64"
