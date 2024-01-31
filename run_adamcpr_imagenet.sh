@@ -40,7 +40,7 @@ ml CUDA/12
 ml GCC/12.3.0
 ml Python/3.11.3
 
-source /p/scratch/laionize/franke5/pt21/bin/activate
+source /p/scratch/laionize/franke5/pt21r/bin/activate
 
 export OMP_NUM_THREADS=${SLURM_NTASKS}
 
