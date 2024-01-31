@@ -10,7 +10,7 @@
 #SBATCH --time=6:00:00  # 6 TODO
 #SBATCH --partition=booster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
 #SBATCH --job-name=fob
-#SBATCH --array=0-3
+#SBATCH --array=0-2
 
 export NCCL_IB_TIMEOUT=50
 export UCX_RC_TIMEOUT=4s
