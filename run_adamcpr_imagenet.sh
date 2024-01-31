@@ -8,7 +8,7 @@
 #SBATCH --output=/p/scratch/laionize/franke5/experiments/output/mpi-out.%j
 #SBATCH --error=/p/scratch/laionize/franke5/experiments/error/mpi-err.%j
 #SBATCH --time=1:00:00  # 6 TODO
-#SBATCH --partition=develbooster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
+#SBATCH --partition=dc-gpu-devel #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
 #SBATCH --job-name=fob
 ###SBATCH --array=0-2
 
