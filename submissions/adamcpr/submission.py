@@ -7,12 +7,13 @@ from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pytorch_cpr import CPR, cpr_group_named_parameters
 from submissions import Submission
+from runtime import RuntimeArgs
 from runtime.specs import SubmissionSpecs
 from runtime.parameter_groups import GroupedModel, intersect_parameter_dicts
 
 
-def get_submission(hyperparameters: dict[str, Any]) -> Submission:
-    return AdamCPR(hyperparameters)
+def get_submission(runtime_args: RuntimeArgs) -> Submission:
+    return AdamCPR(runtime_args.hyperparameter_path)
 
 
 def warmup_steps(total_steps: int, warmup_factor: float) -> int:

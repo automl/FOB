@@ -1,9 +1,10 @@
 # generates hyperparameter based on a grid search-space
 
 import argparse
+import json
 from pathlib import Path
 import sys
-from runtime.grid_search import write_hyperparameter
+import runtime.grid_search
 
 
 def main(args):
@@ -13,7 +14,7 @@ def main(args):
         print("Search space is not a file!", file=sys.stderr)
         sys.exit(27)
     output_dir.mkdir(parents=True, exist_ok=True)
-    write_hyperparameter(search_space, output_dir)
+    runtime.grid_search.write_hyperparameter(search_space, output_dir)
 
 
 if __name__ == "__main__":

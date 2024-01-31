@@ -7,10 +7,10 @@
 #SBATCH --gres=gpu:4
 #SBATCH --output=/p/scratch/laionize/franke5/experiments/output/mpi-out.%j
 #SBATCH --error=/p/scratch/laionize/franke5/experiments/error/mpi-err.%j
-#SBATCH --time=6:00:00  # 6 TODO
-#SBATCH --partition=booster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
+#SBATCH --time=1:00:00  # 6 TODO
+#SBATCH --partition=develbooster #dc-gpu  #dc-gpu #-devel #booster develbooster dc-gpu "dc-cpu-devel  # 6 TODO
 #SBATCH --job-name=fob
-#SBATCH --array=0-2
+###SBATCH --array=0-2
 
 export NCCL_IB_TIMEOUT=50
 export UCX_RC_TIMEOUT=4s
@@ -62,7 +62,8 @@ cd $fob_path
 
 # Running the job
 start=`date +%s`
-srun python submission_runner.py --workload=$workload --output=$output_dir --data_dir=$data_dir --submission=$submission --hyperparameters "/p/scratch/laionize/franke5/workspace/FOB/icml_related/hyperparameters/adamcpr/imagenet64" --workers=16 --seed $seed --trials 1 --start_trial $((first_trial + SLURM_ARRAY_TASK_ID)) --start_hyperparameter $SLURM_ARRAY_TASK_ID --silent  --devices=4 --max_steps=50000
+srun python submission_runner.py --workload=$workload --output=$output_dir --data_dir=$data_dir --submission=$submission --hyperparameters "/p/scratch/laionize/franke5/workspace/FOB/icml_related/hyperparameters/adamcpr/imagenet64" --workers=16 --seed $seed --trials 1 --start_trial $((first_trial + SLURM_ARRAY_TASK_ID)) --start_hyperparameter 0 --silent  --devices=4 --max_steps=50000
+#srun python submission_runner.py --workload=$workload --output=$output_dir --data_dir=$data_dir --submission=$submission --hyperparameters "/p/scratch/laionize/franke5/workspace/FOB/icml_related/hyperparameters/adamcpr/imagenet64" --workers=16 --seed $seed --trials 1 --start_trial $((first_trial + SLURM_ARRAY_TASK_ID)) --start_hyperparameter $SLURM_ARRAY_TASK_ID --silent  --devices=4 --max_steps=50000
 exit_code=$?
 end=`date +%s`
 runtime=$((end-start))

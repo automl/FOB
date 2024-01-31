@@ -21,11 +21,14 @@ def submission_names() -> list[str]:
 
 
 class Submission():
-    def __init__(self, hyperparameters: dict[str, Any]) -> None:
-        self.hyperparameters = hyperparameters
+    def __init__(self, hyperparameter_path: Path) -> None:
+        self.hyperparameter_path = hyperparameter_path
 
     def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
         raise NotImplementedError("Each submission must define this method themselves.")
 
     def get_hyperparameters(self) -> dict[str, Any]:
-        return self.hyperparameters
+        # TODO: random sampling from search space
+        with open(self.hyperparameter_path, "r", encoding="utf8") as fp:
+            hyperarameters = json.load(fp)
+        return hyperarameters

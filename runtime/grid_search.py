@@ -4,15 +4,9 @@ from typing import Iterator, Any
 from math import log10, floor
 
 
-def load_json(json_data: Path | str) -> dict:
-    if isinstance(json_data, Path):
-        with open(json_data, "r", encoding="utf8") as f:
-            parsed = json.load(f)
-    elif isinstance(json_data, str):
-        parsed = json.loads(json_data)
-    else:
-        return json_data
-    return parsed
+def load_json(json_path: Path | str) -> dict:
+    with open(json_path, "r", encoding="utf8") as f:
+        return json.load(f)
 
 
 def is_search_space(json_data: Path | str | dict) -> bool:
