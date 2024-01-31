@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=cstdl #cstdl laionize
+#SBATCH --account=transfernetx #cstdl laionize
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=16
