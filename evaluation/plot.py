@@ -147,17 +147,15 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
                            vmin=vmin, vmax=vmax, cmap=colormap_name)
     else:
         # PRECISION TO DISPLAY
-        std_decimal_points = 2
-        mean_decimal_points = 1
-        # TODO overwrite with user args if given
-        # fmt = f".{decimal_points}f"
+        std_decimal_points = decimal_points  # good default would be 2
+        mean_decimal_points = decimal_points  # good default would be 1
 
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
                                          columns=args.x_axis, index=args.y_axis, values=args.metric,
                                          aggfunc='std')
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
-        annot_matrix = pivot_table.copy()
+        annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
@@ -194,8 +192,6 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
-    # create list of subfigures
-    # for each create a matrix plot
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
         some_stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
@@ -213,14 +209,9 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
             # remove y_label of all but first one
             axs[i].set_ylabel('', fontsize=8, labelpad=8)
         else:
-            pass
             # TODO format parameter just as in submission name
             # axs[i].set_ylabel
-
-        # axs[i].set_xlabel('Warm start steps', fontsize=8,labelpad=3)
-        # axs[i].set_yticklabels(['1e-4.0', '1e-3.5','1e-3.0','1e-2.5','1e-2.0','1e-1.5','1e-1.0'])
-        # x_ticks = current_plot.axes[i].values
-        # axs[i].set_xticklabels([int(tick) for tick in x_ticks ], rotation=0)
+            pass
 
         if s_name in WORKLOAD_TO_TITLE.keys():
             axs[i].set_title(WORKLOAD_TO_TITLE[s_name])
