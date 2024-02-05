@@ -131,6 +131,8 @@ class WMTModel(WorkloadModel):
         self.tokenizer = data_module.tokenizer
         self.vocab_transform = data_module.vocab_transform
         self.bleu = evaluate.load("bleu", cache_dir=str(data_module.cache_dir))
+        self.metric_cache_pred: list[str] = []
+        self.metric_cache_trues: list[str] = []
         if "de" not in self.vocab_size:
             raise Exception("prepare dataset before running the model!")
         model = GroupedTransformer(Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512))
@@ -179,26 +181,34 @@ class WMTModel(WorkloadModel):
     def training_step(self, batch, batch_idx):
         return self.compute_and_log_loss(batch, "train_loss")
 
-    def compute_bleu(self, de: list[str], en_target: list[str]) -> float:
-        assert len(de) == len(en_target)
-        en_translated: list[str] = []
-        for s in de:
-            en_translated += [self.translate(s)]
-        result = self.bleu.compute(predictions=en_translated, references=[[t] for t in en_target])
+    def compute_bleu(self, en_preds: list[str], en_target: list[str]) -> float:
+        assert len(en_preds) == len(en_target)
+        result = self.bleu.compute(predictions=en_preds, references=[[t] for t in en_target])
         return result["bleu"]  # type: ignore
-
 
     def validation_step(self, batch, batch_idx):
         src, tgt, de, en = batch
         self.compute_and_log_loss((src, tgt), "val_loss")
-        bleu = self.compute_bleu(de, en)
-        self.log("val_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
+        self.metric_cache_trues += en
+        self.metric_cache_pred += [self.translate(s) for s in de]
 
     def test_step(self, batch, batch_idx):
         src, tgt, de, en = batch
         self.compute_and_log_loss((src, tgt), "test_loss")
-        bleu = self.compute_bleu(de, en)
+        self.metric_cache_trues += en
+        self.metric_cache_pred += [self.translate(s) for s in de]
+
+    def on_validation_epoch_end(self):
+        bleu = self.compute_bleu(self.metric_cache_pred, self.metric_cache_trues)
+        self.log("val_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
+        self.metric_cache_trues.clear()
+        self.metric_cache_pred.clear()
+
+    def on_test_epoch_end(self) -> None:
+        bleu = self.compute_bleu(self.metric_cache_pred, self.metric_cache_trues)
         self.log("test_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
+        self.metric_cache_trues.clear()
+        self.metric_cache_pred.clear()
 
     def compute_and_log_loss(self, batch, log_name: str):
         src, tgt = batch
