@@ -44,7 +44,6 @@ class RuntimeArgs(DatasetArgs):
         self.deterministic: bool = args.deterministic
         self.optimize_memory: bool = some(args.optimize_memory, default=False)
         self.hyperparameters: dict[str, Any]
-        self.use_bfloat = not args.no_bfloat
         from_search_space = self._resolve_hyperparameters(args.hyperparameters, args.start_hyperparameter)
         if args.seed_mode == "fixed":
             self.seed = args.seed

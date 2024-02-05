@@ -67,14 +67,14 @@ def run_trial(runtime_args: RuntimeArgs):
         strategy=trainer_strategy(devices),
         enable_progress_bar=(not runtime_args.silent),
         deterministic="warn" if runtime_args.deterministic else False,
-        precision="bf16-mixed" if runtime_args.use_bfloat else None
+        precision="bf16-mixed" if torch.cuda.is_bf16_supported() else "16-mixed"
     )
     tester = Trainer(
         callbacks=[*(workload.get_callbacks())],
         devices=1,
         enable_progress_bar=(not runtime_args.silent),
         deterministic="warn" if runtime_args.deterministic else False,
-        precision="bf16-mixed" if runtime_args.use_bfloat else None
+        precision="bf16-mixed" if torch.cuda.is_bf16_supported() else "16-mixed"
     )
     if runtime_args.test_only:
         ckpt_path = runtime_args.resume
@@ -149,7 +149,5 @@ if __name__ == "__main__":
                         help="Whether to use deterministic algorithms if possible.")
     parser.add_argument("--optimize_memory", action="store_true",
                         help="Use memory efficient attention, which is non-deterministic.")
-    parser.add_argument("--no_bfloat", action="store_true",
-                        help="Do not use bfloat16 (use if the device does not support it).")
     args = parser.parse_args()
     main(args)
