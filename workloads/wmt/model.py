@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.nn import Module, Transformer
 from torchtext.data.metrics import bleu_score
 import math
+import evaluate
 from runtime.parameter_groups import GroupedModel
 from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
@@ -129,6 +130,7 @@ class WMTModel(WorkloadModel):
         self.train_data_len = data_module.train_data_len
         self.tokenizer = data_module.tokenizer
         self.vocab_transform = data_module.vocab_transform
+        self.bleu = evaluate.load("bleu", cache_dir=str(data_module.cache_dir))
         if "de" not in self.vocab_size:
             raise Exception("prepare dataset before running the model!")
         model = GroupedTransformer(Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512))
@@ -177,23 +179,25 @@ class WMTModel(WorkloadModel):
     def training_step(self, batch, batch_idx):
         return self.compute_and_log_loss(batch, "train_loss")
 
-    def compute_bleu_mean(self, de: list[str], en_target: list[str]) -> float:
+    def compute_bleu(self, de: list[str], en_target: list[str]) -> float:
         assert len(de) == len(en_target)
-        bleu_sum = 0.0
-        for s, t in zip(de, en_target):
-            bleu_sum += bleu_score([self.translate(s)], [t])
-        return bleu_sum / len(de)
+        en_translated: list[str] = []
+        for s in de:
+            en_translated += [self.translate(s)]
+        result = self.bleu.compute(predictions=en_translated, references=[[t] for t in en_target])
+        return result["bleu"]  # type: ignore
+
 
     def validation_step(self, batch, batch_idx):
         src, tgt, de, en = batch
         self.compute_and_log_loss((src, tgt), "val_loss")
-        bleu = self.compute_bleu_mean(de, en)
+        bleu = self.compute_bleu(de, en)
         self.log("val_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
 
     def test_step(self, batch, batch_idx):
         src, tgt, de, en = batch
         self.compute_and_log_loss((src, tgt), "test_loss")
-        bleu = self.compute_bleu_mean(de, en)
+        bleu = self.compute_bleu(de, en)
         self.log("test_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
 
     def compute_and_log_loss(self, batch, log_name: str):
