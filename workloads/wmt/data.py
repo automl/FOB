@@ -2,6 +2,7 @@ from typing import Any, Iterable, Iterator
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torchtext.data.utils import get_tokenizer
+from torch.utils.data import DataLoader
 from torchtext.vocab import build_vocab_from_iterator
 from workloads import WorkloadDataModule
 from runtime import DatasetArgs
@@ -58,17 +59,22 @@ class WMTDataModule(WorkloadDataModule):
                                    cache_dir=str(self.cache_dir), trust_remote_code=True,
                                    num_proc=self.prepare_workers)
         return ds  # type: ignore
-    
-    def _prepare_data_transform(self, train_data: Dataset):
-        self.tokenizer["de"] = get_tokenizer('spacy', language='de_core_news_sm')
-        self.tokenizer["en"] = get_tokenizer('spacy', language='en_core_web_sm')
+
+    def _load_tokenizer(self):
+        if len(self.tokenizer) < 2:
+            self.tokenizer["de"] = get_tokenizer('spacy', language='de_core_news_sm')
+            self.tokenizer["en"] = get_tokenizer('spacy', language='en_core_web_sm')
+
+    def _prepare_data_transform(self, train_data: Dataset | None = None):
+        self._load_tokenizer()
         if (self.processed_data_dir / "vocabulary.pkl").exists():
             print("loading vocabulary from disk...")
             with open(self.processed_data_dir / "vocabulary.pkl", "rb") as f:
-                self.vocab_transform = pickle.load(f)
+                for k, v in pickle.load(f).items():
+                    self.vocab_transform[k] = v
                 for ln in ("de", "en"):
                     self.vocab_size[ln] = len(self.vocab_transform[ln])
-        else:
+        elif train_data is not None:
             for ln in ("de", "en"):
                 print(f"building vocabulary for {ln}...")
                 self.vocab_transform[ln] = build_vocab_from_iterator(
@@ -80,6 +86,8 @@ class WMTDataModule(WorkloadDataModule):
                 )
                 self.vocab_transform[ln].set_default_index(UNK_IDX)
                 self.vocab_size[ln] = len(self.vocab_transform[ln])
+        else:
+            raise Exception("Vocabulary not found and it should not be created!")
 
     def _yield_token(self, data_iter: Iterable, language: str) -> Iterator[str]:
         for data in tqdm(data_iter):
@@ -110,7 +118,8 @@ class WMTDataModule(WorkloadDataModule):
                     self.vocab_transform[ln],
                     tensor_transform)(data["translation"][ln])
             return res
-        ds = ds.map(transform_text, num_proc=self.prepare_workers, remove_columns="translation")
+        ds = ds.map(transform_text, num_proc=self.prepare_workers)
+        ds["train"] = ds["train"].remove_columns("translation")
 
         print("filtering sentences with too many tokens...")
         ds = ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE
@@ -134,6 +143,7 @@ class WMTDataModule(WorkloadDataModule):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
         ds = datasets.load_from_disk(str(self.processed_data_dir))
+        self._prepare_data_transform()
 
         def collate_fn(batch):
             src_batch, tgt_batch = [], []
@@ -146,6 +156,16 @@ class WMTDataModule(WorkloadDataModule):
             return src_batch, tgt_batch
         
         self.collate_fn = collate_fn
+
+        def collate_fn_validtest(batch):
+            de_text = []
+            en_text = []
+            for sample in batch:
+                de_text += [sample["translation"]["de"]]
+                en_text += [sample["translation"]["en"]]
+            return collate_fn(batch) + (de_text, en_text)
+
+        self.collate_fn_validtest = collate_fn_validtest
 
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
@@ -161,3 +181,40 @@ class WMTDataModule(WorkloadDataModule):
 
         if stage == "predict":
             self.data_predict = ds["test"]
+
+    def train_dataloader(self):
+        self.check_dataset(self.data_train)
+        return DataLoader(
+            self.data_train,
+            shuffle=True,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn
+        )
+
+    def val_dataloader(self):
+        self.check_dataset(self.data_val)
+        return DataLoader(
+            self.data_val,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn_validtest
+        )
+
+    def test_dataloader(self):
+        self.check_dataset(self.data_test)
+        return DataLoader(
+            self.data_test,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn_validtest
+        )
+
+    def predict_dataloader(self):
+        self.check_dataset(self.data_predict)
+        return DataLoader(
+            self.data_predict,
+            batch_size=self.batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn_validtest
+        )

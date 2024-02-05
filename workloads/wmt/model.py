@@ -2,13 +2,15 @@ from typing import Any
 from torch import Tensor
 import torch
 import torch.nn as nn
-from torch.nn import Transformer
+from torch.nn import Module, Transformer
+from torchtext.data.metrics import bleu_score
 import math
+from runtime.parameter_groups import GroupedModel
 from workloads import WorkloadModel
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
 
-from workloads.wmt.data import WMTDataModule, PAD_IDX
+from workloads.wmt.data import WMTDataModule, PAD_IDX, BOS_IDX, EOS_IDX, MAX_TOKENS_PER_SENTENCE, sequential_transforms, tensor_transform
 
 # code inspired by: https://pytorch.org/tutorials/beginner/translation_transformer.html
 
@@ -71,7 +73,7 @@ class Seq2SeqTransformer(nn.Module):
                  tgt_vocab_size: int,
                  dim_feedforward: int = 512,
                  dropout: float = 0.1):
-        super(Seq2SeqTransformer, self).__init__()
+        super().__init__()
         self.transformer = Transformer(d_model=emb_size,
                                        nhead=nhead,
                                        num_encoder_layers=num_encoder_layers,
@@ -108,28 +110,91 @@ class Seq2SeqTransformer(nn.Module):
                           tgt_mask)
 
 
+class GroupedTransformer(GroupedModel):
+    def __init__(self, model: Seq2SeqTransformer) -> None:
+        super().__init__(model)
+        self.generator = self.model.generator
+
+    def encode(self, src: Tensor, src_mask: Tensor):
+        return self.model.encode(src, src_mask)
+
+    def decode(self, tgt: Tensor, memory: Tensor, tgt_mask: Tensor):
+        return self.model.decode(tgt, memory, tgt_mask)
+
+
 class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
         self.vocab_size = data_module.vocab_size
         self.batch_size = data_module.batch_size
         self.train_data_len = data_module.train_data_len
+        self.tokenizer = data_module.tokenizer
+        self.vocab_transform = data_module.vocab_transform
         if "de" not in self.vocab_size:
             raise Exception("prepare dataset before running the model!")
-        model = Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512)
+        model = GroupedTransformer(Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512))
+
         for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
         super().__init__(model, submission)
         self.loss = nn.functional.cross_entropy
 
+    def forward(self, src: str) -> str:
+        return self.translate(src)
+    
+    def greedy_decode(self, src: Tensor, src_mask: Tensor, max_len=MAX_TOKENS_PER_SENTENCE, start_symbol=BOS_IDX) -> Tensor:
+        self.model: Seq2SeqTransformer
+        memory = self.model.encode(src, src_mask)
+        ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(self.device)
+        for i in range(max_len-1):
+            tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+                        .type(torch.bool)).to(self.device)
+            out = self.model.decode(ys, memory, tgt_mask)
+            out = out.transpose(0, 1)
+            prob = self.model.generator(out[:, -1])
+            _, next_word = torch.max(prob, dim=1)
+            next_word = next_word.item()
+
+            ys = torch.cat([ys,
+                            torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=0)
+            if next_word == EOS_IDX:
+                break
+        return ys
+    
+    def translate(self, src: str) -> str:
+        def transform_text(sentence: str) -> Tensor:
+            return sequential_transforms(
+                    self.tokenizer["de"],
+                    self.vocab_transform["de"],
+                    tensor_transform)(sentence)  # type: ignore
+
+        src_tensor = transform_text(src).view(-1, 1).to(self.device)
+        num_tokens = src_tensor.shape[0]
+        src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool).to(self.device)
+        tgt_tokens = self.greedy_decode(src_tensor, src_mask, max_len=num_tokens + 5).flatten()
+        return " ".join(self.vocab_transform["en"].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
+
     def training_step(self, batch, batch_idx):
         return self.compute_and_log_loss(batch, "train_loss")
 
+    def compute_bleu_mean(self, de: list[str], en_target: list[str]) -> float:
+        assert len(de) == len(en_target)
+        bleu_sum = 0.0
+        for s, t in zip(de, en_target):
+            bleu_sum += bleu_score([self.translate(s)], [t])
+        return bleu_sum / len(de)
+
     def validation_step(self, batch, batch_idx):
-        self.compute_and_log_loss(batch, "val_loss")
+        src, tgt, de, en = batch
+        self.compute_and_log_loss((src, tgt), "val_loss")
+        bleu = self.compute_bleu_mean(de, en)
+        self.log("val_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
 
     def test_step(self, batch, batch_idx):
-        self.compute_and_log_loss(batch, "test_loss")
+        src, tgt, de, en = batch
+        self.compute_and_log_loss((src, tgt), "test_loss")
+        bleu = self.compute_bleu_mean(de, en)
+        self.log("test_bleu", bleu, batch_size=self.batch_size, sync_dist=True)
 
     def compute_and_log_loss(self, batch, log_name: str):
         src, tgt = batch
