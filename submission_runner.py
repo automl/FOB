@@ -4,6 +4,7 @@ from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 import torch
+import sys
 
 from runtime.args import RuntimeArgs, hyperparameters
 from runtime.callbacks import LogParamsAndGrads, PrintEpoch
@@ -16,6 +17,8 @@ import submissions
 
 def run_trial(runtime_args: RuntimeArgs):
     torch.set_float32_matmul_precision('high')  # TODO: check if gpu has tensor cores
+    if not torch.cuda.is_bf16_supported():
+        print("Warning: GPU does not support bfloat16, using float16. Results can be different!", file=sys.stderr)
     seed_everything(runtime_args.seed, workers=True)
     runtime_args.export_settings()
     workload = workloads.import_workload(runtime_args.workload_name)
