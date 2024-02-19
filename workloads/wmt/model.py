@@ -2,8 +2,7 @@ from typing import Any
 from torch import Tensor
 import torch
 import torch.nn as nn
-from torch.nn import Module, Transformer
-from torchtext.data.metrics import bleu_score
+from torch.nn import Transformer
 import math
 import evaluate
 from runtime.parameter_groups import GroupedModel
@@ -135,7 +134,7 @@ class WMTModel(WorkloadModel):
         self.metric_cache_trues: list[str] = []
         if "de" not in self.vocab_size:
             raise Exception("prepare dataset before running the model!")
-        model = GroupedTransformer(Seq2SeqTransformer(3, 3, 512, 8, self.vocab_size["de"], self.vocab_size["en"], 512))
+        model = GroupedTransformer(Seq2SeqTransformer(6, 6, 1024, 16, self.vocab_size["de"], self.vocab_size["en"], 1024))
 
         for p in model.parameters():
             if p.dim() > 1:
@@ -223,7 +222,7 @@ class WMTModel(WorkloadModel):
         return loss
 
     def get_specs(self) -> RuntimeSpecs:
-        epochs = 12
+        epochs = 20
         devices = 4
         return RuntimeSpecs(
             max_epochs=epochs,
