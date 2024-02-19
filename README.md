@@ -47,7 +47,7 @@ We try to cover a large range of deep learning tasks in this benchmark.
 | WMT17(de-en) | transformer | machine translation | cross-entropy loss / BLEU score | ? | 4h | 4 gpus |
 | openwebtext | transformer | unsupervised pretraining | ? | ? | ? | ? |
 | librispeech | conformer | speech recognition | ? | ? | ? | ? |
-| OGBG | graph NN | graph property prediction | ? | ? | ? | ? |
+| [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | ? | ? | ? |
 | FFHQ | ? | image diffusion | ? | ? | ? | ? |
 | MNIST | MLP | Image classification | Validation Accuracy | 0.95 | 1 min | 1 gpu |
 | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test MSE | 0.11 | 2 min | 1 gpu |
