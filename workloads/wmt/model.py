@@ -1,16 +1,17 @@
-from typing import Any
+import sys
+import math
 from torch import Tensor
 import torch
 import torch.nn as nn
 from torch.nn import Transformer
-import math
 import evaluate
-from runtime.parameter_groups import GroupedModel
-from workloads import WorkloadModel
+from runtime.parameter_groups import GroupedModel, ParameterGroup, merge_parameter_splits
 from runtime.specs import RuntimeSpecs
 from submissions import Submission
+from workloads import WorkloadModel
+from workloads.wmt.data \
+    import WMTDataModule, PAD_IDX, BOS_IDX, EOS_IDX, MAX_TOKENS_PER_SENTENCE, sequential_transforms, tensor_transform
 
-from workloads.wmt.data import WMTDataModule, PAD_IDX, BOS_IDX, EOS_IDX, MAX_TOKENS_PER_SENTENCE, sequential_transforms, tensor_transform
 
 # code inspired by: https://pytorch.org/tutorials/beginner/translation_transformer.html
 
@@ -121,6 +122,11 @@ class GroupedTransformer(GroupedModel):
     def decode(self, tgt: Tensor, memory: Tensor, tgt_mask: Tensor):
         return self.model.decode(tgt, memory, tgt_mask)
 
+    def parameter_groups(self) -> list[ParameterGroup]:
+        split1 = super().parameter_groups()  # default split
+        split2 = [ParameterGroup(dict(self.model.named_parameters()), lr_multiplier=0.1)]  # use less learning rate
+        return merge_parameter_splits(split1, split2)
+
 
 class WMTModel(WorkloadModel):
     def __init__(self, submission: Submission, data_module: WMTDataModule):
@@ -144,7 +150,7 @@ class WMTModel(WorkloadModel):
 
     def forward(self, src: str) -> str:
         return self.translate(src)
-    
+
     def greedy_decode(self, src: Tensor, src_mask: Tensor, max_len=MAX_TOKENS_PER_SENTENCE, start_symbol=BOS_IDX) -> Tensor:
         self.model: Seq2SeqTransformer
         memory = self.model.encode(src, src_mask)
@@ -163,7 +169,7 @@ class WMTModel(WorkloadModel):
             if next_word == EOS_IDX:
                 break
         return ys
-    
+
     def translate(self, src: str) -> str:
         def transform_text(sentence: str) -> Tensor:
             return sequential_transforms(
@@ -182,7 +188,11 @@ class WMTModel(WorkloadModel):
 
     def compute_bleu(self, en_preds: list[str], en_target: list[str]) -> float:
         assert len(en_preds) == len(en_target)
-        result = self.bleu.compute(predictions=en_preds, references=[[t] for t in en_target])
+        try:
+            result = self.bleu.compute(predictions=en_preds, references=[[t] for t in en_target])
+        except ZeroDivisionError:
+            print("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
+            result = {"bleu": 0.0}
         return result["bleu"]  # type: ignore
 
     def validation_step(self, batch, batch_idx):
