@@ -16,17 +16,11 @@ from workloads.wmt.data \
 # code inspired by: https://pytorch.org/tutorials/beginner/translation_transformer.html
 
 
-def generate_square_subsequent_mask(sz):
-    mask = (torch.triu(torch.ones((sz, sz))) == 1).transpose(0, 1)
-    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-    return mask
-
-
 def create_mask(src, tgt):
     src_seq_len = src.shape[0]
     tgt_seq_len = tgt.shape[0]
 
-    tgt_mask = generate_square_subsequent_mask(tgt_seq_len)
+    tgt_mask = Transformer.generate_square_subsequent_mask(tgt_seq_len)
     src_mask = torch.zeros((src_seq_len, src_seq_len)).type(torch.bool)
 
     src_padding_mask = (src == PAD_IDX).transpose(0, 1)
@@ -38,7 +32,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self,
                  emb_size: int,
                  dropout: float,
-                 maxlen: int = 5000):
+                 maxlen: int = MAX_TOKENS_PER_SENTENCE):
         super(PositionalEncoding, self).__init__()
         den = torch.exp(- torch.arange(0, emb_size, 2)* math.log(10000) / emb_size)
         pos = torch.arange(0, maxlen).reshape(maxlen, 1)
@@ -57,7 +51,7 @@ class PositionalEncoding(nn.Module):
 class TokenEmbedding(nn.Module):
     def __init__(self, vocab_size: int, emb_size):
         super(TokenEmbedding, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, emb_size)
+        self.embedding = nn.Embedding(vocab_size, emb_size, padding_idx=PAD_IDX)
         self.emb_size = emb_size
 
     def forward(self, tokens: Tensor):
@@ -73,19 +67,21 @@ class Seq2SeqTransformer(nn.Module):
                  src_vocab_size: int,
                  tgt_vocab_size: int,
                  dim_feedforward: int = 512,
-                 dropout: float = 0.1):
+                 dropout: float = 0.1,
+                 norm_first: bool = True):
         super().__init__()
         self.transformer = Transformer(d_model=emb_size,
                                        nhead=nhead,
                                        num_encoder_layers=num_encoder_layers,
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
-                                       dropout=dropout)
+                                       dropout=dropout,
+                                       norm_first=norm_first)
         self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.src_tok_emb = TokenEmbedding(src_vocab_size, emb_size)
         self.tgt_tok_emb = TokenEmbedding(tgt_vocab_size, emb_size)
         self.positional_encoding = PositionalEncoding(
-            emb_size, dropout=dropout)
+            emb_size, dropout=dropout, maxlen=MAX_TOKENS_PER_SENTENCE)
 
     def forward(self,
                 src: Tensor,
@@ -156,7 +152,7 @@ class WMTModel(WorkloadModel):
         memory = self.model.encode(src, src_mask)
         ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(self.device)
         for i in range(max_len-1):
-            tgt_mask = (generate_square_subsequent_mask(ys.size(0))
+            tgt_mask = (Transformer.generate_square_subsequent_mask(ys.size(0))
                         .type(torch.bool)).to(self.device)
             out = self.model.decode(ys, memory, tgt_mask)
             out = out.transpose(0, 1)
@@ -227,7 +223,8 @@ class WMTModel(WorkloadModel):
         tgt_mask = tgt_mask.to(self.device)
         logits = self.model(src, tgt_input, src_mask, tgt_mask, src_padding_mask, tgt_padding_mask, src_padding_mask)
         tgt_out = tgt[1:, :]
-        loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1), ignore_index=PAD_IDX)
+        loss = self.loss(logits.reshape(-1, logits.shape[-1]), tgt_out.reshape(-1),
+                         ignore_index=PAD_IDX, label_smoothing=0.1)
         self.log(log_name, loss, batch_size=self.batch_size, sync_dist=True)
         return loss
 
