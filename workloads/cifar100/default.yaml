@@ -1,0 +1,8 @@
+workload:
+  batch_size: 128
+  max_epochs: 50
+  max_steps: 19550
+  target_metric: val_acc
+  target_metric_mode: max
+runtime:
+  devices: 1

@@ -1,0 +1,7 @@
+runtime:
+  data_dir: "./data"
+  output_dir: "./experiments"
+  seed: 42
+  seed_mode: "fixed"
+  test_only: True
+  silent: False

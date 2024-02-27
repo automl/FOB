@@ -1,0 +1,10 @@
+workload:
+  batch_size: 16
+  max_epochs: 32
+  max_steps: 10_112
+  target_metric: val_mean_accuracy
+  target_metric_mode: max
+runtime:
+  devices: 4
+submission:
+  lr: 6.e-5

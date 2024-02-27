@@ -1,0 +1,7 @@
+submission:
+  name: sgd_baseline
+  learning_rate: 1.e-2
+  momentum: 0.9
+  weight_decay: 1.e-4
+  eta_min_factor: 0.01
+  nesterov: False

@@ -15,6 +15,10 @@ def import_workload(name: str):
     return importlib.import_module(f"workloads.{name}.workload")
 
 
+def workload_path(name: str) -> Path:
+    return Path(__file__).resolve().parent / name
+
+
 def workload_names() -> list[str]:
     EXCLUDE = ["__pycache__"]
     return [d.name for d in Path(__file__).parent.iterdir() if d.is_dir() and d.name not in EXCLUDE]

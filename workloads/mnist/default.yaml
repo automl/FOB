@@ -1,0 +1,12 @@
+workload:
+  batch_size: 16
+  max_epochs: 42
+  max_steps: 4536
+  target_metric: val_acc
+  target_metric_mode: max
+  model:
+    num_hidden: 128
+    num_layers: 2
+    activation: ReLU
+runtime:
+  devices: 1
