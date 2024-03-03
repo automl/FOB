@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 import re
 import yaml
-from submissions import submission_path
-from workloads import workload_path
+from submissions import submission_path, submission_names
+from workloads import workload_path, workload_names
 from .grid_search import gridsearch
 
 
@@ -23,7 +23,13 @@ class Runtime():
         searchspace = self._parse_yaml(file)
         for arg in extra_args:
             self._parse_into_searchspace(searchspace, arg)
+        self._named_dicts_to_list(
+            searchspace,
+            [self.submission_key, self.workload_key],
+            [submission_names(), workload_names()]
+        )
         self.runs += gridsearch(searchspace)
+        self._fill_runs_from_default()
 
     def _parse_into_searchspace(self, searchspace: dict[str, Any], arg: str):
         keys, value = arg.split("=")
@@ -41,7 +47,13 @@ class Runtime():
             target = target[key]
         target[keys_with_list_indices[-1]] = value
 
-    def fill_experiments_from_default(self):
+    def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
+        assert len(keys) == len(valid_options)
+        for key, opts in zip(keys, valid_options):
+            if all(name in opts for name in searchspace[key]):
+                searchspace[key] = [cfg | {self.identifier_key: name} for name, cfg in searchspace[key].items()]
+
+    def _fill_runs_from_default(self):
         for i, _ in enumerate(self.runs):
             # order from higher to lower in hierarchy
             self.runs[i] = self._fill_unnamed_from_default(self.runs[i], runtime_path)
@@ -53,7 +65,6 @@ class Runtime():
         default_config = self._parse_yaml(default_path)
         self._merge_dicts_hierarchical(default_config, experiment)
         return default_config
-
 
     def _fill_named_from_default(self, experiment: dict[str, Any], key: str, named_root: Callable) -> dict[str, Any]:
         self._argcheck_named(experiment, key, self.identifier_key)
