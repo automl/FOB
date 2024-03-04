@@ -30,7 +30,8 @@ class Run():
         self.submission = SubmissionConfig(config, submission_key, workload_key, identifier_key)
         self.workload = WorkloadConfig(config, workload_key, runtime_key, identifier_key)
         self._set_outpath(experiment_paths)
-        self.outdir.mkdir(parents=True, exist_ok=True)
+        # TODO: resolve conflicting variable name (run.output_dir vs. run.runtime.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _set_outpath(self, experiment_paths: dict[str, int]):
         # TODO: better naming for trial (using differences to default config)
@@ -38,10 +39,10 @@ class Run():
         if str(base) not in experiment_paths:
             experiment_paths[str(base)] = 0
         experiment_paths[str(base)] += 1
-        self.outdir = base / f"trial_{experiment_paths[str(base)]}"
+        self.output_dir = base / f"trial_{experiment_paths[str(base)]}"
 
     def export_config(self):
-        with open(self.outdir / "config.yaml", "w", encoding="utf8") as f:
+        with open(self.output_dir / "config.yaml", "w", encoding="utf8") as f:
             yaml.safe_dump(self._config, f)
 
     def get_submission(self) -> Submission:
