@@ -1,4 +1,6 @@
 workload:
+  name: cifar100
+  output_dir_name: cifar100
   batch_size: 128
   max_epochs: 50
   max_steps: 19_550

@@ -1,4 +1,6 @@
 workload:
+  name: imagenet64
+  output_dir_name: imagenet64
   batch_size: 512
   max_epochs: 80
   max_steps: 50_080

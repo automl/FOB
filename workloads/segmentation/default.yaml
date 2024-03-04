@@ -1,4 +1,6 @@
 workload:
+  name: segmentation
+  output_dir_name: segmentation
   batch_size: 16
   max_epochs: 32
   max_steps: 10_112

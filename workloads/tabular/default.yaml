@@ -1,4 +1,6 @@
 workload:
+  name: tabular
+  output_dir_name: tabular
   train_split: 0.8
   batch_size: 256
   max_epochs: 100

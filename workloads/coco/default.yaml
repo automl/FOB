@@ -1,4 +1,6 @@
 workload:
+  name: coco
+  output_dir_name: coco
   batch_size: 8
   max_epochs: 26
   max_steps: 381_134

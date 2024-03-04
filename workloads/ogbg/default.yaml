@@ -1,7 +1,7 @@
 workload:
-  batch_size: 32
   name: ogbg
   output_dir_name: ogbg
+  batch_size: 32
   target_metric: val_rocauc
   target_metric_mode: max
   max_epochs: 50
