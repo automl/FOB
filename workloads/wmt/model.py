@@ -68,7 +68,7 @@ class Seq2SeqTransformer(nn.Module):
                  tgt_vocab_size: int,
                  dim_feedforward: int = 512,
                  dropout: float = 0.1,
-                 norm_first: bool = True):
+                 norm_first: bool = False):
         super().__init__()
         self.transformer = Transformer(d_model=emb_size,
                                        nhead=nhead,
@@ -119,9 +119,9 @@ class GroupedTransformer(GroupedModel):
         return self.model.decode(tgt, memory, tgt_mask)
 
     def parameter_groups(self) -> list[ParameterGroup]:
-        # split1 = super().parameter_groups()  # default split
+        split1 = super().parameter_groups()  # default split
         split2 = [ParameterGroup(dict(self.model.named_parameters()), lr_multiplier=0.1)]  # use less learning rate
-        return split2  # merge_parameter_splits(split1, split2), use weight decay on everything
+        return merge_parameter_splits(split1, split2)
 
 
 class WMTModel(WorkloadModel):
@@ -166,6 +166,42 @@ class WMTModel(WorkloadModel):
                 break
         return ys
 
+    def beam_search(self, src: Tensor,
+                    src_mask: Tensor,
+                    beam_width=5,
+                    max_len=MAX_TOKENS_PER_SENTENCE,
+                    start_symbol=BOS_IDX) -> Tensor:
+        self.model: Seq2SeqTransformer
+        memory = self.model.encode(src, src_mask)
+        ys = torch.ones(1, 1).fill_(start_symbol).type(torch.long).to(self.device)
+        topk = [(0, ys)]
+        for i in range(max_len-1):
+            candidates = []
+            for score, seq in topk:
+                if seq[0][-1] == EOS_IDX:
+                    candidates.append((score, seq))
+                    continue
+                tgt_mask = (Transformer.generate_square_subsequent_mask(seq.size(0))
+                            .type(torch.bool)).to(self.device)
+                out = self.model.decode(seq, memory, tgt_mask)
+                out = out.transpose(0, 1)
+                prob = self.model.generator(out[:, -1])
+                prob = torch.softmax(prob, dim=1)
+
+                # Get top k candidates
+                topk_probs, topk_idx = torch.topk(prob, beam_width)
+                for i in range(beam_width):
+                    new_seq = torch.cat([seq, topk_idx[0, i].unsqueeze(0).unsqueeze(0)], dim=0)
+                    new_score = score + topk_probs[0, i].item()
+                    candidates.append((new_score, new_seq))
+
+                _, next_word = torch.max(prob, dim=1)
+                next_word = next_word.item()
+
+             # Select top k candidates
+            topk = sorted(candidates, key=lambda x: x[0], reverse=True)[:beam_width]
+        return topk[0][1]
+
     def translate(self, src: str) -> str:
         def transform_text(sentence: str) -> Tensor:
             return sequential_transforms(
@@ -176,7 +212,7 @@ class WMTModel(WorkloadModel):
         src_tensor = transform_text(src).view(-1, 1).to(self.device)
         num_tokens = src_tensor.shape[0]
         src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool).to(self.device)
-        tgt_tokens = self.greedy_decode(src_tensor, src_mask, max_len=num_tokens + 5).flatten()
+        tgt_tokens = self.beam_search(src_tensor, src_mask, max_len=num_tokens + 5).flatten()
         return " ".join(self.vocab_transform["en"].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
 
     def training_step(self, batch, batch_idx):
@@ -229,7 +265,7 @@ class WMTModel(WorkloadModel):
         return loss
 
     def get_specs(self) -> RuntimeSpecs:
-        epochs = 20
+        epochs = 18
         devices = 4
         return RuntimeSpecs(
             max_epochs=epochs,
