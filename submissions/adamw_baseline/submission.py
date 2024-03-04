@@ -39,7 +39,7 @@ def configure_optimizers(
     optimizer = AdamW(
         parameter_groups,
         lr=lr,
-        eps=hparams["eps"],
+        eps=hparams["epsilon"],
         betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),
         weight_decay=weight_decay,
         fused=False

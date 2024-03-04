@@ -5,5 +5,5 @@
     "warmup_factor": 0.01,
     "eta_min_factor": 0.01,
     "weight_decay": 0.01,
-    "eps": 1e-8
+    "epsilon": 1e-8
 }
