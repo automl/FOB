@@ -2,20 +2,66 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 import re
 import yaml
-from submissions import submission_path, submission_names
-from workloads import workload_path, workload_names
+from submissions import Submission, submission_path, submission_names
+from workloads import WorkloadModel, WorkloadDataModule, import_workload, workload_path, workload_names
 from .grid_search import gridsearch
+from .configs import RuntimeConfig, SubmissionConfig, WorkloadConfig
 
 
 def runtime_path() -> Path:
     return Path(__file__).resolve().parent
 
 
+class Run():
+    def __init__(
+            self,
+            config: dict[str, Any],
+            experiment_paths: dict[str, int],
+            workload_key: str,
+            submission_key: str,
+            runtime_key: str,
+            identifier_key: str
+        ) -> None:
+        self._config = config
+        self.workload_key = workload_key
+        self.submission_key = submission_key
+        self.runtime_key = runtime_key
+        self.runtime = RuntimeConfig(config, workload_key, runtime_key)
+        self.submission = SubmissionConfig(config, submission_key, workload_key, identifier_key)
+        self.workload = WorkloadConfig(config, workload_key, runtime_key, identifier_key)
+        self._set_outpath(experiment_paths)
+        self.outdir.mkdir(parents=True, exist_ok=True)
+
+    def _set_outpath(self, experiment_paths: dict[str, int]):
+        # TODO: better naming for trial (using differences to default config)
+        base = self.runtime.output_dir / self.workload.output_dir_name / self.submission.output_dir_name
+        if str(base) not in experiment_paths:
+            experiment_paths[str(base)] = 0
+        experiment_paths[str(base)] += 1
+        self.outdir = base / f"trial_{experiment_paths[str(base)]}"
+
+    def export_config(self):
+        with open(self.outdir / "config.yaml", "w", encoding="utf8") as f:
+            yaml.safe_dump(self._config, f)
+
+    def get_submission(self) -> Submission:
+        return Submission(self.submission)
+
+    def get_workload(self) -> tuple[WorkloadModel, WorkloadDataModule]:
+        workload = import_workload(self.workload.name)
+        return workload.get_workload(self.get_submission(), self.workload)
+
+    def get_datamodule(self) -> WorkloadDataModule:
+        workload = import_workload(self.workload.name)
+        return workload.get_datamodule(self.workload)
+
+
 class Runtime():
     def __init__(self) -> None:
-        self.runs = []
+        self._runs = []
         self.workload_key = "workload"
         self.submission_key = "submission"
+        self.runtime_key = "runtime"
         self.identifier_key = "name"
         self.default_file_name = "default.yaml"
 
@@ -28,8 +74,16 @@ class Runtime():
             [self.submission_key, self.workload_key],
             [submission_names(), workload_names()]
         )
-        self.runs += gridsearch(searchspace)
+        self._runs += gridsearch(searchspace)
         self._fill_runs_from_default()
+
+    def runs(self) -> list[Run]:
+        paths = {}
+        runs = []
+        for config in self._runs:
+            run = Run(config, paths, self.workload_key, self.submission_key, self.runtime_key, self.identifier_key)
+            runs.append(run)
+        return runs
 
     def _parse_into_searchspace(self, searchspace: dict[str, Any], arg: str):
         keys, value = arg.split("=")
@@ -54,11 +108,11 @@ class Runtime():
                 searchspace[key] = [cfg | {self.identifier_key: name} for name, cfg in searchspace[key].items()]
 
     def _fill_runs_from_default(self):
-        for i, _ in enumerate(self.runs):
+        for i, _ in enumerate(self._runs):
             # order from higher to lower in hierarchy
-            self.runs[i] = self._fill_unnamed_from_default(self.runs[i], runtime_path)
-            self.runs[i] = self._fill_named_from_default(self.runs[i], self.workload_key, workload_path)
-            self.runs[i] = self._fill_named_from_default(self.runs[i], self.submission_key, submission_path)
+            self._runs[i] = self._fill_unnamed_from_default(self._runs[i], runtime_path)
+            self._runs[i] = self._fill_named_from_default(self._runs[i], self.workload_key, workload_path)
+            self._runs[i] = self._fill_named_from_default(self._runs[i], self.submission_key, submission_path)
 
     def _fill_unnamed_from_default(self, experiment: dict[str, Any], unnamed_root: Callable) -> dict[str, Any]:
         default_path: Path = unnamed_root() / self.default_file_name
@@ -94,7 +148,7 @@ class Runtime():
 
     def dump_experiments(self):
         # TODO: remove this and make proper export function
-        for i, e in enumerate(self.runs):
+        for i, e in enumerate(self._runs):
             outpath = Path(e["runtime"]["output_dir"]) / f"experiment_{i}.yaml"
             outpath.parent.mkdir(parents=True, exist_ok=True)
             with open(outpath, "w", encoding="utf8") as f:
