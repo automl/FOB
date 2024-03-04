@@ -9,6 +9,13 @@ class BaseConfig():
     def __getitem__(self, key: str) -> Any:
         return self._config[key]
 
+    def __getattribute__(self, key: str) -> Any:
+        try:
+            return super().__getattribute__(key)
+        except AttributeError:
+            pass
+        return self._config[key]
+
     def keys(self):
         return self._config.keys()
 
@@ -46,6 +53,7 @@ class WorkloadConfig(NamedConfig):
         self.model: str | dict[str, Any] = config["model"]
         self.target_metric: str = config["target_metric"]
         self.target_metric_mode: str = config["target_metric_mode"]
+        # TODO: data_dir, workers
 
 
 class RuntimeConfig(BaseConfig):
@@ -64,3 +72,4 @@ class RuntimeConfig(BaseConfig):
         self.silent: bool = config.get("silent", False)
         self.test_only: bool = config.get("test_only", False)
         self.workers: int = config["workers"]
+        # TODO: max_steps
