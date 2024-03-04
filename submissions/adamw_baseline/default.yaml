@@ -5,3 +5,4 @@ submission:
   beta2: 0.999
   warmup_factor: 0.01
   weight_decay: 0.01
+  epsilon: 1.e-8
