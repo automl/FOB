@@ -4,8 +4,8 @@ from datasets import load_dataset, Dataset
 from huggingface_hub import hf_hub_download
 from transformers import SegformerImageProcessor
 from torchvision.transforms import v2
+from runtime.configs import WorkloadConfig
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
 
 
 class SegmentationDataModule(WorkloadDataModule):
@@ -15,8 +15,8 @@ class SegmentationDataModule(WorkloadDataModule):
     - https://github.com/huggingface/transformers/tree/main/examples/pytorch/semantic-segmentation
     - https://huggingface.co/blog/fine-tune-segformer
     """
-    def __init__(self, dataset_args: DatasetArgs):
-        super().__init__(dataset_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "SceneParse150"
         self.batch_size = 16
         image_processor = SegformerImageProcessor.from_pretrained(

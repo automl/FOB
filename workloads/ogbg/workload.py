@@ -1,17 +1,16 @@
 from lightning import Callback
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel, WorkloadDataModule
 from workloads.ogbg import data
 from workloads.ogbg import model
 
 
-def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
-    return data.OGBGDataModule(dataset_args)
+def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
+    return data.OGBGDataModule(workload_config)
 
-
-def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
-    datamodule = data.OGBGDataModule(dataset_args)
+def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
+    datamodule = data.OGBGDataModule(workload_config)
     node_feature_dim = datamodule.feature_dim
     num_classes = datamodule.num_classes
     dataset_name = datamodule.dataset_name
@@ -19,9 +18,9 @@ def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[Wor
                                  node_feature_dim=node_feature_dim,
                                  num_classes=num_classes,
                                  dataset_name=dataset_name,
-                                 batch_size=datamodule.batch_size)
+                                 batch_size=datamodule.batch_size,
+                                 workload_config=workload_config)
     return ogbg_model, datamodule
-
 
 def get_callbacks() -> list[Callback]:
     return []

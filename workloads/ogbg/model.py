@@ -2,7 +2,7 @@ import torch
 from torch_geometric.nn import GIN, MLP, global_add_pool
 from ogb.graphproppred import Evaluator
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 
 
@@ -14,7 +14,8 @@ class OGBGModel(WorkloadModel):
             node_feature_dim: int,
             num_classes: int,
             dataset_name: str,
-            batch_size: int
+            batch_size: int,
+            workload_config: WorkloadConfig
     ):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
         self.batch_size = batch_size
@@ -23,7 +24,7 @@ class OGBGModel(WorkloadModel):
             node_feature_dim=node_feature_dim,
             num_classes=num_classes
             )
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
         self.metric_preds: list[torch.Tensor] = []  # probabilities for class 1
         self.metric_trues: list[torch.Tensor] = []  # labels for classes
 
@@ -73,16 +74,6 @@ class OGBGModel(WorkloadModel):
     def _collect_data_for_metric(self, preds, labels):
         self.metric_preds.append(preds[:, 1].unsqueeze(dim=-1))
         self.metric_trues.append(labels)
-
-    def get_specs(self) -> RuntimeSpecs:
-        # TODO have another look at epochs etc
-        return RuntimeSpecs(
-            max_epochs=50,
-            max_steps=51_600,
-            devices=1,
-            target_metric="val_rocauc",
-            target_metric_mode="max"
-        )
 
     def on_validation_epoch_end(self):
         self.compute_and_log_metric("val_rocauc")

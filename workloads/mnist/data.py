@@ -2,13 +2,13 @@ import torch
 from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
+from runtime.configs import WorkloadConfig
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
 
 
 class MNISTDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: DatasetArgs):
-        super().__init__(runtime_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.batch_size = 512
         # split can also be a fraction self.train_val_split
         # [55000, 5000] is taken from https://lightning.ai/docs/pytorch/stable/data/datamodule.html

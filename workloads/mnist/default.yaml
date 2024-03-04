@@ -1,7 +1,7 @@
 workload:
   batch_size: 16
   max_epochs: 42
-  max_steps: 4536
+  max_steps: 4_536
   target_metric: val_acc
   target_metric_mode: max
   model:

@@ -2,8 +2,8 @@ from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
 from submissions import Submission
+from runtime.configs import WorkloadConfig
 from .coco_eval import CocoEvaluator
 
 
@@ -13,12 +13,12 @@ class COCODetectionModel(WorkloadModel):
     Implementation is heavily inspired by
     https://github.com/pytorch/vision/tree/main/references/detection
     """
-    def __init__(self, submission: Submission, eval_gts: COCO):
+    def __init__(self, submission: Submission, workload_config: WorkloadConfig, eval_gts: COCO):
         model = fasterrcnn_mobilenet_v3_large_fpn(
             num_classes=91,
             weights_backbone=MobileNet_V3_Large_Weights.IMAGENET1K_V1
         )
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
         self.eval_gts = eval_gts
         self.reset_coco_eval()
 
@@ -58,12 +58,3 @@ class COCODetectionModel(WorkloadModel):
 
     def total_loss(self, losses: dict):
         return sum(loss for loss in losses.values())
-
-    def get_specs(self) -> RuntimeSpecs:
-        return RuntimeSpecs(
-            max_epochs=26,
-            max_steps=381_134,
-            devices=4,
-            target_metric="val_AP",
-            target_metric_mode="max"
-        )

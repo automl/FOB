@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from transformers.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 
 
 class Imagenet64Dataset(Dataset):
@@ -27,8 +27,8 @@ class Imagenet64Dataset(Dataset):
 
 
 class ImagenetDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: DatasetArgs):
-        super().__init__(runtime_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "Imagenet64"
         self.batch_size = 512
         self.train_transforms = v2.Compose([

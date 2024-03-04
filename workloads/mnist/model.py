@@ -1,11 +1,11 @@
 import torch
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 
 
 class MNISTModel(WorkloadModel):
-    def __init__(self, submission: Submission):
+    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
 
         input_size = 28 * 28  # 784
         num_hidden = 128
@@ -18,7 +18,7 @@ class MNISTModel(WorkloadModel):
             torch.nn.Sigmoid(),
             torch.nn.Linear(num_hidden, num_classes, bias=True),
         )
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
         # negative log likelihood loss
         self.loss_fn = torch.nn.functional.nll_loss
 
@@ -58,12 +58,3 @@ class MNISTModel(WorkloadModel):
         # By default logs it per epoch (weighted average over batches)
         self.log(log_label, acc)
         return acc
-
-    def get_specs(self) -> RuntimeSpecs:
-        return RuntimeSpecs(
-            max_epochs=42,
-            max_steps=4536,
-            devices=1,
-            target_metric="val_acc",
-            target_metric_mode="max"
-        )

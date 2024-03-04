@@ -9,7 +9,7 @@ from torchvision import datasets, tv_tensors
 from pycocotools.coco import COCO
 from tqdm import tqdm
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 
 
 class COCODataModule(WorkloadDataModule):
@@ -18,8 +18,8 @@ class COCODataModule(WorkloadDataModule):
     Implementation and choice of transforms is heavily inspired by
     https://github.com/pytorch/vision/tree/main/references/detection
     """
-    def __init__(self, dataset_args: DatasetArgs):
-        super().__init__(dataset_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "COCO"
         self.batch_size = 8
         self.train_transforms = v2.Compose(

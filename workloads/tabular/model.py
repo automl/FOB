@@ -1,7 +1,7 @@
 import torch
 from rtdl_revisiting_models import FTTransformer
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 
 
@@ -10,7 +10,7 @@ class TabularModel(WorkloadModel):
     Lightning Module for tabular data task.
     Model is FT-Transformer from https://arxiv.org/abs/2106.11959v5.
     """
-    def __init__(self, submission: Submission):
+    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
         # output dimension
         d_out = 1
         # Continuous features.
@@ -24,7 +24,7 @@ class TabularModel(WorkloadModel):
             d_out=d_out,
             **default_kwargs,
         )
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
         self.loss_fn = torch.nn.MSELoss()
 
     def forward(self, x):
@@ -50,12 +50,3 @@ class TabularModel(WorkloadModel):
         loss = self.loss_fn(preds, targets)
         self.log(log_label, loss)
         return loss
-
-    def get_specs(self) -> RuntimeSpecs:
-        return RuntimeSpecs(
-            max_epochs=100,
-            max_steps=None,
-            devices=1,
-            target_metric="val_loss",
-            target_metric_mode="min"
-        )

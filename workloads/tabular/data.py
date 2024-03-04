@@ -7,7 +7,7 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import QuantileTransformer
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 
 
 class TabularDataset(Dataset):
@@ -26,8 +26,8 @@ class TabularDataModule(WorkloadDataModule):
     """
     DataModule for california housing tabular data task.
     """
-    def __init__(self, dataset_args: DatasetArgs):
-        super().__init__(dataset_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "Tabular"
         self.batch_size = 256
 

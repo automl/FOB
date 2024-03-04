@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 from ogb.graphproppred import PygGraphPropPredDataset
 # from torch.utils.data import DataLoader
 # from torch_geometric.data import DataLoader
@@ -16,8 +16,8 @@ class OGBGDataModule(WorkloadDataModule):
     graph: molecule, nodes: atoms, edges: chemical bonds
     features can be found here https://github.com/snap-stanford/ogb/blob/master/ogb/utils/features.py
     """
-    def __init__(self, dataset_args: DatasetArgs):
-        super().__init__(dataset_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "ogbg-molhiv"
         self.batch_size = 32
         self.print_dataset_info = False

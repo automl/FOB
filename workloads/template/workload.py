@@ -9,7 +9,6 @@ from workloads.template import model
 def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
     return data.TemplateDataModule(workload_config)
 
-
 def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
     return model.TemplateModel(submission, workload_config), get_datamodule(workload_config)
 
