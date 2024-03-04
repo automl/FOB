@@ -36,40 +36,59 @@ class NamedConfig(BaseConfig):
 
 
 class SubmissionConfig(NamedConfig):
-    pass
+    def __init__(
+            self,
+            config: dict[str, Any],
+            submission_key: str,
+            workload_key: str,
+            identifier_key: str = "name",
+            outdir_key: str = "output_dir_name"
+        ) -> None:
+        cfg = config[submission_key]
+        self.max_steps = config[workload_key]["max_steps"]
+        cfg["max_steps"] = self.max_steps
+        super().__init__(cfg, identifier_key, outdir_key)
 
 
 class WorkloadConfig(NamedConfig):
     def __init__(
             self,
             config: dict[str, Any],
+            workload_key: str,
+            runtime_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
-        super().__init__(config, identifier_key, outdir_key)
-        self.batch_size: int = config["batch_size"]
-        self.max_epochs: int = config["max_epochs"]
-        self.max_steps: int = config["max_steps"]
-        self.model: str | dict[str, Any] = config["model"]
-        self.target_metric: str = config["target_metric"]
-        self.target_metric_mode: str = config["target_metric_mode"]
-        # TODO: data_dir, workers
+        cfg = config[workload_key]
+        self.batch_size: int = cfg["batch_size"]
+        self.data_dir = config[runtime_key]["data_dir"]
+        self.max_epochs: int = cfg["max_epochs"]
+        self.max_steps: int = cfg["max_steps"]
+        self.model: str | dict[str, Any] = cfg["model"]
+        self.target_metric: str = cfg["target_metric"]
+        self.target_metric_mode: str = cfg["target_metric_mode"]
+        self.workers = config[runtime_key]["workers"]
+        cfg["data_dir"] = self.data_dir
+        cfg["workers"] = self.workers
+        super().__init__(cfg, identifier_key, outdir_key)
 
 
 class RuntimeConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any]) -> None:
-        super().__init__(config)
-        self.deterministic: bool = config.get("deterministic", True)
-        self.devices: int = config["devices"]
-        self.data_dir = Path(config["data_dir"]).resolve()
-        self.log_extra: bool = config.get("log_extra", False)
-        self.optimize_memory: bool = config.get("optimize_memory", False)
-        self.output_dir = Path(config["output_dir"]).resolve()
-        maybe_resume = config.get("resume", None)
+    def __init__(self, config: dict[str, Any], workload_key: str, runtime_key: str) -> None:
+        cfg = config[runtime_key]
+        self.deterministic: bool = cfg.get("deterministic", True)
+        self.devices: int = cfg["devices"]
+        self.data_dir = Path(cfg["data_dir"]).resolve()
+        self.log_extra: bool = cfg.get("log_extra", False)
+        self.max_steps = config[workload_key]["max_steps"]
+        self.optimize_memory: bool = cfg.get("optimize_memory", False)
+        self.output_dir = Path(cfg["output_dir"]).resolve()
+        maybe_resume = cfg.get("resume", None)
         self.resume: Optional[Path] = Path(maybe_resume).resolve() if maybe_resume is not None else None
-        self.seed: int = config["seed"]
-        self.seed_mode: str = config["seed_mode"]
-        self.silent: bool = config.get("silent", False)
-        self.test_only: bool = config.get("test_only", False)
-        self.workers: int = config["workers"]
-        # TODO: max_steps
+        self.seed: int = cfg["seed"]
+        self.seed_mode: str = cfg["seed_mode"]
+        self.silent: bool = cfg.get("silent", False)
+        self.test_only: bool = cfg.get("test_only", False)
+        self.workers: int = cfg["workers"]
+        cfg["max_steps"] = self.max_steps
+        super().__init__(cfg)
