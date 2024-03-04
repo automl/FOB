@@ -1,0 +1,11 @@
+workload:
+  train_split: 0.8
+  batch_size: 256
+  max_epochs: 100
+  # max_steps: None
+  target_metric: val_loss
+  target_metric_mode: min
+  model:
+    n_cont_features: 8
+runtime:
+  devices: 1

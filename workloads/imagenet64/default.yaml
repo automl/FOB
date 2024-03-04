@@ -1,0 +1,19 @@
+workload:
+  batch_size: 512
+  max_epochs: 80
+  max_steps: 50_080
+  target_metric: val_top5_err
+  target_metric_mode: min
+  # model: davit_tiny
+  model: wrn
+  wrn_modification:
+    use_max_pool: True
+    conv_size: 3
+  train_transforms:
+    random_crop:
+      padding: 4
+      padding_mode: reflect
+  # TODO add random horizontal flip
+  # TODO add trivial augment
+runtime:
+  devices: 4
