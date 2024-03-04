@@ -168,7 +168,8 @@ class WMTModel(WorkloadModel):
 
     def beam_search(self, src: Tensor,
                     src_mask: Tensor,
-                    beam_width=5,
+                    beam_width=4,
+                    length_penalty=0.6,
                     max_len=MAX_TOKENS_PER_SENTENCE,
                     start_symbol=BOS_IDX) -> Tensor:
         self.model: Seq2SeqTransformer
@@ -199,7 +200,7 @@ class WMTModel(WorkloadModel):
                 next_word = next_word.item()
 
              # Select top k candidates
-            topk = sorted(candidates, key=lambda x: x[0], reverse=True)[:beam_width]
+            topk = sorted(candidates, key=lambda x: x[0] / (x[1].size(0) ** length_penalty), reverse=True)[:beam_width]
         return topk[0][1]
 
     def translate(self, src: str) -> str:
