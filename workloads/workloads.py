@@ -6,9 +6,8 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
 from submissions import Submission
+from runtime.configs import WorkloadConfig
 from runtime.parameter_groups import GroupedModel
-from runtime.specs import RuntimeSpecs, to_submission_specs
-from runtime import DatasetArgs
 
 
 def import_workload(name: str):
@@ -25,24 +24,29 @@ def workload_names() -> list[str]:
 
 
 class WorkloadModel(LightningModule):
-    def __init__(self, model: nn.Module | GroupedModel, submission: Submission, **kwargs: Any) -> None:
+    def __init__(
+            self,
+            model: nn.Module | GroupedModel,
+            submission: Submission,
+            workload_config: WorkloadConfig,
+            **kwargs: Any
+        ) -> None:
         super().__init__(**kwargs)
+        self.config = workload_config
         self.submission = submission
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        specs = to_submission_specs(self.get_specs())
-        return self.submission.configure_optimizers(self.model, specs)
-
-    def get_specs(self) -> RuntimeSpecs:
-        raise NotImplementedError("Each workload has its own specs.")
+        return self.submission.configure_optimizers(self.model, self.config)
 
 
 class WorkloadDataModule(LightningDataModule):
-    def __init__(self, dataset_args: DatasetArgs) -> None:
+    def __init__(self, workload_config: WorkloadConfig) -> None:
         super().__init__()
-        self.workers = min(dataset_args.workers, 16)
-        self.data_dir = dataset_args.data_dir
+        self.config = workload_config
+        self.workers = min(workload_config.workers, 16)
+        self.data_dir = workload_config.data_dir
+        self.batch_size = workload_config.batch_size
         self.data_train: Any
         self.data_val: Any
         self.data_test: Any
