@@ -1,9 +1,8 @@
 import importlib
 from pathlib import Path
-from typing import Any
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from runtime.parameter_groups import GroupedModel
-from runtime.specs import SubmissionSpecs
+from runtime.configs import SubmissionConfig, WorkloadConfig
 
 
 def import_submission(name: str):
@@ -20,11 +19,9 @@ def submission_names() -> list[str]:
 
 
 class Submission():
-    def __init__(self, hyperparameters: dict[str, Any]) -> None:
-        self.hyperparameters = hyperparameters
+    def __init__(self, config: SubmissionConfig) -> None:
+        self.config = config
 
-    def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
-        raise NotImplementedError("Each submission must define this method themselves.")
-
-    def get_hyperparameters(self) -> dict[str, Any]:
-        return self.hyperparameters
+    def configure_optimizers(self, model: GroupedModel, workload_config: WorkloadConfig) -> OptimizerLRScheduler:
+        submission_module = import_submission(self.config.name)
+        return submission_module.configure_optimizers(model, workload_config, self.config)

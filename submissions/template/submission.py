@@ -1,17 +1,14 @@
-from typing import Any
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.optim import SGD
-from submissions import Submission
 from runtime.parameter_groups import GroupedModel
-from runtime.specs import SubmissionSpecs
+from runtime.configs import SubmissionConfig, WorkloadConfig
 
 
-def get_submission(hyperparameters: dict[str, Any]) -> Submission:
-    return TemplateSubmission(hyperparameters)
-
-
-class TemplateSubmission(Submission):
-
-    def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
-        hparams = self.get_hyperparameters()
-        return {"optimizer": SGD(model.grouped_parameters(lr=hparams["learning_rate"]), lr=hparams["learning_rate"])}
+def configure_optimizers(
+        model: GroupedModel,
+        workload_config: WorkloadConfig,
+        submission_config: SubmissionConfig
+    ) -> OptimizerLRScheduler:
+    hparams = submission_config
+    lr = hparams["learning_rate"]
+    return {"optimizer": SGD(model.grouped_parameters(lr=lr), lr=lr)}

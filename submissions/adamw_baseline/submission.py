@@ -1,17 +1,11 @@
 import math
-from typing import Any
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from submissions import Submission
-from runtime.specs import SubmissionSpecs
+from runtime.configs import SubmissionConfig, WorkloadConfig
 from runtime.parameter_groups import GroupedModel
-
-
-def get_submission(hyperparameters: dict[str, Any]) -> Submission:
-    return AdamWBaseline(hyperparameters)
 
 
 def cosine_warmup(
@@ -33,29 +27,30 @@ def cosine_warmup(
     return SequentialLR(
         optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
-
-class AdamWBaseline(Submission):
-
-    def configure_optimizers(self, model: GroupedModel, workload_specs: SubmissionSpecs) -> OptimizerLRScheduler:
-        hparams = self.get_hyperparameters()
-        lr=hparams["learning_rate"]
-        weight_decay=hparams["weight_decay"]
-        parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)
-        optimizer = AdamW(
-            parameter_groups,
-            lr=lr,
-            eps=1e-8,
-            betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),
-            weight_decay=weight_decay,
-            fused=False
-        )
-        step_hint = workload_specs.max_steps if workload_specs.max_steps else workload_specs.max_epochs
-        interval = "step" if workload_specs.max_steps else "epoch"
-        scheduler = cosine_warmup(step_hint, hparams["warmup_factor"], hparams["eta_min_factor"]*lr, optimizer)
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": interval
-            }
+def configure_optimizers(
+        model: GroupedModel,
+        workload_config: WorkloadConfig,
+        submission_config: SubmissionConfig
+    ) -> OptimizerLRScheduler:
+    hparams = submission_config
+    lr=hparams["learning_rate"]
+    weight_decay=hparams["weight_decay"]
+    parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)
+    optimizer = AdamW(
+        parameter_groups,
+        lr=lr,
+        eps=1e-8,
+        betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),
+        weight_decay=weight_decay,
+        fused=False
+    )
+    step_hint = workload_config.max_steps if workload_config.max_steps else workload_config.max_epochs
+    interval = "step" if workload_config.max_steps else "epoch"
+    scheduler = cosine_warmup(step_hint, hparams["warmup_factor"], hparams["eta_min_factor"]*lr, optimizer)
+    return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": scheduler,
+            "interval": interval
         }
+    }
