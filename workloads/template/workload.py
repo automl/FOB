@@ -1,17 +1,17 @@
 from lightning import Callback
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadDataModule, WorkloadModel
 from workloads.template import data
 from workloads.template import model
 
 
-def get_datamodule(dataset_args: DatasetArgs) -> WorkloadDataModule:
-    return data.TemplateDataModule(dataset_args)
+def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
+    return data.TemplateDataModule(workload_config)
 
 
-def get_workload(submission: Submission, dataset_args: DatasetArgs) -> tuple[WorkloadModel, WorkloadDataModule]:
-    return model.TemplateModel(submission), get_datamodule(dataset_args)
+def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
+    return model.TemplateModel(submission, workload_config), get_datamodule(workload_config)
 
 def get_callbacks() -> list[Callback]:
     return []

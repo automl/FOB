@@ -1,10 +1,11 @@
 import torch
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 
+
 class TemplateModel(WorkloadModel):
-    def __init__(self, submission: Submission):
+    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
         model = torch.nn.Sequential(
             torch.nn.Linear(1, 10),
             torch.nn.ReLU(),
@@ -12,7 +13,7 @@ class TemplateModel(WorkloadModel):
             torch.nn.ReLU(),
         )
         self.loss = torch.nn.functional.mse_loss
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
@@ -37,12 +38,3 @@ class TemplateModel(WorkloadModel):
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
         self.log(log_name, loss)
-
-    def get_specs(self) -> RuntimeSpecs:
-        return RuntimeSpecs(
-            max_epochs=42,
-            max_steps=None,
-            devices=1,
-            target_metric="val_loss",
-            target_metric_mode="min"
-        )

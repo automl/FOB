@@ -1,13 +1,12 @@
 import torch
 import torch.utils.data as data
 from lightning.pytorch.demos.boring_classes import RandomDataset
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 from workloads import WorkloadDataModule
 
 class TemplateDataModule(WorkloadDataModule):
-    def __init__(self, dataset_args: DatasetArgs) -> None:
-        super().__init__(dataset_args)
-        self.batch_size = 42
+    def __init__(self, workload_config: WorkloadConfig) -> None:
+        super().__init__(workload_config)
 
     def prepare_data(self):
         # download, IO, etc. Useful with shared filesystems
