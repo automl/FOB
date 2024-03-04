@@ -39,7 +39,7 @@ class WMTDataModule(WorkloadDataModule):
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 5))
-        self.batch_size = 64
+        self.batch_size = 128
         self.tokenizer = {}
         self.vocab_transform = {}
         self.info_file = self.processed_data_dir / "info.json"

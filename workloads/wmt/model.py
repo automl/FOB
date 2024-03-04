@@ -119,9 +119,9 @@ class GroupedTransformer(GroupedModel):
         return self.model.decode(tgt, memory, tgt_mask)
 
     def parameter_groups(self) -> list[ParameterGroup]:
-        split1 = super().parameter_groups()  # default split
+        # split1 = super().parameter_groups()  # default split
         split2 = [ParameterGroup(dict(self.model.named_parameters()), lr_multiplier=0.1)]  # use less learning rate
-        return merge_parameter_splits(split1, split2)
+        return split2  # merge_parameter_splits(split1, split2), use weight decay on everything
 
 
 class WMTModel(WorkloadModel):
