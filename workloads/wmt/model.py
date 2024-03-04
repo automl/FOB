@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.nn import Transformer
 import evaluate
 from runtime.parameter_groups import GroupedModel, ParameterGroup, merge_parameter_splits
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel
 from workloads.wmt.data \
@@ -125,7 +125,7 @@ class GroupedTransformer(GroupedModel):
 
 
 class WMTModel(WorkloadModel):
-    def __init__(self, submission: Submission, data_module: WMTDataModule):
+    def __init__(self, submission: Submission, data_module: WMTDataModule, workload_config: WorkloadConfig):
         self.vocab_size = data_module.vocab_size
         self.batch_size = data_module.batch_size
         self.train_data_len = data_module.train_data_len
@@ -141,7 +141,7 @@ class WMTModel(WorkloadModel):
         for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        super().__init__(model, submission)
+        super().__init__(model, submission, workload_config)
         self.loss = nn.functional.cross_entropy
 
     def forward(self, src: str) -> str:
@@ -264,14 +264,3 @@ class WMTModel(WorkloadModel):
                          ignore_index=PAD_IDX, label_smoothing=0.1)
         self.log(log_name, loss, batch_size=self.batch_size, sync_dist=True)
         return loss
-
-    def get_specs(self) -> RuntimeSpecs:
-        epochs = 18
-        devices = 4
-        return RuntimeSpecs(
-            max_epochs=epochs,
-            max_steps=math.ceil(self.train_data_len / self.batch_size / devices) * epochs,
-            devices=devices,
-            target_metric="val_loss",
-            target_metric_mode="min"
-        )

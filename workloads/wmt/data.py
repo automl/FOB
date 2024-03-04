@@ -5,7 +5,7 @@ from torchtext.data.utils import get_tokenizer
 from torch.utils.data import DataLoader
 from torchtext.vocab import build_vocab_from_iterator
 from workloads import WorkloadDataModule
-from runtime import DatasetArgs
+from runtime.configs import WorkloadConfig
 import datasets
 from datasets import DatasetDict, Dataset
 import os
@@ -33,8 +33,8 @@ def tensor_transform(token_ids: list[int]):
 
 
 class WMTDataModule(WorkloadDataModule):
-    def __init__(self, runtime_args: DatasetArgs):
-        super().__init__(runtime_args)
+    def __init__(self, workload_config: WorkloadConfig):
+        super().__init__(workload_config)
         self.data_dir = self.data_dir / "wmt"
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
