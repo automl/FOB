@@ -46,3 +46,9 @@ def begin_timeout(delay=10, show_threads=False):
             traceback.print_stack(frame)
             print()
     signal.alarm(delay)  # Timeout after 10 seconds
+
+
+def path_to_str_inside_dict(d: dict) -> dict:
+    return {k: (str(v) if isinstance(v, Path) else
+                (path_to_str_inside_dict(v) if isinstance(v, dict) else v))
+            for k, v in d.items()}
