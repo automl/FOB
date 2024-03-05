@@ -61,7 +61,7 @@ class WorkloadConfig(NamedConfig):
         ) -> None:
         cfg = config[workload_key]
         self.batch_size: int = cfg["batch_size"]
-        self.data_dir = config[runtime_key]["data_dir"]
+        self.data_dir = Path(config[runtime_key]["data_dir"]).resolve()
         self.max_epochs: int = cfg["max_epochs"]
         self.max_steps: int = cfg["max_steps"]
         self.model: str | dict[str, Any] = cfg["model"]

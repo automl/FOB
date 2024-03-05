@@ -2,6 +2,7 @@ from lightning import Callback, Trainer
 from workloads.coco.model import COCODetectionModel
 
 
+# TODO: move this to module
 class COCOEvalSummarize(Callback):
     def on_validation_epoch_end(self, trainer: Trainer, pl_module: COCODetectionModel):
         self._summarize_eval(pl_module)

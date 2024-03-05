@@ -91,7 +91,7 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     runtime.parse_experiment(args.experiment_file, extra_args=extra_args)
     runs = runtime.runs()
     for i, run in enumerate(runs):
-        print(f"Starting run {i}/{len(runs)}.")
+        print(f"Starting run {i + 1}/{len(runs)}.")
         run_trial(run)
 
     if args.send_timeout:

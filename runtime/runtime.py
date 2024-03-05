@@ -6,6 +6,7 @@ from submissions import Submission, submission_path, submission_names
 from workloads import WorkloadModel, WorkloadDataModule, import_workload, workload_path, workload_names
 from .grid_search import gridsearch
 from .configs import RuntimeConfig, SubmissionConfig, WorkloadConfig
+from .utils import path_to_str_inside_dict
 
 
 def runtime_path() -> Path:
@@ -43,7 +44,7 @@ class Run():
 
     def export_config(self):
         with open(self.output_dir / "config.yaml", "w", encoding="utf8") as f:
-            yaml.safe_dump(self._config, f)
+            yaml.safe_dump(path_to_str_inside_dict(self._config), f)
 
     def get_submission(self) -> Submission:
         return Submission(self.submission)
