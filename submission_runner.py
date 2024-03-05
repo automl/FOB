@@ -105,5 +105,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("experiment_file", type=Path,
                         help="The yaml file specifying the experiment.")
+    parser.add_argument("--send_timeout", action="store_true",
+                        help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
     args, extra_args = parser.parse_known_args()
     main(args, extra_args)
