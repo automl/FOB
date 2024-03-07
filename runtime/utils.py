@@ -1,7 +1,8 @@
 from pathlib import Path
-import json
-import signal
 from typing import Any
+import json
+import math
+import signal
 import torch
 
 
@@ -9,6 +10,10 @@ def write_results(results, filepath: Path):
     with open(filepath, "w", encoding="utf8") as f:
         json.dump(results, f, indent=4)
     print(f"Saved results into {filepath}.")
+
+
+def calculate_steps(epochs: int, datapoints: int, devices: int, batch_size: int) -> int:
+    return math.ceil(datapoints / batch_size / devices) * epochs
 
 
 def some(*args, default):
