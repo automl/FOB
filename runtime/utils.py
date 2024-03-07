@@ -56,4 +56,22 @@ def path_to_str_inside_dict(d: dict) -> dict:
 
 
 def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[str, Any]:
-    raise NotImplementedError()
+    """
+    Example:
+    >>> dict_differences({"hi": 3, "bla": {"a": 2, "b": 2}}, {"hi": 2, "bla": {"a": 1, "b": 2}})
+    {'hi': 3, 'bla': {'a': 2}}
+    """
+    assert set(default.keys()).issubset(set(custom.keys()))
+    diff: dict[str, Any] = {}
+    for key, value in custom.items():
+        if key in default:
+            default_value = default[key]
+            if default_value == value:
+                continue
+            if isinstance(value, dict):
+                diff[key] = dict_differences(value, default_value)
+            else:
+                diff[key] = value
+        else:
+            diff[key] = value
+    return diff
