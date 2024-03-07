@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import signal
+from typing import Any
 import torch
 
 
@@ -52,3 +53,7 @@ def path_to_str_inside_dict(d: dict) -> dict:
     return {k: (str(v) if isinstance(v, Path) else
                 (path_to_str_inside_dict(v) if isinstance(v, dict) else v))
             for k, v in d.items()}
+
+
+def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[str, Any]:
+    raise NotImplementedError()
