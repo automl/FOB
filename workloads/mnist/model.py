@@ -8,14 +8,21 @@ class MNISTModel(WorkloadModel):
     def __init__(self, submission: Submission, workload_config: WorkloadConfig):
 
         input_size = 28 * 28  # 784
-        num_hidden = 128
         num_classes = 10
+        num_hidden = workload_config.model["num_hidden"]
+        activation = workload_config.model["activation"]
+        if activation.lower() == "Sigmoid".lower():
+            self.activation = torch.nn.Sigmoid
+        elif activation.lower() == "ReLU".lower():
+            self.activation = torch.nn.ReLU
+        else:
+            raise NotImplementedError(f"{activation} is not supported for mnist yet")
 
         # algoperf net
         # https://github.com/mlcommons/algorithmic-efficiency/blob/main/algorithmic_efficiency/workloads/mnist/mnist_pytorch/workload.py
         model = torch.nn.Sequential(
             torch.nn.Linear(input_size, num_hidden, bias=True),
-            torch.nn.Sigmoid(),
+            self.activation(),
             torch.nn.Linear(num_hidden, num_classes, bias=True),
         )
         super().__init__(model, submission, workload_config)

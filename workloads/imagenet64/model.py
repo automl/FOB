@@ -10,7 +10,21 @@ from submissions import Submission
 
 class ImagenetModel(WorkloadModel):
     def __init__(self, submission: Submission, workload_config: WorkloadConfig):
-        model = create_model("davit_small.msft_in1k")
+        model_name = workload_config.model["name"]
+        model = create_model(model_name)
+        
+        # 7x7 conv might be pretty large for 32x32 images
+        model.conv1 = nn.Conv2d(3,  # rgb color
+                                workload_config.model["hidden_channel"],
+                                kernel_size=workload_config.model["kernel_size"],
+                                padding=workload_config.model["padding"],
+                                bias=False
+                                )
+
+        # pooling small images might be bad
+        if not workload_config.model["maxpool"]:
+            model.maxpool = nn.Identity()  # type:ignore
+
         super().__init__(model, submission, workload_config)
         self.loss_fn = nn.CrossEntropyLoss()
 

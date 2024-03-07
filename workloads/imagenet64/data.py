@@ -29,23 +29,49 @@ class Imagenet64Dataset(Dataset):
 class ImagenetDataModule(WorkloadDataModule):
     def __init__(self, workload_config: WorkloadConfig):
         super().__init__(workload_config)
-        self.data_dir = self.data_dir / "Imagenet64"
-        self.batch_size = 512
-        self.train_transforms = v2.Compose([
-            v2.ToImage(),
-            v2.RandomCrop(64, padding=4, padding_mode='reflect'),
-            v2.RandomHorizontalFlip(),
-            v2.TrivialAugmentWide(interpolation=v2.InterpolationMode.BILINEAR),
-            v2.ToDtype(torch.float, scale=True),
-            v2.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
-            v2.ToPureTensor()
-        ])
+
+        self.train_transforms = self._get_train_transforms(workload_config)
+
         self.val_transforms = v2.Compose([
             v2.ToImage(),
             v2.ToDtype(torch.float, scale=True),
             v2.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
             v2.ToPureTensor()
         ])
+
+    def _get_train_transforms(self, workload_config: WorkloadConfig):
+        # reading setting
+        random_crop = v2.RandomCrop(
+            size = workload_config.train_transforms["random_crop"]["size"],
+            padding = workload_config.train_transforms["random_crop"]["padding"],
+            padding_mode = workload_config.train_transforms["random_crop"]["padding_mode"],
+        )
+        horizontal_flip = v2.RandomHorizontalFlip(
+            workload_config.train_transforms["horizontal_flip"]["p"]
+        )
+        trivial_augment = v2.TrivialAugmentWide(interpolation=v2.InterpolationMode.BILINEAR)
+
+        # main list
+        transforms = [
+            v2.ToImage(),
+            random_crop,
+            horizontal_flip,
+            trivial_augment,
+            v2.ToDtype(torch.float, scale=True),
+            v2.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
+            v2.ToPureTensor()
+        ]
+
+        # removing unused
+        if not workload_config.train_transforms["random_crop"]["use"]:
+            transforms.remove(random_crop)
+        if not workload_config.train_transforms["horizontal_flip"]["use"]:
+            transforms.remove(horizontal_flip)
+        if not workload_config.train_transforms["trivial_augment"]["use"]:
+            transforms.remove(trivial_augment)
+
+        transforms = v2.Compose(transforms)
+        return transforms
 
     def prepare_data(self):
         # download

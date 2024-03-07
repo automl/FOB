@@ -11,7 +11,7 @@ def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
 
 
 def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
-    return ImagenetModel(submission), get_datamodule(workload_config)
+    return ImagenetModel(submission, workload_config), get_datamodule(workload_config)
 
 
 def get_callbacks() -> list[Callback]:
