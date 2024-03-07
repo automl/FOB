@@ -10,10 +10,6 @@ from runtime.runtime import Runtime, Run
 from runtime.callbacks import LogParamsAndGrads, PrintEpoch
 from runtime.utils import some, trainer_strategy, begin_timeout, write_results
 
-import workloads
-from workloads import WorkloadModel, WorkloadDataModule
-import submissions
-
 
 def run_trial(run: Run):
     torch.set_float32_matmul_precision('high')  # TODO: check if gpu has tensor cores
