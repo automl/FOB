@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Type
+from typing import Any, Iterable, Type
 import json
 import math
 import signal
@@ -90,6 +90,32 @@ def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[st
         else:
             diff[key] = value
     return diff
+
+
+def concatenate_dict_keys(
+        d: dict[str, Any],
+        parent_key: str = "",
+        sep: str = ".",
+        exclude_keys: Iterable[str] = tuple()
+    ) -> dict[str, Any]:
+    """
+    Example:
+    >>> concatenate_dict_keys({ "A": { "B": { "C": 1, "D": 2 }, "E": { "F": 3 } } })
+    {'A.B.C': 1, 'A.B.D': 2, 'A.E.F': 3}
+    >>> concatenate_dict_keys({ "A": { "B": { "C": 1, "D": 2 }, "E": { "F": 3 } } }, exclude_keys=["B"])
+    {'A.E.F': 3}
+    """
+    result = {}
+    for k, v in d.items():
+        if k in exclude_keys:
+            continue
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            nested_result = concatenate_dict_keys(v, new_key, sep, exclude_keys)
+            result.update(nested_result)
+        else:
+            result[new_key] = v
+    return result
 
 
 class AttributeDict(dict):

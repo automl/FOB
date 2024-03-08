@@ -19,7 +19,7 @@ def run_trial(run: Run):
     run.export_config()
     model, data_module = run.get_workload()
     model_checkpoint = ModelCheckpoint(
-        dirpath=run.output_dir / "checkpoints",
+        dirpath=run.run_dir / "checkpoints",
         filename="best-{epoch}-{step}",
         monitor=run.workload.target_metric,
         mode=run.workload.target_metric_mode,
@@ -33,11 +33,11 @@ def run_trial(run: Run):
         max_steps=max_steps,
         logger=[
             TensorBoardLogger(
-                save_dir=run.output_dir,
+                save_dir=run.run_dir,
                 name="tb_logs"
             ),
             CSVLogger(
-                save_dir=run.output_dir,
+                save_dir=run.run_dir,
                 name="csv_logs"
             )
         ],
@@ -78,8 +78,8 @@ def run_trial(run: Run):
             trainer.fit(model, datamodule=data_module, ckpt_path=run.runtime.resume)
         final_score = tester.test(model, datamodule=data_module)
         best_score = tester.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
-        write_results(final_score, run.output_dir / "results_final_model.json")
-        write_results(best_score, run.output_dir / "results_best_model.json")
+        write_results(final_score, run.run_dir / "results_final_model.json")
+        write_results(best_score, run.run_dir / "results_best_model.json")
 
 
 def main(args: argparse.Namespace, extra_args: list[str]):
