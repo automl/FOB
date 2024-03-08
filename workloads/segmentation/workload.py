@@ -1,4 +1,3 @@
-from lightning import Callback
 from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel, WorkloadDataModule
@@ -13,7 +12,3 @@ def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
 def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
     dm = SegmentationDataModule(workload_config)
     return SegmentationModel(submission, dm.data_dir, dm.id2label, dm.label2id, workload_config), dm
-
-
-def get_callbacks() -> list[Callback]:
-    return []

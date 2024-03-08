@@ -59,3 +59,22 @@ class COCODetectionModel(WorkloadModel):
 
     def total_loss(self, losses: dict):
         return sum(loss for loss in losses.values())
+
+    def on_validation_epoch_end(self):
+        self._summarize_eval()
+        self.log("val_AP", self.get_eval_stats()[0], sync_dist=True)
+
+    def on_test_epoch_end(self):
+        self._summarize_eval()
+        self.log("test_AP", self.get_eval_stats()[0], sync_dist=True)
+
+    def _summarize_eval(self):
+        self.coco_eval.synchronize_between_processes()
+        self.coco_eval.accumulate()
+        self.coco_eval.summarize()
+
+    def on_validation_epoch_start(self):
+        self.reset_coco_eval()
+
+    def on_test_epoch_start(self):
+        self.reset_coco_eval()

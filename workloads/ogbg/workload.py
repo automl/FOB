@@ -1,4 +1,3 @@
-from lightning import Callback
 from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel, WorkloadDataModule
@@ -21,6 +20,3 @@ def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tup
                                  batch_size=datamodule.batch_size,
                                  workload_config=workload_config)
     return ogbg_model, datamodule
-
-def get_callbacks() -> list[Callback]:
-    return []

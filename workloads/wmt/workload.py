@@ -1,4 +1,3 @@
-from lightning import Callback
 from runtime.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel, WorkloadDataModule
@@ -13,6 +12,3 @@ def get_datamodule(workload_config: WorkloadConfig) -> WorkloadDataModule:
 def get_workload(submission: Submission, workload_config: WorkloadConfig) -> tuple[WorkloadModel, WorkloadDataModule]:
     data_module = WMTDataModule(workload_config)
     return WMTModel(submission, data_module, workload_config), data_module
-
-def get_callbacks() -> list[Callback]:
-    return []
