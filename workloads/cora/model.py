@@ -1,24 +1,27 @@
 import torch
 from workloads import WorkloadModel
-from runtime.specs import RuntimeSpecs
+from runtime.configs import WorkloadConfig
 from submissions import Submission
 from torch_geometric.nn import GCNConv
+from torch import nn
 import torch.nn.functional as F
 
 
 class CoraModel(WorkloadModel):
     """simple GCN implementation / GAT from pytorch geometric"""
-    def __init__(self, submission: Submission, batch_size: int):
-        model_name = "GCN"
-        self.batch_size = batch_size
-        if model_name == "GCN":
-            model = GCN()
-        elif model_name == "GAT":
-            # TODO pytorch geometric GAT
-            model = GAT()
-        else:
-            NotImplementedError("model not available")
-        super().__init__(model, submission)
+    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+        self.batch_size = workload_config.batch_size
+        hidden_channels = workload_config.model["hidden_channels"]
+        num_layers = workload_config.model["num_layers"]
+        cached = workload_config.model["cached"]
+        normalize = workload_config.model["normalize"]
+        dropout = workload_config.model["dropout"]
+        model = GCN(hidden_channels=hidden_channels,
+                    num_layers=num_layers,
+                    dropout=dropout,
+                    cached=cached,
+                    normalize=normalize)
+        super().__init__(model, submission, workload_config)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
     def forward(self, data: torch.Tensor, mode="train") -> torch.Tensor:
@@ -53,30 +56,55 @@ class CoraModel(WorkloadModel):
         _, acc = self.forward(batch, mode="test")
         self.log("test_acc", acc, on_epoch=True, batch_size=self.batch_size)
 
-    def get_specs(self) -> RuntimeSpecs:
-        # TODO set proper specs
-        return RuntimeSpecs(
-            max_epochs=100,
-            max_steps=None,
-            devices=1,
-            target_metric="val_acc",
-            target_metric_mode="max"
-        )
-
 
 class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels=32):
+    def __init__(self, hidden_channels=32, num_layers:int = 2, dropout=0.5, cached:bool=False, normalize:bool=True):
+        self.dropout = dropout
+        self.num_layers = num_layers
         super().__init__()
-        self.dropout = 0.5
         # cora dataset:
         num_features = 1433
         num_classes = 7
-        self.conv1 = GCNConv(num_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, num_classes)
+
+        self.convs = nn.ModuleList()
+        self.convs.append(
+            GCNConv(num_features,
+                    hidden_channels,
+                    cached=cached,
+                    normalize=normalize,
+                    dropout=dropout
+                )
+        )
+
+        for _ in range(num_layers - 2):
+            self.convs.append(
+                GCNConv(
+                    hidden_channels,
+                    hidden_channels,
+                    cached=cached,
+                    normalize=normalize,
+                    dropout=dropout
+                )
+            )
+
+        self.convs.append(
+            GCNConv(
+                hidden_channels,
+                num_classes,
+                cached=cached,
+                normalize=normalize,
+            )
+        )
+
 
     def forward(self, x, edge_index):
-        x = self.conv1(x, edge_index)
-        x = x.relu()
-        x = F.dropout(x, p=self.dropout, training=self.training)
-        x = self.conv2(x, edge_index)
+        # print(edge_index)
+        for idx, conv in enumerate(self.convs):
+            x = conv(x, edge_index)
+            if idx < self.num_layers - 1:
+                x = F.relu(x)
+                x = F.dropout(x, p=self.dropout, training=self.training)
+            else:
+                x = F.log_softmax(x, dim=1)
+
         return x
