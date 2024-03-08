@@ -115,15 +115,6 @@ class SegmentationModel(WorkloadModel):
             raise TypeError(f"could not infer num_process from {specs.devices=}")
         return evaluate.load("mean_iou", num_process=num_process, cache_dir=str(data_dir))
 
-    def get_specs(self) -> RuntimeSpecs:
-        return RuntimeSpecs(
-            max_epochs=32,
-            max_steps=10_112,
-            devices=4,
-            target_metric="val_mean_accuracy",
-            target_metric_mode="max"
-        )
-
     def _compute_and_log_metrics(self, stage: str):
         for k, v in self.metrics.items():
             self.log(f"{stage}_{k}", np.mean(v), sync_dist=True)  # type:ignore
