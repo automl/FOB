@@ -106,7 +106,7 @@ class Runtime():
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)
         for key, opts in zip(keys, valid_options):
-            if all(name in opts for name in searchspace[key]):
+            if isinstance(searchspace[key], dict) and all(name in opts for name in searchspace[key]):
                 searchspace[key] = [cfg | {self.identifier_key: name} for name, cfg in searchspace[key].items()]
 
     def _fill_runs_from_default(self):
@@ -127,6 +127,8 @@ class Runtime():
         named = experiment[key]
         if isinstance(named, dict):
             named = named[self.identifier_key]
+        else:
+            experiment[key] = {self.identifier_key: named}
         default_path: Path = named_root(named) / self.default_file_name
         default_config = self._parse_yaml(default_path)
         self._merge_dicts_hierarchical(default_config, experiment)
