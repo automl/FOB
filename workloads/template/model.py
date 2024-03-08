@@ -6,11 +6,24 @@ from submissions import Submission
 
 class TemplateModel(WorkloadModel):
     def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+        # Here you can see some examples on how to include the config
+        # 1) parameters that should change depending on the experiment are placed in the default.yaml
+        hidden_channels_from_yaml = workload_config.model.hidden_channels
+
+        # 2) you can also add other type, e.g. activation function, but this usually needs some code
+        if workload_config.model.activation.lower() == "ReLU".lower():
+            self.activation = torch.nn.ReLU
+        # 3) the workload_config is a dict, you could access the values just like a dict; we prefer the dots
+        elif workload_config["model"]["activation"].lower() == "GELU".lower():
+            self.activation = torch.nn.GELU
+        else:
+            raise NotImplementedError(f"{workload_config.model.activation} is not yet supported for {type(self)}")
+
         model = torch.nn.Sequential(
-            torch.nn.Linear(1, 10),
-            torch.nn.ReLU(),
-            torch.nn.Linear(10, 1),
-            torch.nn.ReLU(),
+            torch.nn.Linear(1, hidden_channels_from_yaml),
+            self.activation(),
+            torch.nn.Linear(hidden_channels_from_yaml, 1),
+            self.activation(),
         )
         self.loss = torch.nn.functional.mse_loss
         super().__init__(model, submission, workload_config)
