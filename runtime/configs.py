@@ -29,7 +29,7 @@ class SubmissionConfig(NamedConfig):
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
-        cfg = config[submission_key]
+        cfg = dict(config[submission_key])
         self.max_steps = config[workload_key]["max_steps"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg, identifier_key, outdir_key)
@@ -44,7 +44,7 @@ class WorkloadConfig(NamedConfig):
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
-        cfg = config[workload_key]
+        cfg = dict(config[workload_key])
         self.batch_size: int = cfg["batch_size"]
         self.data_dir = Path(config[runtime_key]["data_dir"]).resolve()
         self.max_epochs: int = cfg["max_epochs"]
@@ -59,7 +59,7 @@ class WorkloadConfig(NamedConfig):
 
 class RuntimeConfig(BaseConfig):
     def __init__(self, config: dict[str, Any], workload_key: str, runtime_key: str) -> None:
-        cfg = config[runtime_key]
+        cfg = dict(config[runtime_key])
         self.deterministic: bool = cfg.get("deterministic", True)
         self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
