@@ -37,7 +37,7 @@ class WorkloadModel(LightningModule):
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        return self.submission.configure_optimizers(self.model, self.config)
+        return self.submission.configure_optimizers(self.model)
 
 
 class WorkloadDataModule(LightningDataModule):

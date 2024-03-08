@@ -4,7 +4,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from runtime.configs import SubmissionConfig, WorkloadConfig
+from runtime.configs import SubmissionConfig
 from runtime.parameter_groups import GroupedModel
 
 
@@ -27,30 +27,23 @@ def cosine_warmup(
     return SequentialLR(
         optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
-def configure_optimizers(
-        model: GroupedModel,
-        workload_config: WorkloadConfig,
-        submission_config: SubmissionConfig
-    ) -> OptimizerLRScheduler:
-    hparams = submission_config
-    lr=hparams["learning_rate"]
-    weight_decay=hparams["weight_decay"]
+def configure_optimizers(model: GroupedModel, config: SubmissionConfig) -> OptimizerLRScheduler:
+    lr=config.learning_rate
+    weight_decay=config.weight_decay
     parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)
     optimizer = AdamW(
         parameter_groups,
         lr=lr,
-        eps=hparams["epsilon"],
-        betas=(1.0 - hparams["one_minus_beta1"], hparams["beta2"]),
+        eps=config.epsilon,
+        betas=(1.0 - config.one_minus_beta1, config.beta2),
         weight_decay=weight_decay,
         fused=False
     )
-    step_hint = workload_config.max_steps if workload_config.max_steps else workload_config.max_epochs
-    interval = "step" if workload_config.max_steps else "epoch"
-    scheduler = cosine_warmup(step_hint, hparams["warmup_factor"], hparams["eta_min_factor"]*lr, optimizer)
+    scheduler = cosine_warmup(config.max_steps, config.warmup_factor, config.eta_min_factor * lr, optimizer)
     return {
         "optimizer": optimizer,
         "lr_scheduler": {
             "scheduler": scheduler,
-            "interval": interval
+            "interval": "step"
         }
     }

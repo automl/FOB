@@ -2,7 +2,7 @@ import importlib
 from pathlib import Path
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from runtime.parameter_groups import GroupedModel
-from runtime.configs import SubmissionConfig, WorkloadConfig
+from runtime.configs import SubmissionConfig
 
 
 def import_submission(name: str):
@@ -22,6 +22,6 @@ class Submission():
     def __init__(self, config: SubmissionConfig) -> None:
         self.config = config
 
-    def configure_optimizers(self, model: GroupedModel, workload_config: WorkloadConfig) -> OptimizerLRScheduler:
+    def configure_optimizers(self, model: GroupedModel) -> OptimizerLRScheduler:
         submission_module = import_submission(self.config.name)
-        return submission_module.configure_optimizers(model, workload_config, self.config)
+        return submission_module.configure_optimizers(model, self.config)

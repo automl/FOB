@@ -1,5 +1,6 @@
 submission:
   name: sgd_baseline
+  output_dir_name: sgd_baseline
   learning_rate: 1.e-2
   momentum: 0.9
   weight_decay: 1.e-4
