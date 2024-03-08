@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Type
 import json
 import math
 import signal
@@ -48,16 +48,26 @@ def begin_timeout(delay=10, show_threads=False):
         import threading
         thread_names = {t.ident: t.name for t in threading.enumerate()}
         for thread_id, frame in sys._current_frames().items():
-            print("Thread %s:" % thread_names.get(thread_id, thread_id))
+            print(f"Thread {thread_names.get(thread_id, thread_id)}:")
             traceback.print_stack(frame)
             print()
     signal.alarm(delay)  # Timeout after 10 seconds
 
 
 def path_to_str_inside_dict(d: dict) -> dict:
-    return {k: (str(v) if isinstance(v, Path) else
-                (path_to_str_inside_dict(v) if isinstance(v, dict) else v))
-            for k, v in d.items()}
+    return convert_type_inside_dict(d, Path, str)
+
+
+def convert_type_inside_dict(d: dict, src: Type, tgt: Type) -> dict:
+    ret = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = convert_type_inside_dict(v, src, tgt)
+        if isinstance(v, src):
+            ret[k] = tgt(v)
+        else:
+            ret[k] = v
+    return ret
 
 
 def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[str, Any]:
@@ -80,3 +90,13 @@ def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[st
         else:
             diff[key] = value
     return diff
+
+
+class AttributeDict(dict):
+
+    def __getattribute__(self, key: str) -> Any:
+        try:
+            return super().__getattribute__(key)
+        except AttributeError:
+            pass
+        return super().__getitem__(key)

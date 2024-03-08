@@ -1,26 +1,11 @@
 from pathlib import Path
 from typing import Any, Optional
+from .utils import AttributeDict, convert_type_inside_dict
 
 
-class BaseConfig():
-    def __init__(self, config: dict[str, Any]) -> None:
-        self._config = config
-
-    def __getitem__(self, key: str) -> Any:
-        return self._config[key]
-
-    def __getattribute__(self, key: str) -> Any:
-        try:
-            return super().__getattribute__(key)
-        except AttributeError:
-            pass
-        return self._config[key]
-
-    def keys(self):
-        return self._config.keys()
-
-    def items(self):
-        return self._config.items()
+class BaseConfig(AttributeDict):
+    def __init__(self, config: dict):
+        super().__init__(convert_type_inside_dict(config, dict, AttributeDict))
 
 
 class NamedConfig(BaseConfig):
@@ -64,7 +49,6 @@ class WorkloadConfig(NamedConfig):
         self.data_dir = Path(config[runtime_key]["data_dir"]).resolve()
         self.max_epochs: int = cfg["max_epochs"]
         self.max_steps: int = cfg["max_steps"]
-        self.model: str | dict[str, Any] = cfg["model"]
         self.target_metric: str = cfg["target_metric"]
         self.target_metric_mode: str = cfg["target_metric_mode"]
         self.workers = config[runtime_key]["workers"]
