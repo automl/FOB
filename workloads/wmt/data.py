@@ -35,11 +35,9 @@ def tensor_transform(token_ids: list[int]):
 class WMTDataModule(WorkloadDataModule):
     def __init__(self, workload_config: WorkloadConfig):
         super().__init__(workload_config)
-        self.data_dir = self.data_dir / "wmt"
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 5))
-        self.batch_size = 100
         self.tokenizer = {}
         self.vocab_transform = {}
         self.info_file = self.processed_data_dir / "info.json"

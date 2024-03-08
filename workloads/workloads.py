@@ -46,12 +46,11 @@ class WorkloadDataModule(LightningDataModule):
         self.config = workload_config
         self.workers = min(workload_config.workers, 16)
         self.data_dir = workload_config.data_dir / workload_config.name
-        self.batch_size = workload_config.batch_size
+        self.batch_size: int = workload_config.batch_size
         self.data_train: Any
         self.data_val: Any
         self.data_test: Any
         self.data_predict: Any
-        self.batch_size: int
         self.collate_fn = None
 
     def check_dataset(self, data):

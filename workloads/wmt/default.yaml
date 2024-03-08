@@ -2,9 +2,8 @@ workload:
   name: wmt
   output_dir_name: wmt
   max_epochs: 18
-  # TODO
-  # max_steps=math.ceil(self.train_data_len / self.batch_size / devices) * epochs,
-  batch_size: 100
+  max_steps: 415242
+  batch_size: 64
   target_metric: val_loss
   target_metric_mode: min
 runtime:

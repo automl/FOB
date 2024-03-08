@@ -1,5 +1,5 @@
 workload:
-  name: template
+  name: template  # important for download directory and other things
   output_dir_name: template
   batch_size: 10
   max_epochs: 15
