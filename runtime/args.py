@@ -19,44 +19,6 @@ class DatasetArgs:
         self.workload_name: str = args.workload
         self.workers: int = min(16, some(args.workers, default=cpu_count() - 1))
 
-
-class RuntimeArgs(DatasetArgs):
-    """
-    Hold runtime specific arguments which is globally available information
-    """
-    _id = count(0)
-
-    def __init__(self, args: argparse.Namespace) -> None:
-        super().__init__(args)
-        self.submission_name: str = args.submission
-        self.resume: Optional[Path] = args.resume
-        self.devices: Optional[int] = args.devices
-        self.max_steps: Optional[int] = args.max_steps
-        self.silent: bool = some(args.silent, default=False)
-        self.run_index: int = next(self._id)
-        self.trial: int = args.start_trial + self.run_index
-        self.log_extra = args.log_extra
-        output_dir = some(args.output, default=Path.cwd() / "experiments")
-        self.output_dir: Path = output_dir / self.submission_name / self.workload_name / f"trial_{self.trial}"
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.checkpoint_dir: Path = self.output_dir / "checkpoints"
-        self.test_only: bool = some(args.test_only, default=False)
-        self.deterministic: bool = args.deterministic
-        self.optimize_memory: bool = some(args.optimize_memory, default=False)
-        self.hyperparameters: dict[str, Any]
-        from_search_space = self._resolve_hyperparameters(args.hyperparameters, args.start_hyperparameter)
-        if args.seed_mode == "fixed":
-            self.seed = args.seed
-        elif args.seed_mode == "increment":
-            self.seed = args.seed + self.run_index
-        elif args.seed_mode == "random":
-            self.seed = random.randint(0, 2**31)
-        else:
-            if from_search_space:
-                self.seed = args.seed
-            else:
-                self.seed = args.seed + self.run_index
-
     def _resolve_hyperparameters(self, hyperparameters: str | Path | None, start_hyperparameter: int) -> bool:
         default_hparam_path = submission_path(self.submission_name) / "hyperparameters.json"
         hparams = some(hyperparameters, default=default_hparam_path)
