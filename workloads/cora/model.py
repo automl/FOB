@@ -11,11 +11,11 @@ class CoraModel(WorkloadModel):
     """simple GCN implementation / GAT from pytorch geometric"""
     def __init__(self, submission: Submission, workload_config: WorkloadConfig):
         self.batch_size = workload_config.batch_size
-        hidden_channels = workload_config.model["hidden_channels"]
-        num_layers = workload_config.model["num_layers"]
-        cached = workload_config.model["cached"]
-        normalize = workload_config.model["normalize"]
-        dropout = workload_config.model["dropout"]
+        hidden_channels = workload_config.model.hidden_channels
+        num_layers = workload_config.model.num_layers
+        cached = workload_config.model.cached
+        normalize = workload_config.model.normalize
+        dropout = workload_config.model.dropout
         model = GCN(hidden_channels=hidden_channels,
                     num_layers=num_layers,
                     dropout=dropout,

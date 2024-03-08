@@ -24,8 +24,7 @@ class CIFAR100DataModule(WorkloadDataModule):
             interpolation=v2.InterpolationMode.BILINEAR
         ) if workload_config.train_transforms.trivial_augment.use else v2.Identity()
 
-        # build list and remove unwanted before composing
-        train_transforms = [
+        self.train_transforms = v2.Compose([
             v2.ToImage(),
             random_crop,
             horizontal_flip,
@@ -33,9 +32,7 @@ class CIFAR100DataModule(WorkloadDataModule):
             v2.ToDtype(torch.float, scale=True),
             v2.Normalize(cifar100_mean, cifar100_stddev),
             v2.ToPureTensor()
-        ]
-
-        self.train_transforms = v2.Compose(train_transforms)
+        ])
         self.val_transforms = v2.Compose([
             v2.ToImage(),
             v2.ToDtype(torch.float, scale=True),
