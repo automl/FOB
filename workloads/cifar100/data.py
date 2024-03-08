@@ -11,17 +11,18 @@ class CIFAR100DataModule(WorkloadDataModule):
         super().__init__(workload_config)
         cifar100_mean = (0.4914, 0.4822, 0.4465)
         cifar100_stddev = (0.2023, 0.1994, 0.2010)
-
         # build the transforms as given in config
         random_crop = v2.RandomCrop(
-            size = workload_config.train_transforms["random_crop"]["size"],
-            padding = workload_config.train_transforms["random_crop"]["padding"],
-            padding_mode = workload_config.train_transforms["random_crop"]["padding_mode"],
-        )
+            size = workload_config.train_transforms.random_crop.size,
+            padding = workload_config.train_transforms.random_crop.padding,
+            padding_mode = workload_config.train_transforms.random_crop.padding_mode,
+        ) if workload_config.train_transforms.random_crop.use else v2.Identity()
         horizontal_flip = v2.RandomHorizontalFlip(
-            workload_config.train_transforms["horizontal_flip"]["p"]
-        )
-        trivial_augment = v2.TrivialAugmentWide(interpolation=v2.InterpolationMode.BILINEAR)
+            workload_config.train_transforms.horizontal_flip.p
+        ) if workload_config.train_transforms.horizontal_flip.use else v2.Identity()
+        trivial_augment = v2.TrivialAugmentWide(
+            interpolation=v2.InterpolationMode.BILINEAR
+        ) if workload_config.train_transforms.trivial_augment.use else v2.Identity()
 
         # build list and remove unwanted before composing
         train_transforms = [
@@ -33,13 +34,6 @@ class CIFAR100DataModule(WorkloadDataModule):
             v2.Normalize(cifar100_mean, cifar100_stddev),
             v2.ToPureTensor()
         ]
-
-        if not workload_config.train_transforms["random_crop"]["use"]:
-            train_transforms.remove(random_crop)
-        if not workload_config.train_transforms["horizontal_flip"]["use"]:
-            train_transforms.remove(horizontal_flip)
-        if not workload_config.train_transforms["trivial_augment"]["use"]:
-            train_transforms.remove(trivial_augment)
 
         self.train_transforms = v2.Compose(train_transforms)
         self.val_transforms = v2.Compose([

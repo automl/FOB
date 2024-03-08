@@ -45,7 +45,7 @@ class WorkloadDataModule(LightningDataModule):
         super().__init__()
         self.config = workload_config
         self.workers = min(workload_config.workers, 16)
-        self.data_dir = workload_config.data_dir
+        self.data_dir = workload_config.data_dir / workload_config.name
         self.batch_size = workload_config.batch_size
         self.data_train: Any
         self.data_val: Any

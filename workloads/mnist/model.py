@@ -9,8 +9,8 @@ class MNISTModel(WorkloadModel):
 
         input_size = 28 * 28  # 784
         num_classes = 10
-        num_hidden = workload_config.model["num_hidden"]
-        activation = workload_config.model["activation"]
+        num_hidden = workload_config.model.num_hidden
+        activation = workload_config.model.activation
         if activation.lower() == "Sigmoid".lower():
             self.activation = torch.nn.Sigmoid
         elif activation.lower() == "ReLU".lower():

@@ -14,24 +14,25 @@ class MNISTDataModule(WorkloadDataModule):
 
         # TODO: check values
         # https://lightning.ai/docs/pytorch/stable/data/datamodule.html
-        meanOfMNIST = (0.1307,)
-        stdOfMNIST = (0.3081,)
+        mean = (0.1307,)
+        std = (0.3081,)
         self.transform = transforms.Compose([transforms.ToTensor(),
-                                             transforms.Normalize(meanOfMNIST, stdOfMNIST)])
+                                             transforms.Normalize(mean, std)])
 
     def prepare_data(self):
         # download
         MNIST(str(self.data_dir), train=True, download=True)
         MNIST(str(self.data_dir), train=False, download=True)
-    
+
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
         """
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
             mnist_full = MNIST(str(self.data_dir), train=True, transform=self.transform)
-            self.data_train, self.data_val = random_split(mnist_full, self.train_val_split)  # TODO confirm seed everything makes this reproducable
-        
+            # TODO (Zachi) confirm seed everything makes this reproducable:
+            self.data_train, self.data_val = random_split(mnist_full, self.train_val_split)
+
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
             self.data_test = MNIST(str(self.data_dir), train=False, transform=self.transform)
