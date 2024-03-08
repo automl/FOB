@@ -28,8 +28,7 @@ class TabularDataModule(WorkloadDataModule):
     """
     def __init__(self, workload_config: WorkloadConfig):
         super().__init__(workload_config)
-        self.data_dir = self.data_dir / "Tabular"
-        self.batch_size = 256
+        self.train_split = workload_config.train_split
 
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
@@ -45,10 +44,10 @@ class TabularDataModule(WorkloadDataModule):
 
         all_idx = np.arange(len(targets))
         trainval_idx, test_idx = train_test_split(
-            all_idx, train_size=0.8
+            all_idx, train_size=self.train_split
         )
         train_idx, val_idx = train_test_split(
-            trainval_idx, train_size=0.8
+            trainval_idx, train_size=self.train_split
         )
         feature_preprocessor = self._get_feature_preprocessor(features[train_idx], train_idx)
         target_preprocessor = self._get_target_preprocessor(targets[train_idx])

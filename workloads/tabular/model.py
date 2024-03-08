@@ -13,11 +13,12 @@ class TabularModel(WorkloadModel):
     def __init__(self, submission: Submission, workload_config: WorkloadConfig):
         # output dimension
         d_out = 1
-        # Continuous features.
+        # Continuous features. (depends on dataset)
         n_cont_features = 8
-        # Categorical features.
+        # Categorical features. (depends on dataset)
         cat_cardinalities = []
-        default_kwargs = FTTransformer.get_default_kwargs()
+        n_blocks = workload_config.model.n_blocks
+        default_kwargs = FTTransformer.get_default_kwargs(n_blocks)
         model = FTTransformer(
             n_cont_features=n_cont_features,
             cat_cardinalities=cat_cardinalities,

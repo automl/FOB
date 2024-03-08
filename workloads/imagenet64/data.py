@@ -41,18 +41,24 @@ class ImagenetDataModule(WorkloadDataModule):
 
     def _get_train_transforms(self, workload_config: WorkloadConfig):
         # reading setting
-        random_crop = v2.RandomCrop(
-            size = workload_config.train_transforms["random_crop"]["size"],
-            padding = workload_config.train_transforms["random_crop"]["padding"],
-            padding_mode = workload_config.train_transforms["random_crop"]["padding_mode"],
-        )
-        horizontal_flip = v2.RandomHorizontalFlip(
-            workload_config.train_transforms["horizontal_flip"]["p"]
-        )
-        trivial_augment = v2.TrivialAugmentWide(interpolation=v2.InterpolationMode.BILINEAR)
+        if workload_config.train_transforms.random_crop.use:
+            random_crop = v2.RandomCrop(
+                size = workload_config.train_transforms.random_crop.size,
+                padding = workload_config.train_transforms.random_crop.padding,
+                padding_mode = workload_config.train_transforms.random_crop.padding_mode
+            )
+        else:
+            random_crop = v2.Identity()
+        if workload_config.train_transforms.horizontal_flip.use:
+            horizontal_flip = v2.RandomHorizontalFlip(workload_config.train_transforms.horizontal_flip.p)
+        else:
+            horizontal_flip = v2.Identity()
+        if workload_config.train_transforms.trivial_augment.use:
+            trivial_augment = v2.TrivialAugmentWide(interpolation=v2.InterpolationMode.BILINEAR)
+        else:
+            trivial_augment = v2.Identity()
 
-        # main list
-        transforms = [
+        transforms = v2.Compose([
             v2.ToImage(),
             random_crop,
             horizontal_flip,
@@ -60,17 +66,8 @@ class ImagenetDataModule(WorkloadDataModule):
             v2.ToDtype(torch.float, scale=True),
             v2.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD),
             v2.ToPureTensor()
-        ]
+        ])
 
-        # removing unused
-        if not workload_config.train_transforms["random_crop"]["use"]:
-            transforms.remove(random_crop)
-        if not workload_config.train_transforms["horizontal_flip"]["use"]:
-            transforms.remove(horizontal_flip)
-        if not workload_config.train_transforms["trivial_augment"]["use"]:
-            transforms.remove(trivial_augment)
-
-        transforms = v2.Compose(transforms)
         return transforms
 
     def prepare_data(self):

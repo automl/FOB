@@ -1,13 +1,8 @@
 # https://github.com/Diego999/pyGAT/blob/master/utils.py
 
-import numpy as np
-import scipy.sparse as sp
-import torch
 from workloads import WorkloadDataModule
 from runtime.configs import WorkloadConfig
 from ogb.graphproppred import PygGraphPropPredDataset
-# from torch.utils.data import DataLoader
-# from torch_geometric.data import DataLoader
 from torch_geometric.loader.dataloader import DataLoader as GeomDataLoader
 
 
@@ -18,15 +13,13 @@ class OGBGDataModule(WorkloadDataModule):
     """
     def __init__(self, workload_config: WorkloadConfig):
         super().__init__(workload_config)
-        self.data_dir = self.data_dir / "ogbg-molhiv"
-        self.batch_size = 32
+
         self.print_dataset_info = False
         # ogbg-molhiv is small (41,127 graphs)
-        # ogbg-molpcba is medium size (437,929 graphs)
         self.dataset_name = "ogbg-molhiv"
+        # ogbg-molpcba is medium size (437,929 graphs)
         # self.dataset_name = "ogbg-molpcba"
 
-        # TODO, checkl if we need those, get them from model
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
         if self.print_dataset_info:
             print(f"{dataset.num_node_features=}")
@@ -36,7 +29,6 @@ class OGBGDataModule(WorkloadDataModule):
         self.num_classes: int = dataset.num_classes
 
     def prepare_data(self):
-        """Load citation network dataset (cora only for now)"""
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
         if self.print_dataset_info:
             print(f"{dataset.num_node_features=}")

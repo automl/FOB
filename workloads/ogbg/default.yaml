@@ -6,11 +6,15 @@ workload:
   target_metric_mode: max
   max_epochs: 50
   max_steps: 51_600
-  # GIN
-  model:
+  model:  # GIN
     hidden_channels: 300
     num_layers: 5
     dropout: 0.5
     jumping_knowledge: last
+    mlp:
+      hidden_channels: 300
+      layers: 2
+      dropout: 0.5
+      norm: "batch_norm"
 runtime:
   devices: 1

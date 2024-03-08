@@ -20,32 +20,28 @@ class OGBGModel(WorkloadModel):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
         self.batch_size = batch_size
 
+        gin_params = workload_config.model
+        mlp_params = workload_config.model.mlp
         model = GINwithClassifier(
             node_feature_dim=node_feature_dim,
-            num_classes=num_classes
+            num_classes=num_classes,
+            hidden_channels=gin_params.hidden_channels,
+            num_layers=gin_params.num_layers,
+            dropout=gin_params.dropout,
+            jumping_knowledge=gin_params.jumping_knowledge,
+            classifier_hidden_channel=mlp_params.hidden_channels,
+            classifier_num_layers=mlp_params.layers,
+            classifier_dropout=mlp_params.dropout,
+            classifier_norm=mlp_params.norm
             )
         super().__init__(model, submission, workload_config)
         self.metric_preds: list[torch.Tensor] = []  # probabilities for class 1
         self.metric_trues: list[torch.Tensor] = []  # labels for classes
 
         # https://ogb.stanford.edu/docs/home/
-        self.evaluator = Evaluator(name=dataset_name)
         # You can learn the input and output format specification of the evaluator as follows.
         # print(self.evaluator.expected_input_format)
-        # ==== Expected input format of Evaluator for ogbg-molhiv
-        # {'y_true': y_true, 'y_pred': y_pred}
-        # - y_true: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
-        # - y_pred: numpy ndarray or torch tensor of shape (num_graphs, num_tasks)
-        # where y_pred stores score values (for computing AUC score),
-        # num_task is 1, and each row corresponds to one graph.
-        # nan values in y_true are ignored during evaluation.
-        # print(self.evaluator.expected_output_format)
-        # ==== Expected output format of Evaluator for ogbg-molhiv
-        # {'rocauc': rocauc}
-        # - rocauc (float): ROC-AUC score averaged across 1 task(s)
-
-        # input_dict = {"y_true": y_true, "y_pred": y_pred}
-        # result_dict = evaluator.eval(input_dict) # E.g., {"rocauc": 0.7321}
+        self.evaluator = Evaluator(name=dataset_name)
 
         self.loss_fn = torch.nn.BCELoss()
 
@@ -85,7 +81,6 @@ class OGBGModel(WorkloadModel):
         """
         https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#validation-epoch-level-metrics
         """
-
         all_trues = torch.cat(self.metric_trues)
         all_preds = torch.cat(self.metric_preds)
 
@@ -106,7 +101,11 @@ class GINwithClassifier(torch.nn.Module):
         hidden_channels=300,
         num_layers=5,
         dropout=0.5,
-        jumping_knowledge="last"
+        jumping_knowledge="last",
+        classifier_hidden_channel=300,
+        classifier_num_layers=2,
+        classifier_norm="batch_norm",
+        classifier_dropout=0.5
     ):
         super().__init__()
         self.gin = GIN(
@@ -118,9 +117,12 @@ class GINwithClassifier(torch.nn.Module):
         )
 
         self.classifier = MLP(
-            [hidden_channels, hidden_channels, num_classes],
-            norm="batch_norm",
-            dropout=dropout
+            in_channels=hidden_channels,
+            hidden_channels=classifier_hidden_channel,
+            out_channels=num_classes,
+            num_layers=classifier_num_layers,
+            norm=classifier_norm,
+            dropout=classifier_dropout
         )
 
     def forward(self, x, edge_index, batch):

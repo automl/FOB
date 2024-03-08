@@ -20,12 +20,16 @@ class COCODataModule(WorkloadDataModule):
     """
     def __init__(self, workload_config: WorkloadConfig):
         super().__init__(workload_config)
-        self.data_dir = self.data_dir / "COCO"
-        self.batch_size = 8
+
+        if workload_config.train_transform.horizontal_flip.use:
+            horizontal_flip = v2.RandomHorizontalFlip(p=workload_config.train_transform.horizontal_flip.p)
+        else:
+            horizontal_flip = v2.Identity()
+
         self.train_transforms = v2.Compose(
             [
                 v2.ToImage(),
-                v2.RandomHorizontalFlip(p=0.5),
+                horizontal_flip,
                 v2.ToDtype(torch.float, scale=True),
                 v2.ConvertBoundingBoxFormat(tv_tensors.BoundingBoxFormat.XYXY),
                 v2.SanitizeBoundingBoxes(),

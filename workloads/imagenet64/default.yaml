@@ -25,5 +25,4 @@ workload:
     trivial_augment:
       use: True
 runtime:
-  # devices: 4
-  devices: 1
+  devices: 4

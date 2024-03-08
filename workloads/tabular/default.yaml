@@ -7,7 +7,7 @@ workload:
   # max_steps: None
   target_metric: val_loss
   target_metric_mode: min
-  model:
-    n_cont_features: 8
+  model:  # FTTransformer
+    n_blocks: 3  # The supported values are: 1, 2, 3, 4, 5, 6
 runtime:
   devices: 1

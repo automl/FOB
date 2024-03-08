@@ -14,9 +14,10 @@ class COCODetectionModel(WorkloadModel):
     https://github.com/pytorch/vision/tree/main/references/detection
     """
     def __init__(self, submission: Submission, workload_config: WorkloadConfig, eval_gts: COCO):
+        weights = MobileNet_V3_Large_Weights.IMAGENET1K_V1 if workload_config.model.pretrained else None
         model = fasterrcnn_mobilenet_v3_large_fpn(
             num_classes=91,
-            weights_backbone=MobileNet_V3_Large_Weights.IMAGENET1K_V1
+            weights_backbone=weights
         )
         super().__init__(model, submission, workload_config)
         self.eval_gts = eval_gts

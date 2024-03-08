@@ -1,14 +1,16 @@
 workload:
-  name: coco
-  output_dir_name: coco
+  name: segmentation
+  output_dir_name: segmentation
   batch_size: 8
   max_epochs: 26
   max_steps: 381_134
   target_metric: val_AP
   target_metric_mode: max
-  model: fasterrcnn_mobilenet_v3_large_fpn
+  model:  # fasterrcnn_mobilenet_v3_large_fpn
+    pretrained: True
   train_transforms:
-    random_horizontal_flip: 0.5
-
+    horizontal_flip:
+      use: True
+      p: 0.5
 runtime:
   devices: 4
