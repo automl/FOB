@@ -115,7 +115,7 @@ class Engine():
         target = searchspace
         for key in keys_with_list_indices[:-1]:
             target = target[key]
-        target[keys_with_list_indices[-1]] = value
+        target[keys_with_list_indices[-1]] = yaml.safe_load(value)
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)
