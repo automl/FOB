@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from engine.engine import Engine, Run
+from engine import Engine, Run
 
 
 def download_single_data(run: Run):

@@ -1,12 +1,12 @@
-import argparse
 from pathlib import Path
+import argparse
+import sys
+import torch
 from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
-import torch
-import sys
 
-from engine.engine import Engine, Run
+from engine import Engine, Run
 from engine.callbacks import LogParamsAndGrads, PrintEpoch
 from engine.utils import some, trainer_strategy, begin_timeout, write_results
 
