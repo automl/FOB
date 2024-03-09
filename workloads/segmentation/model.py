@@ -7,7 +7,7 @@ from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from workloads import WorkloadModel
 from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 
 
 class SegFormerGroupedModel(GroupedModel):
@@ -38,7 +38,7 @@ class SegmentationModel(WorkloadModel):
     This workload reaches a performance similar to this pretrained model:
     https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512
     """
-    def __init__(self, submission: Submission, data_dir: Path, id2label: dict[int, str], label2id: dict[str, int], workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, data_dir: Path, id2label: dict[int, str], label2id: dict[str, int], workload_config: WorkloadConfig):
         model_name = "nvidia/mit-b0"
         config = SegformerConfig.from_pretrained(
             model_name,
@@ -55,7 +55,7 @@ class SegmentationModel(WorkloadModel):
         #     "nvidia/segformer-b0-finetuned-ade-512-512",
         #     cache_dir=data_dir
         # )
-        super().__init__(SegFormerGroupedModel(model), submission, workload_config)
+        super().__init__(SegFormerGroupedModel(model), optimizer, workload_config)
         self.metric = self._get_metric(data_dir)
         self._reset_metrics()
 

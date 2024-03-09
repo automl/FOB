@@ -5,7 +5,7 @@ from lightning import LightningModule, LightningDataModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
-from submissions import Submission
+from optimizers import Optimizer
 from engine.configs import WorkloadConfig
 from engine.parameter_groups import GroupedModel
 
@@ -27,17 +27,17 @@ class WorkloadModel(LightningModule):
     def __init__(
             self,
             model: nn.Module | GroupedModel,
-            submission: Submission,
+            optimizer: Optimizer,
             workload_config: WorkloadConfig,
             **kwargs: Any
         ) -> None:
         super().__init__(**kwargs)
         self.config = workload_config
-        self.submission = submission
+        self.optimizer = optimizer
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        return self.submission.configure_optimizers(self.model)
+        return self.optimizer.configure_optimizers(self.model)
 
 
 class WorkloadDataModule(LightningDataModule):

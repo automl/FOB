@@ -4,7 +4,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from engine.configs import SubmissionConfig
+from engine.configs import OptimizerConfig
 from engine.parameter_groups import GroupedModel
 
 
@@ -27,7 +27,7 @@ def cosine_warmup(
     return SequentialLR(
         optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
-def configure_optimizers(model: GroupedModel, config: SubmissionConfig) -> OptimizerLRScheduler:
+def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
     lr=config.learning_rate
     weight_decay=config.weight_decay
     parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)

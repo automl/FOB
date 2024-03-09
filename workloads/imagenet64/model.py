@@ -5,11 +5,11 @@ from timm import create_model
 from sklearn.metrics import top_k_accuracy_score
 from workloads import WorkloadModel
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 
 
 class ImagenetModel(WorkloadModel):
-    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, workload_config: WorkloadConfig):
         model_name = workload_config.model.name
         model = create_model(model_name)
         
@@ -25,7 +25,7 @@ class ImagenetModel(WorkloadModel):
         if not workload_config.model.maxpool:
             model.maxpool = nn.Identity()  # type:ignore
 
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         self.loss_fn = nn.CrossEntropyLoss()
 
     def forward(self, batch) -> tuple[torch.Tensor, torch.Tensor]:

@@ -2,10 +2,10 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from engine.parameter_groups import GroupedModel
-from engine.configs import SubmissionConfig
+from engine.configs import OptimizerConfig
 
 
-def configure_optimizers(model: GroupedModel, config: SubmissionConfig) -> OptimizerLRScheduler:
+def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
     lr=config.learning_rate
     weight_decay=config.weight_decay
     optimizer = SGD(

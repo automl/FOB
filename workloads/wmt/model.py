@@ -7,7 +7,7 @@ from torch.nn import Transformer
 import evaluate
 from engine.parameter_groups import GroupedModel, ParameterGroup, merge_parameter_splits
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 from workloads import WorkloadModel
 from workloads.wmt.data \
     import WMTDataModule, PAD_IDX, BOS_IDX, EOS_IDX, MAX_TOKENS_PER_SENTENCE, sequential_transforms, tensor_transform
@@ -125,7 +125,7 @@ class GroupedTransformer(GroupedModel):
 
 
 class WMTModel(WorkloadModel):
-    def __init__(self, submission: Submission, data_module: WMTDataModule, workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, data_module: WMTDataModule, workload_config: WorkloadConfig):
         self.vocab_size = data_module.vocab_size
         self.batch_size = data_module.batch_size
         self.train_data_len = data_module.train_data_len
@@ -141,7 +141,7 @@ class WMTModel(WorkloadModel):
         for p in model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         self.loss = nn.functional.cross_entropy
 
     def forward(self, src: str) -> str:

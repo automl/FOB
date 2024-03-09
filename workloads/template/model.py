@@ -1,11 +1,11 @@
 import torch
 from workloads import WorkloadModel
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 
 
 class TemplateModel(WorkloadModel):
-    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, workload_config: WorkloadConfig):
         # Here you can see some examples on how to include the config
         # 1) parameters that should change depending on the experiment are placed in the default.yaml
         hidden_channels_from_yaml = workload_config.model.hidden_channels
@@ -26,7 +26,7 @@ class TemplateModel(WorkloadModel):
             self.activation(),
         )
         self.loss = torch.nn.functional.mse_loss
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.

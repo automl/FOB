@@ -3,14 +3,14 @@ from torch_geometric.nn import GIN, MLP, global_add_pool
 from ogb.graphproppred import Evaluator
 from workloads import WorkloadModel
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 
 
 class OGBGModel(WorkloadModel):
     """GIN from pytorch geometric"""
     def __init__(
             self,
-            submission: Submission,
+            optimizer: Optimizer,
             node_feature_dim: int,
             num_classes: int,
             dataset_name: str,
@@ -34,7 +34,7 @@ class OGBGModel(WorkloadModel):
             classifier_dropout=mlp_params.dropout,
             classifier_norm=mlp_params.norm
             )
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         self.metric_preds: list[torch.Tensor] = []  # probabilities for class 1
         self.metric_trues: list[torch.Tensor] = []  # labels for classes
 

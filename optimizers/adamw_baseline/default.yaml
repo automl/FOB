@@ -1,4 +1,4 @@
-submission:
+optimizer:
   name: adamw_baseline
   output_dir_name: adamw_baseline
   learning_rate: 1.e-3

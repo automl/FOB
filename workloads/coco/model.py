@@ -2,7 +2,7 @@ from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from workloads import WorkloadModel
-from submissions import Submission
+from optimizers import Optimizer
 from engine.configs import WorkloadConfig
 from .coco_eval import CocoEvaluator
 
@@ -13,13 +13,13 @@ class COCODetectionModel(WorkloadModel):
     Implementation is heavily inspired by
     https://github.com/pytorch/vision/tree/main/references/detection
     """
-    def __init__(self, submission: Submission, workload_config: WorkloadConfig, eval_gts: COCO):
+    def __init__(self, optimizer: Optimizer, workload_config: WorkloadConfig, eval_gts: COCO):
         weights = MobileNet_V3_Large_Weights.IMAGENET1K_V1 if workload_config.model.pretrained else None
         model = fasterrcnn_mobilenet_v3_large_fpn(
             num_classes=91,
             weights_backbone=weights
         )
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         self.eval_gts = eval_gts
         self.reset_coco_eval()
 

@@ -1,11 +1,11 @@
 import torch
 from workloads import WorkloadModel
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 
 
 class MNISTModel(WorkloadModel):
-    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, workload_config: WorkloadConfig):
 
         input_size = 28 * 28  # 784
         num_classes = 10
@@ -25,7 +25,7 @@ class MNISTModel(WorkloadModel):
             self.activation(),
             torch.nn.Linear(num_hidden, num_classes, bias=True),
         )
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         # negative log likelihood loss
         self.loss_fn = torch.nn.functional.nll_loss
 

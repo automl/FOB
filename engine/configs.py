@@ -20,16 +20,16 @@ class NamedConfig(BaseConfig):
         self.output_dir_name = config[outdir_key]
 
 
-class SubmissionConfig(NamedConfig):
+class OptimizerConfig(NamedConfig):
     def __init__(
             self,
             config: dict[str, Any],
-            submission_key: str,
+            optimizer_key: str,
             workload_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
-        cfg = dict(config[submission_key])
+        cfg = dict(config[optimizer_key])
         self.max_steps = config[workload_key]["max_steps"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg, identifier_key, outdir_key)

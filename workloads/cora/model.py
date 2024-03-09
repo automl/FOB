@@ -1,7 +1,7 @@
 import torch
 from workloads import WorkloadModel
 from engine.configs import WorkloadConfig
-from submissions import Submission
+from optimizers import Optimizer
 from torch_geometric.nn import GCNConv
 from torch import nn
 import torch.nn.functional as F
@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 class CoraModel(WorkloadModel):
     """simple GCN implementation / GAT from pytorch geometric"""
-    def __init__(self, submission: Submission, workload_config: WorkloadConfig):
+    def __init__(self, optimizer: Optimizer, workload_config: WorkloadConfig):
         self.batch_size = workload_config.batch_size
         hidden_channels = workload_config.model.hidden_channels
         num_layers = workload_config.model.num_layers
@@ -21,7 +21,7 @@ class CoraModel(WorkloadModel):
                     dropout=dropout,
                     cached=cached,
                     normalize=normalize)
-        super().__init__(model, submission, workload_config)
+        super().__init__(model, optimizer, workload_config)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
     def forward(self, data: torch.Tensor, mode="train") -> torch.Tensor:

@@ -8,5 +8,5 @@ workload:
   target_metric_mode: max
 engine:
   devices: 4
-submission:
-  lr: 6.e-5
+optimizer:
+  learning_rate: 6.e-5
