@@ -1,7 +1,8 @@
 {
-    "learning_rate": [1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4],
+    "learning_rate": [1e-2, 3.16e-3, 1e-3, 3.16e-4, 1e-4],
     "one_minus_beta1": 0.1,
     "beta2": 0.999,
     "warmup_factor": 0.01,
-    "weight_decay": [0.0, 1e-4, 1e-3, 1e-2, 1e-1, 1.0]
+    "eta_min_factor": 0.01,
+    "weight_decay": [0.0, 1e-4, 1e-3, 1e-2, 1e-1]
 }

@@ -3,9 +3,16 @@ import json
 from typing import Iterator, Any
 from math import log10, floor
 
-def load_json(json_path: Path | str) -> dict:
-    with open(json_path, "r", encoding="utf8") as f:
-        return json.load(f)
+
+def load_json(json_data: Path | str) -> dict:
+    if isinstance(json_data, Path):
+        with open(json_data, "r", encoding="utf8") as f:
+            parsed = json.load(f)
+    elif isinstance(json_data, str):
+        parsed = json.loads(json_data)
+    else:
+        return json_data
+    return parsed
 
 
 def is_search_space(json_data: Path | str | dict) -> bool:
@@ -13,7 +20,8 @@ def is_search_space(json_data: Path | str | dict) -> bool:
     if isinstance(json_data, (Path, str)):
         json_data = load_json(json_data)
     for v in json_data.values():
-        if isinstance(v, list): return True
+        if isinstance(v, list):
+            return True
     return False
 
 
@@ -22,7 +30,7 @@ def generate_hyperparameter_from_search_space(json_data: Path | str | dict[str, 
 
     Each combination is generated!"""
     if isinstance(json_data, (Path, str)):
-       json_data = load_json(json_data)
+        json_data = load_json(json_data)
     # find first list and iterate over it
     for k, v in json_data.items():
         if isinstance(v, list):

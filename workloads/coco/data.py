@@ -56,7 +56,6 @@ class COCODataModule(WorkloadDataModule):
         # self._extract(test, self.data_dir, "test images")
         # TODO: cleanup zip files, we should have an argument for this
 
-
     def _download(self, url: str, subject: str) -> Path:
         dl_dir = self.data_dir / "downloads"
         dl_dir.mkdir(exist_ok=True)
@@ -107,14 +106,20 @@ class COCODataModule(WorkloadDataModule):
             )
         # use validation set for test and predict, because test labels are not available
         if stage == "validate":
-            self.data_val = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
+            self.data_val = self._wrapped_coco_dataset(
+                val_path, annot_path / "instances_val2017.json", self.val_transforms
+            )
         if stage == "test":
-            self.data_test = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
+            self.data_test = self._wrapped_coco_dataset(
+                val_path, annot_path / "instances_val2017.json", self.val_transforms
+            )
         if stage == "predict":
-            self.data_predict = self._wrapped_coco_dataset(val_path, annot_path / "instances_val2017.json", self.val_transforms)
+            self.data_predict = self._wrapped_coco_dataset(
+                val_path, annot_path / "instances_val2017.json", self.val_transforms
+            )
 
     def train_dataloader(self) -> DataLoader:
-        return self._dataloader_from_dataset(self.data_train)
+        return self._dataloader_from_dataset(self.data_train, shuffle=True)
 
     def val_dataloader(self) -> DataLoader:
         return self._dataloader_from_dataset(self.data_val, batch_size=1)
@@ -125,11 +130,22 @@ class COCODataModule(WorkloadDataModule):
     def predict_dataloader(self) -> DataLoader:
         return self._dataloader_from_dataset(self.data_predict)
 
-    def _dataloader_from_dataset(self, dataset: Dataset, batch_size: int | None = None) -> DataLoader:
+    def _dataloader_from_dataset(
+            self,
+            dataset: Dataset,
+            batch_size: int | None = None,
+            shuffle: bool = False
+        ) -> DataLoader:
         if batch_size is None:
             batch_size = self.batch_size
         self.check_dataset(dataset)
-        return DataLoader(dataset, batch_size=batch_size, num_workers=self.workers, collate_fn=self.collate_fn)
+        return DataLoader(
+            dataset,
+            batch_size=batch_size,
+            num_workers=self.workers,
+            collate_fn=self.collate_fn,
+            shuffle=shuffle
+        )
 
     def eval_gt_data(self) -> COCO:
         val_path = self.data_dir / "val2017"

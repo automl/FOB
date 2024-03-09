@@ -1,0 +1,7 @@
+{
+    "learning_rate": 5e-3,
+    "one_minus_beta1": 0.1,
+    "beta2": 0.999,
+    "warmup_factor": 0.01,
+    "weight_decay": 0.001
+}

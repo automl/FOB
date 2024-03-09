@@ -1,0 +1,15 @@
+{
+    "data_dir": "/work/dlclarge2/haeringz-bigdata/data",
+    "workload_name": "ogbg",
+    "workers": 8,
+    "submission_name": "adamw_baseline",
+    "resume": null,
+    "devices": null,
+    "silent": true,
+    "trial": 3,
+    "log_extra": false,
+    "seed": 1,
+    "output_dir": "/work/dlclarge2/haeringz-bigdata/experiments/adamw_baseline/ogbg/trial_3",
+    "checkpoint_dir": "/work/dlclarge2/haeringz-bigdata/experiments/adamw_baseline/ogbg/trial_3/checkpoints",
+    "hyperparameter_path": "/home/haeringz/run/ogbg_experiment/adamw_space/08.json"
+}

@@ -1,0 +1,14 @@
+{
+    "data_dir": "/work/dlclarge2/haeringz-bigdata",
+    "workload_name": "mnist",
+    "workers": 63,
+    "submission_name": "adamw_baseline",
+    "resume": null,
+    "devices": null,
+    "silent": false,
+    "trial": 0,
+    "seed": 42,
+    "output_dir": "/home/haeringz/bob/experiments/adamw_baseline/mnist/trial_0",
+    "checkpoint_dir": "/home/haeringz/bob/experiments/adamw_baseline/mnist/trial_0/checkpoints",
+    "hyperparameter_path": "/home/haeringz/bob/submissions/adamw_baseline/hyperparameters.json"
+}

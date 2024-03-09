@@ -12,7 +12,7 @@ class CIFAR100Model(WorkloadModel):
         # 7x7 conv is too large for 32x32 images
         model.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False)
         # pooling small images is bad
-        model.maxpool = nn.Identity()  #type:ignore
+        model.maxpool = nn.Identity()  # type:ignore
         super().__init__(model, submission)
         self.loss_fn = nn.CrossEntropyLoss()
 

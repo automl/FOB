@@ -1,12 +1,27 @@
 import torch
 import lightning.pytorch as pl
-from lightning import Callback
+from lightning import Callback, Trainer, LightningModule
+from lightning_utilities.core.rank_zero import rank_zero_only
 import deepspeed
+
+
+class PrintEpoch(Callback):
+    def __init__(self, active: bool = True) -> None:
+        super().__init__()
+        self.active = active
+        self.epoch = 0
+
+    @rank_zero_only
+    def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule):
+        # TODO: better logging (with time spent on epoch and stuff)
+        if self.active:
+            max_epochs = pl_module.get_specs().max_epochs
+            print(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
 
 
 class LogParamsAndGrads(Callback):
 
-    def __init__(self, log_gradient: bool, log_params: bool, log_quantiles:bool, log_every_n_steps: int):
+    def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_every_n_steps: int):
         super().__init__()
         self.log_gradient = log_gradient
         self.log_params = log_params
@@ -20,11 +35,8 @@ class LogParamsAndGrads(Callback):
             q = torch.arange(.25, 1, .25).round(decimals=2).to(trainer.model.device)
             stats = {}
             for k, v in pl_module.named_parameters():
-
                 if self.log_params:
-
                     if trainer.global_rank == 0:
-
                         v_detached = v.detach()
 
                         if torch.isnan(v_detached).sum() > 0:
@@ -81,7 +93,6 @@ class LogParamsAndGrads(Callback):
                             stats[f"grad/{k}/mean"] = grad_data.mean().item()
                             stats[f"grad/{k}/abs_std"] = grad_data.abs().std().item()
                             stats[f"grad/{k}/std"] = grad_data.std().item()
-
 
                             if self.log_quantiles and grad_data.size().numel() < 10000000:
                                 deciles = torch.quantile(grad_data.float(), q, interpolation='linear')
