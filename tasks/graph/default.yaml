@@ -1,6 +1,6 @@
 task:
-  name: ogbg
-  output_dir_name: ogbg
+  name: graph
+  output_dir_name: graph
   batch_size: 32
   target_metric: val_rocauc
   target_metric_mode: max

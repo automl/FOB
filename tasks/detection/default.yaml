@@ -1,6 +1,6 @@
 task:
-  name: segmentation
-  output_dir_name: segmentation
+  name: detection
+  output_dir_name: detection
   batch_size: 8
   max_epochs: 26
   max_steps: 381_134

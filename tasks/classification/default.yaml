@@ -1,6 +1,6 @@
 task:
-  name: classification_large
-  output_dir_name: classification_large
+  name: classification
+  output_dir_name: classification
   batch_size: 512
   max_epochs: 80
   max_steps: 50_080

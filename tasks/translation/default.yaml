@@ -1,6 +1,6 @@
 task:
-  name: wmt
-  output_dir_name: wmt
+  name: translation
+  output_dir_name: translation
   max_epochs: 18
   max_steps: 415242
   batch_size: 64

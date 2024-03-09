@@ -1,8 +1,8 @@
 from engine.configs import TaskConfig
 from optimizers import Optimizer
 from tasks import TaskModel, TaskDataModule
-from tasks.ogbg import data
-from tasks.ogbg import model
+from tasks.graph import data
+from tasks.graph import model
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:
