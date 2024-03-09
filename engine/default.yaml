@@ -1,0 +1,13 @@
+engine:
+  deterministic: True
+  # devices: 1
+  data_dir: ./data
+  log_extra: False
+  optimize_memory: False
+  output_dir: ./experiments
+  # resume: path/to/checkpoint
+  seed: 42
+  seed_mode: fixed
+  silent: False
+  test_only: False
+  workers: 16

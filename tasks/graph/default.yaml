@@ -1,0 +1,20 @@
+task:
+  name: graph
+  output_dir_name: graph
+  batch_size: 32
+  target_metric: val_rocauc
+  target_metric_mode: max
+  max_epochs: 50
+  max_steps: 51_600
+  model:  # GIN
+    hidden_channels: 300
+    num_layers: 5
+    dropout: 0.5
+    jumping_knowledge: last
+    mlp:
+      hidden_channels: 300
+      layers: 2
+      dropout: 0.5
+      norm: "batch_norm"
+engine:
+  devices: 1
