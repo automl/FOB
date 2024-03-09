@@ -11,4 +11,4 @@ def get_datamodule(config: TaskConfig) -> TaskDataModule:
 
 def get_task(optimizer: Optimizer, config: TaskConfig) -> tuple[TaskModel, TaskDataModule]:
     dm = SegmentationDataModule(config)
-    return SegmentationModel(optimizer, dm.data_dir, dm.id2label, dm.label2id, config), dm
+    return SegmentationModel(optimizer, dm.id2label, dm.label2id, config), dm

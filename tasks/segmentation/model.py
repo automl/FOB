@@ -15,15 +15,15 @@ class SegFormerGroupedModel(GroupedModel):
         super().__init__(model)
 
     def parameter_groups(self) -> list[ParameterGroup]:
-        default_params = ParameterGroup(
-            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("segformer"))
+        backbone_params = ParameterGroup(
+            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("segformer")),
+            lr_multiplier=0.1
         )
         decoder_params = ParameterGroup(
-            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("decode_head")),
-            lr_multiplier=10.
+            named_parameters=dict(np for np in self.model.named_parameters() if np[0].startswith("decode_head"))
         )
-        assert len(default_params) + len(decoder_params) == len(list(self.model.named_parameters()))
-        split1 = [default_params, decoder_params]
+        assert len(backbone_params) + len(decoder_params) == len(list(self.model.named_parameters()))
+        split1 = [backbone_params, decoder_params]
         split2 = wd_group_named_parameters(self.model)
         return merge_parameter_splits(split1, split2)
 
@@ -38,25 +38,32 @@ class SegmentationModel(TaskModel):
     This task reaches a performance similar to this pretrained model:
     https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512
     """
-    def __init__(self, optimizer: Optimizer, data_dir: Path, id2label: dict[int, str], label2id: dict[str, int], config: TaskConfig):
+    def __init__(
+            self,
+            optimizer: Optimizer,
+            id2label: dict[int, str],
+            label2id: dict[str, int],
+            config: TaskConfig
+        ):
+        self.config = config
         model_name = "nvidia/mit-b0"
-        config = SegformerConfig.from_pretrained(
+        model_config = SegformerConfig.from_pretrained(
             model_name,
-            cache_dir=data_dir,
+            cache_dir=self.config.data_dir,
             id2label=id2label,
             label2id=label2id
         )
         model = SegformerForSemanticSegmentation.from_pretrained(
             model_name,
-            cache_dir=data_dir,
-            config=config
+            cache_dir=self.config.data_dir,
+            config=model_config
         )
         # model = SegformerForSemanticSegmentation.from_pretrained(
         #     "nvidia/segformer-b0-finetuned-ade-512-512",
         #     cache_dir=data_dir
         # )
         super().__init__(SegFormerGroupedModel(model), optimizer, config)
-        self.metric = self._get_metric(data_dir)
+        self.metric = self._get_metric()
         self._reset_metrics()
 
     def forward(self, x):
@@ -105,15 +112,13 @@ class SegmentationModel(TaskModel):
             "mean_accuracy": []
         }
 
-    def _get_metric(self, data_dir: Path):
-        specs = self.get_specs()
-        if isinstance(specs.devices, int):
-            num_process = specs.devices
-        elif isinstance(specs.devices, list):
-            num_process = len(specs.devices)
-        else:
-            raise TypeError(f"could not infer num_process from {specs.devices=}")
-        return evaluate.load("mean_iou", num_process=num_process, cache_dir=str(data_dir))
+    def _get_metric(self, num_process: int = 4):
+        # TODO: get num_process from devices
+        return evaluate.load(
+            "mean_iou",
+            num_process=num_process,
+            cache_dir=str(self.config.data_dir)
+        )
 
     def _compute_and_log_metrics(self, stage: str):
         for k, v in self.metrics.items():
@@ -122,6 +127,9 @@ class SegmentationModel(TaskModel):
 
     def on_validation_epoch_end(self) -> None:
         self._compute_and_log_metrics("val")
+
+    def on_test_start(self) -> None:
+        self.metric = self._get_metric(num_process=1)
 
     def on_test_epoch_end(self) -> None:
         self._compute_and_log_metrics("test")

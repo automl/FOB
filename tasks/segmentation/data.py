@@ -17,8 +17,6 @@ class SegmentationDataModule(TaskDataModule):
     """
     def __init__(self, config: TaskConfig):
         super().__init__(config)
-        self.data_dir = self.data_dir / "SceneParse150"
-        self.batch_size = 16
         image_processor = SegformerImageProcessor.from_pretrained(
             "nvidia/mit-b0",
             cache_dir=self.data_dir
