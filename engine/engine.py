@@ -5,9 +5,9 @@ import re
 import sys
 import yaml
 from optimizers import Optimizer, optimizer_path, optimizer_names
-from workloads import WorkloadModel, WorkloadDataModule, import_workload, workload_path, workload_names
+from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .grid_search import gridsearch
-from .configs import EngineConfig, OptimizerConfig, WorkloadConfig
+from .configs import EngineConfig, OptimizerConfig, TaskConfig
 from .utils import path_to_str_inside_dict, dict_differences, concatenate_dict_keys
 
 
@@ -20,23 +20,23 @@ class Run():
             self,
             config: dict[str, Any],
             default_config: dict[str, Any],
-            workload_key: str,
+            task_key: str,
             optimizer_key: str,
             engine_key: str,
             identifier_key: str
         ) -> None:
         self._config = config
-        self.workload_key = workload_key
+        self.task_key = task_key
         self.optimizer_key = optimizer_key
         self.engine_key = engine_key
-        self.engine = EngineConfig(config, workload_key, engine_key)
-        self.optimizer = OptimizerConfig(config, optimizer_key, workload_key, identifier_key)
-        self.workload = WorkloadConfig(config, workload_key, engine_key, identifier_key)
+        self.engine = EngineConfig(config, task_key, engine_key)
+        self.optimizer = OptimizerConfig(config, optimizer_key, task_key, identifier_key)
+        self.task = TaskConfig(config, task_key, engine_key, identifier_key)
         self._set_outpath(default_config)
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
     def _set_outpath(self, default_config: dict[str, Any]):
-        base = self.engine.output_dir / self.workload.output_dir_name / self.optimizer.output_dir_name
+        base = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = ["name", "output_dir_name"]
         include_engine = ["deterministic", "optimize_memory", "seed"]
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
@@ -55,20 +55,20 @@ class Run():
     def get_optimizer(self) -> Optimizer:
         return Optimizer(self.optimizer)
 
-    def get_workload(self) -> tuple[WorkloadModel, WorkloadDataModule]:
-        workload = import_workload(self.workload.name)
-        return workload.get_workload(self.get_optimizer(), self.workload)
+    def get_task(self) -> tuple[TaskModel, TaskDataModule]:
+        task_module = import_task(self.task.name)
+        return task_module.get_task(self.get_optimizer(), self.task)
 
-    def get_datamodule(self) -> WorkloadDataModule:
-        workload = import_workload(self.workload.name)
-        return workload.get_datamodule(self.workload)
+    def get_datamodule(self) -> TaskDataModule:
+        task_module = import_task(self.task.name)
+        return task_module.get_datamodule(self.task)
 
 
 class Engine():
     def __init__(self) -> None:
         self._runs = []
         self._defaults = []
-        self.workload_key = "workload"
+        self.task_key = "task"
         self.optimizer_key = "optimizer"
         self.engine_key = "engine"
         self.identifier_key = "name"
@@ -80,8 +80,8 @@ class Engine():
             self._parse_into_searchspace(searchspace, arg)
         self._named_dicts_to_list(
             searchspace,
-            [self.optimizer_key, self.workload_key],
-            [optimizer_names(), workload_names()]
+            [self.optimizer_key, self.task_key],
+            [optimizer_names(), task_names()]
         )
         self._runs += gridsearch(searchspace)
         self._fill_runs_from_default(self._runs)
@@ -93,7 +93,7 @@ class Engine():
             run = Run(
                 config,
                 default_config,
-                self.workload_key,
+                self.task_key,
                 self.optimizer_key,
                 self.engine_key,
                 self.identifier_key
@@ -128,7 +128,7 @@ class Engine():
         for run in self._runs:
             default_cfg = {
                 k: {self.identifier_key: run[k][self.identifier_key]}
-                for k in [self.workload_key, self.optimizer_key]
+                for k in [self.task_key, self.optimizer_key]
             }
             self._defaults.append(default_cfg)
         self._fill_runs_from_default(self._defaults)
@@ -137,7 +137,7 @@ class Engine():
         for i, _ in enumerate(runs):
             # order from higher to lower in hierarchy
             runs[i] = self._fill_unnamed_from_default(runs[i], engine_path)
-            runs[i] = self._fill_named_from_default(runs[i], self.workload_key, workload_path)
+            runs[i] = self._fill_named_from_default(runs[i], self.task_key, task_path)
             runs[i] = self._fill_named_from_default(runs[i], self.optimizer_key, optimizer_path)
 
     def _fill_unnamed_from_default(self, experiment: dict[str, Any], unnamed_root: Callable) -> dict[str, Any]:

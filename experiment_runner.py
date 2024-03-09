@@ -17,16 +17,16 @@ def run_trial(run: Run):
         print("Warning: GPU does not support bfloat16, using float16. Results can be different!", file=sys.stderr)
     seed_everything(run.engine.seed, workers=True)
     run.export_config()
-    model, data_module = run.get_workload()
+    model, data_module = run.get_task()
     model_checkpoint = ModelCheckpoint(
         dirpath=run.run_dir / "checkpoints",
         filename="best-{epoch}-{step}",
-        monitor=run.workload.target_metric,
-        mode=run.workload.target_metric_mode,
+        monitor=run.task.target_metric,
+        mode=run.task.target_metric_mode,
         save_last=True
     )
-    max_epochs = run.workload.max_epochs if run.workload.max_steps is None else None
-    max_steps = some(run.workload.max_steps, run.workload.max_steps, default=-1)
+    max_epochs = run.task.max_epochs if run.task.max_steps is None else None
+    max_steps = some(run.task.max_steps, run.task.max_steps, default=-1)
     devices = some(run.engine.devices, default=run.engine.devices)
     trainer = Trainer(
         max_epochs=max_epochs,

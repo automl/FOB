@@ -1,0 +1,10 @@
+task:
+  name: wmt
+  output_dir_name: wmt
+  max_epochs: 18
+  max_steps: 415242
+  batch_size: 64
+  target_metric: val_loss
+  target_metric_mode: min
+engine:
+  devices: 4

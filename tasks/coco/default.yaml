@@ -1,0 +1,16 @@
+task:
+  name: segmentation
+  output_dir_name: segmentation
+  batch_size: 8
+  max_epochs: 26
+  max_steps: 381_134
+  target_metric: val_AP
+  target_metric_mode: max
+  model:  # fasterrcnn_mobilenet_v3_large_fpn
+    pretrained: True
+  train_transforms:
+    horizontal_flip:
+      use: True
+      p: 0.5
+engine:
+  devices: 4

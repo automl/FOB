@@ -25,26 +25,26 @@ class OptimizerConfig(NamedConfig):
             self,
             config: dict[str, Any],
             optimizer_key: str,
-            workload_key: str,
+            task_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
         cfg = dict(config[optimizer_key])
-        self.max_steps = config[workload_key]["max_steps"]
+        self.max_steps = config[task_key]["max_steps"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg, identifier_key, outdir_key)
 
 
-class WorkloadConfig(NamedConfig):
+class TaskConfig(NamedConfig):
     def __init__(
             self,
             config: dict[str, Any],
-            workload_key: str,
+            task_key: str,
             engine_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
         ) -> None:
-        cfg = dict(config[workload_key])
+        cfg = dict(config[task_key])
         self.batch_size: int = cfg["batch_size"]
         self.data_dir = Path(config[engine_key]["data_dir"]).resolve()
         self.max_epochs: int = cfg["max_epochs"]
@@ -58,13 +58,13 @@ class WorkloadConfig(NamedConfig):
 
 
 class EngineConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], workload_key: str, engine_key: str) -> None:
+    def __init__(self, config: dict[str, Any], task_key: str, engine_key: str) -> None:
         cfg = dict(config[engine_key])
         self.deterministic: bool = cfg.get("deterministic", True)
         self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.log_extra: bool = cfg.get("log_extra", False)
-        self.max_steps = config[workload_key]["max_steps"]
+        self.max_steps = config[task_key]["max_steps"]
         self.optimize_memory: bool = cfg.get("optimize_memory", False)
         self.output_dir = Path(cfg["output_dir"]).resolve()
         maybe_resume = cfg.get("resume", None)

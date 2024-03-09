@@ -20,11 +20,11 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     engine.parse_experiment(args.experiment_file, extra_args=extra_args)
     done = set()
     for run in engine.runs():
-        if run.workload.name in done:
+        if run.task.name in done:
             continue
-        print(f"Setting up data for {run.workload_key} '{run.workload.name}'.")
+        print(f"Setting up data for {run.task_key} '{run.task.name}'.")
         download_single_data(run)
-        done.add(run.workload.name)
+        done.add(run.task.name)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,13 @@
+task:
+  name: mnist
+  output_dir_name: mnist
+  batch_size: 512
+  max_epochs: 42
+  max_steps: 4_536
+  target_metric: val_acc
+  target_metric_mode: max
+  model:
+    num_hidden: 128
+    activation: Sigmoid
+engine:
+  devices: 1

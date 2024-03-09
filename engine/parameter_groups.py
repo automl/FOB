@@ -59,8 +59,8 @@ class ParameterGroup():
 class GroupedModel(Module):
     """
     Wrapper around a nn.Module to allow specifying different optimizer settings for different parameters.
-    To use this feature for your workload, inherit from this class and override the `parameter_groups` method.
-    Then simply wrap your model before passing it to the `__init__` method of the `WorkloadModel` superclass.
+    To use this feature for your task, inherit from this class and override the `parameter_groups` method.
+    Then simply wrap your model before passing it to the `__init__` method of the `TaskModel` superclass.
     """
     def __init__(self, model: Module) -> None:
         super().__init__()
