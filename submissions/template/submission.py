@@ -1,7 +1,7 @@
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.optim import SGD
-from runtime.parameter_groups import GroupedModel
-from runtime.configs import SubmissionConfig
+from engine.parameter_groups import GroupedModel
+from engine.configs import SubmissionConfig
 
 
 def configure_optimizers(model: GroupedModel, config: SubmissionConfig) -> OptimizerLRScheduler:

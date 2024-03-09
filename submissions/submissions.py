@@ -1,8 +1,8 @@
 import importlib
 from pathlib import Path
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from runtime.parameter_groups import GroupedModel
-from runtime.configs import SubmissionConfig
+from engine.parameter_groups import GroupedModel
+from engine.configs import SubmissionConfig
 
 
 def import_submission(name: str):

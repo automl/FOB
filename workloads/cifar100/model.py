@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torchvision.models import resnet18
 from workloads import WorkloadModel
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from submissions import Submission
 
 

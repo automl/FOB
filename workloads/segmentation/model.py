@@ -5,8 +5,8 @@ import torch
 from torch.nn.functional import interpolate
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from workloads import WorkloadModel
-from runtime.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
-from runtime.configs import WorkloadConfig
+from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
+from engine.configs import WorkloadConfig
 from submissions import Submission
 
 

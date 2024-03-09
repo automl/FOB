@@ -10,7 +10,7 @@ workload:
   model:  # small MLP (name of model as comment might be a good idea)
     hidden_channels: 10
     activation: relu  # this parameter has to be in {relu, gelu}, modify the model.py to support more
-runtime:
+engine:
   devices: 1
 submission:  # you can set your favourite baseline as default like this
   name: adamw_baseline

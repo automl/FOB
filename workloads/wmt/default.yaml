@@ -6,5 +6,5 @@ workload:
   batch_size: 64
   target_metric: val_loss
   target_metric_mode: min
-runtime:
+engine:
   devices: 4

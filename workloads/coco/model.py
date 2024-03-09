@@ -3,7 +3,7 @@ from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
 from workloads import WorkloadModel
 from submissions import Submission
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from .coco_eval import CocoEvaluator
 
 

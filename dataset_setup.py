@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from runtime.runtime import Runtime, Run
+from engine.engine import Engine, Run
 
 
 def download_single_data(run: Run):
@@ -16,10 +16,10 @@ def get_parser():
 
 
 def main(args: argparse.Namespace, extra_args: list[str]):
-    runtime = Runtime()
-    runtime.parse_experiment(args.experiment_file, extra_args=extra_args)
+    engine = Engine()
+    engine.parse_experiment(args.experiment_file, extra_args=extra_args)
     done = set()
-    for run in runtime.runs():
+    for run in engine.runs():
         if run.workload.name in done:
             continue
         print(f"Setting up data for {run.workload_key} '{run.workload.name}'.")

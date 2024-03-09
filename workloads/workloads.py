@@ -6,8 +6,8 @@ from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
 from submissions import Submission
-from runtime.configs import WorkloadConfig
-from runtime.parameter_groups import GroupedModel
+from engine.configs import WorkloadConfig
+from engine.parameter_groups import GroupedModel
 
 
 def import_workload(name: str):

@@ -23,5 +23,5 @@ workload:
       use: True
   target_metric: val_acc
   target_metric_mode: max
-runtime:
+engine:
   devices: 1

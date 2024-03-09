@@ -1,4 +1,4 @@
-runtime:
+engine:
   deterministic: True
   # devices: 1
   data_dir: ./data

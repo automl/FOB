@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from transformers.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from workloads import WorkloadDataModule
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 
 
 class Imagenet64Dataset(Dataset):

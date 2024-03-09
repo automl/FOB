@@ -1,7 +1,7 @@
 import torch
 from rtdl_revisiting_models import FTTransformer
 from workloads import WorkloadModel
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from submissions import Submission
 
 

@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 from torch.nn import Transformer
 import evaluate
-from runtime.parameter_groups import GroupedModel, ParameterGroup, merge_parameter_splits
-from runtime.configs import WorkloadConfig
+from engine.parameter_groups import GroupedModel, ParameterGroup, merge_parameter_splits
+from engine.configs import WorkloadConfig
 from submissions import Submission
 from workloads import WorkloadModel
 from workloads.wmt.data \

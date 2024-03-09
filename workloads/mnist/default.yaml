@@ -9,5 +9,5 @@ workload:
   model:
     num_hidden: 128
     activation: Sigmoid
-runtime:
+engine:
   devices: 1

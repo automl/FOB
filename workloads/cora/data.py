@@ -2,7 +2,7 @@ import torch_geometric.loader as geom_loader
 from torch_geometric.datasets import Planetoid
 from torch_geometric.transforms import NormalizeFeatures
 from workloads import WorkloadDataModule
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 
 
 class CoraDataModule(WorkloadDataModule):

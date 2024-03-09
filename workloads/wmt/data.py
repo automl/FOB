@@ -5,7 +5,7 @@ from torchtext.data.utils import get_tokenizer
 from torch.utils.data import DataLoader
 from torchtext.vocab import build_vocab_from_iterator
 from workloads import WorkloadDataModule
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 import datasets
 from datasets import DatasetDict, Dataset
 import os

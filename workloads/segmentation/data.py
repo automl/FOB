@@ -4,7 +4,7 @@ from datasets import load_dataset, Dataset
 from huggingface_hub import hf_hub_download
 from transformers import SegformerImageProcessor
 from torchvision.transforms import v2
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from workloads import WorkloadDataModule
 
 

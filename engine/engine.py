@@ -2,15 +2,16 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 import hashlib
 import re
+import sys
 import yaml
 from submissions import Submission, submission_path, submission_names
 from workloads import WorkloadModel, WorkloadDataModule, import_workload, workload_path, workload_names
 from .grid_search import gridsearch
-from .configs import RuntimeConfig, SubmissionConfig, WorkloadConfig
+from .configs import EngineConfig, SubmissionConfig, WorkloadConfig
 from .utils import path_to_str_inside_dict, dict_differences, concatenate_dict_keys
 
 
-def runtime_path() -> Path:
+def engine_path() -> Path:
     return Path(__file__).resolve().parent
 
 
@@ -21,31 +22,29 @@ class Run():
             default_config: dict[str, Any],
             workload_key: str,
             submission_key: str,
-            runtime_key: str,
+            engine_key: str,
             identifier_key: str
         ) -> None:
         self._config = config
         self.workload_key = workload_key
         self.submission_key = submission_key
-        self.runtime_key = runtime_key
-        self.runtime = RuntimeConfig(config, workload_key, runtime_key)
+        self.engine_key = engine_key
+        self.engine = EngineConfig(config, workload_key, engine_key)
         self.submission = SubmissionConfig(config, submission_key, workload_key, identifier_key)
-        self.workload = WorkloadConfig(config, workload_key, runtime_key, identifier_key)
+        self.workload = WorkloadConfig(config, workload_key, engine_key, identifier_key)
         self._set_outpath(default_config)
         self.run_dir.mkdir(parents=True, exist_ok=True)
 
     def _set_outpath(self, default_config: dict[str, Any]):
-        base = self.runtime.output_dir / self.workload.output_dir_name / self.submission.output_dir_name
+        base = self.engine.output_dir / self.workload.output_dir_name / self.submission.output_dir_name
         exclude_keys = ["name", "output_dir_name"]
-        include_runtime = ["deterministic", "optimize_memory", "seed"]
-        exclude_keys += [k for k in self._config[self.runtime_key] if not k in include_runtime]
-        print(exclude_keys)
+        include_engine = ["deterministic", "optimize_memory", "seed"]
+        exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
         diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
-        print(diffs)
         run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.")
+            print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
             run_dir = hashdir
         self.run_dir = base / run_dir
 
@@ -65,13 +64,13 @@ class Run():
         return workload.get_datamodule(self.workload)
 
 
-class Runtime():
+class Engine():
     def __init__(self) -> None:
         self._runs = []
         self._defaults = []
         self.workload_key = "workload"
         self.submission_key = "submission"
-        self.runtime_key = "runtime"
+        self.engine_key = "engine"
         self.identifier_key = "name"
         self.default_file_name = "default.yaml"
 
@@ -96,7 +95,7 @@ class Runtime():
                 default_config,
                 self.workload_key,
                 self.submission_key,
-                self.runtime_key,
+                self.engine_key,
                 self.identifier_key
             )
             runs.append(run)
@@ -137,7 +136,7 @@ class Runtime():
     def _fill_runs_from_default(self, runs: list[dict[str, Any]]):
         for i, _ in enumerate(runs):
             # order from higher to lower in hierarchy
-            runs[i] = self._fill_unnamed_from_default(runs[i], runtime_path)
+            runs[i] = self._fill_unnamed_from_default(runs[i], engine_path)
             runs[i] = self._fill_named_from_default(runs[i], self.workload_key, workload_path)
             runs[i] = self._fill_named_from_default(runs[i], self.submission_key, submission_path)
 

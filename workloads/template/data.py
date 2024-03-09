@@ -1,7 +1,7 @@
 import torch
 import torch.utils.data as data
 from lightning.pytorch.demos.boring_classes import RandomDataset
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from workloads import WorkloadDataModule
 
 class TemplateDataModule(WorkloadDataModule):

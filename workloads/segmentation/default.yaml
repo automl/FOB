@@ -6,7 +6,7 @@ workload:
   max_steps: 10_112
   target_metric: val_mean_accuracy
   target_metric_mode: max
-runtime:
+engine:
   devices: 4
 submission:
   lr: 6.e-5

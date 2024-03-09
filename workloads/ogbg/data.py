@@ -1,7 +1,7 @@
 # https://github.com/Diego999/pyGAT/blob/master/utils.py
 
 from workloads import WorkloadDataModule
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader.dataloader import DataLoader as GeomDataLoader
 

@@ -16,5 +16,5 @@ workload:
       layers: 2
       dropout: 0.5
       norm: "batch_norm"
-runtime:
+engine:
   devices: 1

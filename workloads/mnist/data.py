@@ -1,7 +1,7 @@
 from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from runtime.configs import WorkloadConfig
+from engine.configs import WorkloadConfig
 from workloads import WorkloadDataModule
 
 
