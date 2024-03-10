@@ -45,17 +45,16 @@ class SegmentationModel(TaskModel):
             label2id: dict[str, int],
             config: TaskConfig
         ):
-        self.config = config
         model_name = "nvidia/mit-b0"
         model_config = SegformerConfig.from_pretrained(
             model_name,
-            cache_dir=self.config.data_dir,
+            cache_dir=config.data_dir,
             id2label=id2label,
             label2id=label2id
         )
         model = SegformerForSemanticSegmentation.from_pretrained(
             model_name,
-            cache_dir=self.config.data_dir,
+            cache_dir=config.data_dir,
             config=model_config
         )
         # model = SegformerForSemanticSegmentation.from_pretrained(
