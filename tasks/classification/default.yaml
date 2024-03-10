@@ -9,7 +9,7 @@ task:
   # model: davit_tiny
   model:
     name: wide_resnet50_2
-    hidden_channel: 300  # TODO
+    hidden_channel: 64  # crashed using previous 300 value
     kernel_size: 3
     padding: 1
     maxpool: True

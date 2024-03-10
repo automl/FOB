@@ -114,6 +114,8 @@ class Engine():
                 keys_with_list_indices.append(key)
         target = searchspace
         for key in keys_with_list_indices[:-1]:
+            if key not in target:
+                target[key] = {}
             target = target[key]
         target[keys_with_list_indices[-1]] = yaml.safe_load(value)
 
