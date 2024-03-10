@@ -41,6 +41,12 @@ def gpu_suited_for_compile():
         return device_cap in ((7, 0), (8, 0), (9, 0))
 
 
+def seconds_to_str(total_seconds: int, sep: str = ":") -> str:
+    hours, rest = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(rest, 60)
+    return sep.join(map(lambda x: str(x).zfill(2), [hours, minutes, seconds]))
+
+
 def begin_timeout(delay=10, show_threads=False):
     if show_threads:
         import sys

@@ -1,6 +1,7 @@
 from pathlib import Path
 import argparse
 import sys
+import time
 import torch
 from lightning import Trainer, seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -8,7 +9,7 @@ from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 
 from engine import Engine, Run
 from engine.callbacks import LogParamsAndGrads, PrintEpoch
-from engine.utils import some, trainer_strategy, begin_timeout, write_results
+from engine.utils import some, trainer_strategy, begin_timeout, write_results, seconds_to_str
 
 
 def run_trial(run: Run):
@@ -70,12 +71,16 @@ def run_trial(run: Run):
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)
         write_results(score, run.engine.output_dir / f"results_{mode}_model.json")
     else:
+        start_time = time.time()
         with torch.backends.cuda.sdp_kernel(
             enable_flash=True,
             enable_math=True,
             enable_mem_efficient=(run.engine.optimize_memory or not run.engine.deterministic)
         ):
             trainer.fit(model, datamodule=data_module, ckpt_path=run.engine.resume)
+        end_time = time.time()
+        train_time = int(end_time - start_time)
+        print(f"Finished training in {seconds_to_str(train_time)}.")
         final_score = tester.test(model, datamodule=data_module)
         best_score = tester.test(model, datamodule=data_module, ckpt_path=model_checkpoint.best_model_path)
         write_results(final_score, run.run_dir / "results_final_model.json")
