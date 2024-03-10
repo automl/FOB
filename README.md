@@ -45,8 +45,8 @@ Some of these are still under development.
 | ------- | ---- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
 | mnist | MNIST | MLP | Image classification | Validation Accuracy | 0.95 | 1 min | 1 gpu |
 | classification_small | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Top-1 Accuracy | 0.74 | 10 min | 1 gpu |
-| classification_large | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
-| segmentation | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Average Precision (IoU) | 0.26 | 4h | 1 gpu |
+| classification | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
+| segmentation | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Average Precision (IoU) | 0.26 | 4h | 4 gpu |
 | graph | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | 0.75 | ? | 1 gpu |
 | tabular | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test MSE | 0.11 | 2 min | 1 gpu |
 
