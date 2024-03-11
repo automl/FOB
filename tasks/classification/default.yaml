@@ -6,10 +6,15 @@ task:
   max_steps: 50_080
   target_metric: val_top5_err
   target_metric_mode: min
+  # make sure to comment out the other model when switching to davit
   # model: davit_tiny
+  # model:
+  #  name: davit_tiny.msft_in1k
+  #  with_stem: True
+  # model: wide res net
   model:
     name: wide_resnet50_2
-    hidden_channel: 64  # crashed using previous 300 value
+    hidden_channel: 64  # TODO modify model to allow values other than 64
     kernel_size: 3
     padding: 1
     maxpool: True

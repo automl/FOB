@@ -10,23 +10,37 @@ from optimizers import Optimizer
 
 class ImagenetModel(TaskModel):
     def __init__(self, optimizer: Optimizer, config: TaskConfig):
-        model_name = config.model.name
-        model = create_model(model_name)
-        
-        # 7x7 conv might be pretty large for 32x32 images
-        model.conv1 = nn.Conv2d(3,  # rgb color
-                                config.model.hidden_channel,
-                                kernel_size=config.model.kernel_size,
-                                padding=config.model.padding,
-                                bias=False
-                                )
-
-        # pooling small images might be bad
-        if not config.model.maxpool:
-            model.maxpool = nn.Identity()  # type:ignore
-
+        model = self._create_model(config)
         super().__init__(model, optimizer, config)
         self.loss_fn = nn.CrossEntropyLoss()
+
+    def _create_model(self, config: TaskConfig):
+        model_name = config.model.name
+        # we want to create exactly the model the user specified in the yaml
+        model = create_model(model_name)
+
+        # taking care of model specific changes
+        if model_name == "wide_resnet50_2":
+            # 7x7 conv might be pretty large for 64x64 images
+            model.conv1 = nn.Conv2d(3,  # rgb color
+                                    config.model.hidden_channel,
+                                    kernel_size=config.model.kernel_size,
+                                    padding=config.model.padding,
+                                    bias=False
+                                    )
+            # pooling small images might be bad
+            if not config.model.maxpool:
+                model.maxpool = nn.Identity()  # type:ignore
+
+        elif model_name == "davit_tiny.msft_in1k":
+            # msft_in1k: trained on imagenet 1k by authors
+            # https://huggingface.co/timm/davit_tiny.msft_in1k
+            pass
+        else:
+            # not throwing an error, its valid for the user to use an given default model
+            pass
+
+        return model
 
     def forward(self, batch) -> tuple[torch.Tensor, torch.Tensor]:
         imgs, labels = batch["image"], batch["label"]
