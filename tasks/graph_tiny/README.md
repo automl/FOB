@@ -1,5 +1,32 @@
-# model
-GCN = Graph Convolutional Networks 
+# task
+
+node classification on the cora dataset.
+
+![](https://production-media.paperswithcode.com/datasets/Cora-0000000700-ce1c5ec7_LD7pZnT.jpg)
+
+image source: https://arxiv.org/abs/1611.08402
+
+## dataset
+
+The cora dataset consists of a single network of 2708 publications classified into one of seven classes and consist of 5429 links.
+
+https://paperswithcode.com/sota/node-classification-on-cora
+
+https://link.springer.com/article/10.1023/A:1009953814988
+
+
+## model
+
+Here we use a GCN (Graph Convolutional Network)
+
+
+## performance
+
+The model achieves a performance of
+
+### performance comparison
+
+Performance using a GCN was reported in 
 https://paperswithcode.com/paper/semi-supervised-classification-with-graph
 
 The authors report a classificationa accuracy of 81.5
@@ -14,21 +41,3 @@ and state that:
 > window size of 10, i.e. we stop training if the validation loss does not decrease for 10 consecutive
 > epochs. We initialize weights using the initialization described in Glorot & Bengio (2010) and
 > accordingly (row-)normalize input feature vectors.
-
-we use a larger network
-
-# dataset
-
-cora 
-
-https://paperswithcode.com/sota/node-classification-on-cora
-
-https://link.springer.com/article/10.1023/A:1009953814988
-
-# task
-
-single graph, task is to classify the nodes
-
-![](https://production-media.paperswithcode.com/datasets/Cora-0000000700-ce1c5ec7_LD7pZnT.jpg)
-
-image source: https://arxiv.org/abs/1611.08402
