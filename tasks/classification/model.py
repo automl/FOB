@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 from torch import nn
-from timm import create_model
+import torch.nn.functional as F
+from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
 from tasks import TaskModel
 from engine.configs import TaskConfig
@@ -17,7 +18,12 @@ class ImagenetModel(TaskModel):
     def _create_model(self, config: TaskConfig):
         model_name = config.model.name
         # we want to create exactly the model the user specified in the yaml
-        model = create_model(model_name)
+        try:
+            model = create_model(model_name)
+        except RuntimeError as e:
+            available_models = list_models()
+            print(f"Available Models are {available_models}")
+            raise Exception("Unsupported model given.") from e
 
         # taking care of model specific changes
         if model_name == "wide_resnet50_2":
@@ -25,6 +31,7 @@ class ImagenetModel(TaskModel):
             model.conv1 = nn.Conv2d(3,  # rgb color
                                     config.model.hidden_channel,
                                     kernel_size=config.model.kernel_size,
+                                    stride=config.model.stride,
                                     padding=config.model.padding,
                                     bias=False
                                     )
@@ -35,10 +42,24 @@ class ImagenetModel(TaskModel):
         elif model_name == "davit_tiny.msft_in1k":
             # msft_in1k: trained on imagenet 1k by authors
             # https://huggingface.co/timm/davit_tiny.msft_in1k
-            pass
-        else:
+            if config.model.stem == "default":
+                # off the shelf DaVit
+                pass
+            elif config.model.stem == "wrn_conv":
+                model.stem = nn.Sequential([
+                    nn.Conv2d(in_channels=3, out_channels=96, kernel_size=3, stride=1, padding=1),
+                    LayerNorm2d((96,))
+                ])
+            elif config.model.stem == "custom_conv":
+                model.stem = nn.Sequential([
+                    nn.Conv2d(in_channels=3, out_channels=96, kernel_size=15, stride=1, padding=3),
+                    LayerNorm2d((96,))
+                ])
+            else:
+                print(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
             # not throwing an error, its valid for the user to use an given default model
-            pass
+            print("WARNING: the model you have specified has no modification.")
+            
 
         return model
 
@@ -77,3 +98,13 @@ class ImagenetModel(TaskModel):
         loss = self.loss_fn(preds, labels)
         self.log(f"{stage}_loss", loss, sync_dist=True)
         return loss
+
+class LayerNorm2d(nn.LayerNorm):
+    """ LayerNorm for channels of '2D' spatial BCHW tensors,
+    thanks to https://github.com/dingmyu/davit/blob/main/timm/models/layers/norm.py """
+    def __init__(self, num_channels):
+        super().__init__(num_channels)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return F.layer_norm(
+            x.permute(0, 2, 3, 1), self.normalized_shape, self.weight, self.bias, self.eps).permute(0, 3, 1, 2)
