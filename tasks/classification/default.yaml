@@ -2,6 +2,7 @@ task:
   name: classification
   output_dir_name: classification
   batch_size: 512
+  max_epochs: 80
   max_steps: 50_080
   target_metric: val_top5_err
   target_metric_mode: min
