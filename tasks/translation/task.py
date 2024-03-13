@@ -1,8 +1,8 @@
 from engine.configs import TaskConfig
 from optimizers import Optimizer
 from tasks import TaskModel, TaskDataModule
-from tasks.wmt.data import WMTDataModule
-from tasks.wmt.model import WMTModel
+from tasks.translation.data import WMTDataModule
+from tasks.translation.model import WMTModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:
