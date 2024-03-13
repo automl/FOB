@@ -1,4 +1,5 @@
 import json
+import yaml
 from pathlib import Path
 import argparse
 from typing import List
@@ -8,13 +9,10 @@ import pandas as pd
 
 # TODO: these should probably all be made into parser args, or dynamically extracted
 SEED = "seed"
-
 # default file names
-HP_FILENAME = "hyperparameters.json"
 RESULT_BEST_FILENAME = "results_best_model.json"
 RESULT_LAST_FILENAME = "results_final_model.json"
-ARGS_FILENAME = "runtime_args.json"
-SPECS_FILENAME = "runtime_specs.json"
+CONFIG_FILENAME = "config.yaml"
 DEFAULT_FILE_ENDING = "png"
 WORKLOAD_TO_TITLE = {
     "adamw_baseline": "AdamW",
@@ -43,8 +41,9 @@ def get_available_trials(dirname: Path, depth: int = 1):
 
     def is_trial(path: Path):
         # here we could do additional checks to filter the subdirectories
+        # currently we only check if there is a config file
         for x in path.iterdir():
-            if x.name == "hyperparameters.json":
+            if x.name == CONFIG_FILENAME:
                 return True
         return False
 
@@ -62,35 +61,32 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
     for path in trial_dir_paths:
         stat = {}
+        hp_dict = {}
 
-        # checking for files
-        args_file = path / ARGS_FILENAME
-        specs_file = path / SPECS_FILENAME
-        hyperparameters_file = path / HP_FILENAME
+        config_file = path / CONFIG_FILENAME
         result_file = path / RESULT_BEST_FILENAME
         if args.last_instead_of_best:
             result_file = path / RESULT_LAST_FILENAME
-        all_files_exist = all([args_file.is_file(),
-                               specs_file.is_file(),
-                               hyperparameters_file.is_file(),
-                               result_file.is_file()])
+        all_files_exist = all([
+            config_file.is_file(),
+            result_file.is_file()
+        ])
         if not all_files_exist:
             print(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting.")
             continue
 
-        # reading content
-        with open(args_file, 'r') as f:
-            content = json.load(f)
-            stat["seed"] = content[SEED]
-            stat["workload_name"] = content["workload_name"]
-            stat["submission_name"] = content["submission_name"]
-
-        with open(specs_file) as f:
-            content = json.load(f)
-            stat["target_metric_mode"] = content["target_metric_mode"]
-            stat["target_metric"] = content["target_metric"]
+        with open(config_file, "r", encoding="utf8") as f:
+            yaml_content = yaml.safe_load(f)
+            if args.verbose:
+                print(f"{yaml_content=}\n")
+            stat["seed"] = yaml_content["engine"]["seed"]
+            stat["workload_name"] = yaml_content["task"]["name"]
+            stat["submission_name"] = yaml_content["optimizer"]["name"]
+            stat["target_metric_mode"] = yaml_content["task"]["target_metric_mode"]
+            stat["target_metric"] = yaml_content["task"]["target_metric"]
             TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
-
+            hp_dict = yaml_content["optimizer"]
+            
         with open(result_file) as f:
             content = json.load(f)
             if args.metric in content[0]:
@@ -101,18 +97,17 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
                       f"Using '{stat['metric']}' because '{stat['target_metric']}' was the target metric.")
                 stat["score"] = content[0][stat["metric"]]
 
-        with open(hyperparameters_file) as f:
-            data = pd.json_normalize(json.loads(f.read()))
-            data.at[0, args.metric] = stat["score"]  # will trim to 4 digits after comma
-            data.at[0, SEED] = stat["seed"]  # saved as float
-            dfs.append(data)  # append the data frame to the list
+        data = pd.json_normalize(hp_dict)
+        data.at[0, args.metric] = stat["score"]  # will trim to 4 digits after comma
+        data.at[0, SEED] = stat["seed"]  # saved as float
+        dfs.append(data)  # append the data frame to the list
 
         if args.verbose:
-            print(stat)
+            print(f"{stat=}")
         stats.append(stat)
 
     df = pd.concat(dfs, sort=False)
-    # print(df)
+
     return df, stats
 
 
