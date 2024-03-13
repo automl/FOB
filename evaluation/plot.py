@@ -14,7 +14,7 @@ RESULT_BEST_FILENAME = "results_best_model.json"
 RESULT_LAST_FILENAME = "results_final_model.json"
 CONFIG_FILENAME = "config.yaml"
 DEFAULT_FILE_ENDING = "png"
-WORKLOAD_TO_TITLE = {
+OPTIM_TO_TITLE = {
     "adamw_baseline": "AdamW",
     "sgd_baseline": "SGD"
 }
@@ -80,8 +80,8 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
             if args.verbose:
                 print(f"{yaml_content=}\n")
             stat["seed"] = yaml_content["engine"]["seed"]
-            stat["workload_name"] = yaml_content["task"]["name"]
-            stat["submission_name"] = yaml_content["optimizer"]["name"]
+            stat["task_name"] = yaml_content["task"]["name"]
+            stat["optimizer_name"] = yaml_content["optimizer"]["name"]
             stat["target_metric_mode"] = yaml_content["task"]["target_metric_mode"]
             stat["target_metric"] = yaml_content["task"]["target_metric"]
             TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
@@ -111,7 +111,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
     return df, stats
 
 
-def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
+def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False, stat: dict={}):
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
                                  columns=args.x_axis, index=args.y_axis, values=args.metric,
@@ -130,6 +130,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     if lower_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
+    metric_legend = stat["metric"] if "metric" in stat.keys() else args.metric
 
     # FINETUNE POSITION
     # left bottom width height
@@ -139,7 +140,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
     if not args.std:
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=True, fmt=f".{decimal_points}f", annot_kws={'fontsize': 8},
-                           vmin=vmin, vmax=vmax, cmap=colormap_name)
+                           vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # PRECISION TO DISPLAY
         std_decimal_points = decimal_points  # good default would be 2
@@ -160,7 +161,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
         fmt = ""  # cannot format like before, as we do not only have a number
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=annot_matrix, fmt=fmt, annot_kws={'fontsize': 5},
-                           vmin=vmin, vmax=vmax, cmap=colormap_name)
+                           vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
 def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
@@ -190,11 +191,11 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
         some_stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
-        s_name = some_stat_entry['submission_name']
+        opti_name = some_stat_entry['optimizer_name']
         s_target_metric_mode = some_stat_entry["target_metric_mode"]
         lower_is_better = s_target_metric_mode == "min"
 
-        current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
+        current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better, stat=some_stat_entry)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
         current_plot.set_xlabel(current_plot.get_xlabel().replace('_', ' ').title())
@@ -208,10 +209,12 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
             # axs[i].set_ylabel
             pass
 
-        if s_name in WORKLOAD_TO_TITLE.keys():
-            axs[i].set_title(WORKLOAD_TO_TITLE[s_name])
-        else:
-            axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
+        # title (heading) of the figure:
+        title = OPTIM_TO_TITLE[opti_name] if opti_name in OPTIM_TO_TITLE.keys() else opti_name.replace('_', ' ').title()
+        title += " on "
+        title += some_stat_entry["task_name"]
+        axs[i].set_title(title)
+
     fig.tight_layout()
     return fig, axs
 
@@ -234,13 +237,13 @@ def get_output_filename(workloads: list[Path]) -> tuple[str, str]:
     some_workload = workloads[0]
     # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    workload = Path(some_workload).resolve()
-    submission = Path(workload).parent
+    task = Path(some_workload).resolve()
+    optimizer = Path(task).parent
     if args.verbose:
-        print(f"{workload.name=}")
-        print(f"{submission.name=}")
+        print(f"{task.name=}")
+        print(f"{optimizer.name=}")
     file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
-    output_filename = f"{submission.name}-{workload.name}"
+    output_filename = f"{optimizer.name}-{task.name}"
     output_filename = here / output_filename
     if args.output:
         output_filename = args.output
