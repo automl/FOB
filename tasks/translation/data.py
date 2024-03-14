@@ -57,7 +57,8 @@ class WMTDataModule(TaskDataModule):
         ds = ds.map(transform_text, batched=True)
         ds["train"] = ds["train"].remove_columns("translation")
         print("filtering sentences with too many tokens...")
-        ds = ds.filter(lambda data: len(data["input_ids"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
+        ds = ds.filter(lambda data: len(data["input_ids"]) <= MAX_TOKENS_PER_SENTENCE and
+                                    len(data["labels"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
         print("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
         print("saving additional information...")
