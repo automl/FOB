@@ -1,22 +1,24 @@
-from typing import Any, Iterable, Iterator
 import json
-import torch
-from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
-from datasets import DatasetDict, Dataset
+from datasets import DatasetDict
 import datasets
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.trainers import BpeTrainer
-from tokenizers.pre_tokenizers import Whitespace
-from tokenizers.processors import TemplateProcessing
-from transformers import PreTrainedTokenizerFast, T5Tokenizer
+from transformers import T5Tokenizer
 from transformers import DataCollatorForSeq2Seq
 
 from tasks import TaskDataModule
 from engine.configs import TaskConfig
 
 MAX_TOKENS_PER_SENTENCE = 128
+
+
+def collate_fn_validtest(batch) -> tuple[list[str], list[str]]:
+    de_text = []
+    en_text = []
+    for sample in batch:
+        de_text += [sample["translation"]["de"]]
+        en_text += [sample["translation"]["en"]]
+    return de_text, en_text
+
 
 class WMTDataModule(TaskDataModule):
     def __init__(self, config: TaskConfig):
@@ -81,16 +83,6 @@ class WMTDataModule(TaskDataModule):
 
         self.collate_fn = data_collator
 
-        def collate_fn_validtest(batch):
-            de_text = []
-            en_text = []
-            for sample in batch:
-                de_text += [sample["translation"]["de"]]
-                en_text += [sample["translation"]["en"]]
-            return de_text, en_text
-
-        self.collate_fn_validtest = collate_fn_validtest
-
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
             self.data_train = ds["train"]  # .select(range(200))
@@ -98,14 +90,13 @@ class WMTDataModule(TaskDataModule):
 
         if stage == "validate":
             self.data_val = ds["validation"]
-        
+
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
             self.data_test = ds["test"]
 
         if stage == "predict":
             self.data_predict = ds["test"]
-
     def train_dataloader(self):
         self.check_dataset(self.data_train)
         return DataLoader(
@@ -122,7 +113,7 @@ class WMTDataModule(TaskDataModule):
             self.data_val,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            collate_fn=collate_fn_validtest
         )
 
     def test_dataloader(self):
@@ -131,7 +122,7 @@ class WMTDataModule(TaskDataModule):
             self.data_test,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            collate_fn=collate_fn_validtest
         )
 
     def predict_dataloader(self):
@@ -140,5 +131,5 @@ class WMTDataModule(TaskDataModule):
             self.data_predict,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            collate_fn=collate_fn_validtest
         )
