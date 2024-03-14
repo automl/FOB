@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 import re
 import yaml
 
@@ -13,6 +13,17 @@ class YAMLParser():
         """
         with open(file, "r", encoding="utf8") as f:
             return yaml.safe_load(f)
+
+    def parse_yamls_and_extra_args(self, default_yaml: Path, custom_yaml: Optional[Path], additional_args: Iterable[str]=tuple()) -> dict:
+        """assumes that there is a dict in the yaml"""
+        config_to_use = self.parse_yaml(default_yaml)
+        if custom_yaml is not None:
+            user_yaml = self.parse_yaml(custom_yaml)
+            # merge in place
+            self.merge_dicts_hierarchical(lo=config_to_use, hi=user_yaml)
+        self.parse_args_into_searchspace(config_to_use, additional_args)
+        return config_to_use
+
 
     def parse_args_into_searchspace(self, searchspace: dict[str, Any], args: Iterable[str]):
         """
