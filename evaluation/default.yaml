@@ -1,22 +1,29 @@
-main:
-  data_dir: null
-  output_dir: null
-  depth: 1  # the depth of the trial dirs relative to the given trial_dirs
-  output_type: [csv, pdf, png]  # choose all you want from {csv, pdf, png} and put it in brackets
-  last_instead_of_best: False  # use the last model, if not set the ebst model will be used
-  verbose: False  # debug prints
-plot_details:
+data_dirs: null  # List of Paths
+output_dir: null # output filename is output_dir / experiment_name
+experiment_name: null
+depth: 1  # the depth of the trial dirs relative to the given trial_dirs
+output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
+last_instead_of_best: False  # use the last model, if not set the ebst model will be used
+verbose: False  # debug prints
+plot:
   # keeping the values on null -> automatically figure it out if possible
-  x_axis: null  # hp on x axis
-  y_axis: null  # hp on y axis
+  x_axis: weight_decay  # hp on x axis
+  y_axis: learning_rate  # hp on y axis
   metric: null  # is automatically chosen from task name, this will overwrite it
   limits: null  # sets the limits for the colormap, 2 ints, order does not matter
   std: True
-plot_configs:  # todo add configs for plotting
-  scale: 1.0  # scales *figsize* argument by this value
-  use_latex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$
-  fontsize: 8  # todo, differ the font sizes
   format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
+plotstyle:  # todo add configs for plotting
+  text:
+    usetex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$
+  font:
+    family: "serif"
+    size: 8
+  scale: 1.0  # scales *figsize* argument by this value
+experiment_files:
+  best_model: results_best_model.json
+  last_model: results_final_model.json
+  config: config.yaml
 names:  # pretty names for the plot
   # optimizer
   adamw_baseline: AdamW
