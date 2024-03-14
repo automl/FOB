@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Any, Callable, Iterable
 import hashlib
-import re
 import sys
 import yaml
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .grid_search import gridsearch
 from .configs import EngineConfig, OptimizerConfig, TaskConfig
+from .parser import YAMLParser
 from .utils import path_to_str_inside_dict, dict_differences, concatenate_dict_keys
 
 
@@ -73,11 +73,11 @@ class Engine():
         self.engine_key = "engine"
         self.identifier_key = "name"
         self.default_file_name = "default.yaml"
+        self.parser = YAMLParser()
 
     def parse_experiment(self, file: Path, extra_args: Iterable[str] = tuple()):
-        searchspace = self._parse_yaml(file)
-        for arg in extra_args:
-            self._parse_into_searchspace(searchspace, arg)
+        searchspace = self.parser.parse_yaml(file)
+        self.parser.parse_args_into_searchspace(searchspace, extra_args)
         self._named_dicts_to_list(
             searchspace,
             [self.optimizer_key, self.task_key],
@@ -100,24 +100,6 @@ class Engine():
             )
             runs.append(run)
         return runs
-
-    def _parse_into_searchspace(self, searchspace: dict[str, Any], arg: str):
-        keys, value = arg.split("=")
-        keys = keys.split(".")
-        keys_with_list_indices = []
-        for key in keys:
-            match = re.search(r"^(.*?)\[(\-?\d+)\]$", key)
-            if match:
-                keys_with_list_indices.append(match.group(1))
-                keys_with_list_indices.append(int(match.group(2)))
-            else:
-                keys_with_list_indices.append(key)
-        target = searchspace
-        for key in keys_with_list_indices[:-1]:
-            if key not in target:
-                target[key] = {}
-            target = target[key]
-        target[keys_with_list_indices[-1]] = yaml.safe_load(value)
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)
@@ -144,8 +126,8 @@ class Engine():
 
     def _fill_unnamed_from_default(self, experiment: dict[str, Any], unnamed_root: Callable) -> dict[str, Any]:
         default_path: Path = unnamed_root() / self.default_file_name
-        default_config = self._parse_yaml(default_path)
-        self._merge_dicts_hierarchical(default_config, experiment)
+        default_config = self.parser.parse_yaml(default_path)
+        self.parser.merge_dicts_hierarchical(default_config, experiment)
         return default_config
 
     def _fill_named_from_default(self, experiment: dict[str, Any], key: str, named_root: Callable) -> dict[str, Any]:
@@ -156,25 +138,14 @@ class Engine():
         else:
             experiment[key] = {self.identifier_key: named}
         default_path: Path = named_root(named) / self.default_file_name
-        default_config = self._parse_yaml(default_path)
-        self._merge_dicts_hierarchical(default_config, experiment)
+        default_config = self.parser.parse_yaml(default_path)
+        self.parser.merge_dicts_hierarchical(default_config, experiment)
         return default_config
 
     def _argcheck_named(self, experiment: dict[str, Any], key: str, identifier: str):
         assert key in experiment, f"You did not provide any {key}."
         assert isinstance(experiment[key], str) or identifier in experiment[key], \
             f"Unknown {key}, either specify only a string or provide a key '{identifier}'"
-
-    def _merge_dicts_hierarchical(self, lo: dict, hi: dict):
-        for k, v in hi.items():
-            if isinstance(v, dict) and isinstance(lo.get(k, None), dict):
-                self._merge_dicts_hierarchical(lo[k], v)
-            else:
-                lo[k] = v
-
-    def _parse_yaml(self, file: Path):
-        with open(file, "r", encoding="utf8") as f:
-            return yaml.safe_load(f)
 
     def dump_experiments(self):
         # TODO: remove this and make proper export function
