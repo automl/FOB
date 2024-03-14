@@ -24,3 +24,4 @@ timm==0.9.12
 tensorflow==2.15.0
 tensorflow-datasets==4.9.4
 opencv-python==4.9.0.80
+pytorch-cpr==0.1.0
