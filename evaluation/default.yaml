@@ -1,0 +1,24 @@
+engine:
+  output_type: [csv, pdf, png]  # choose all you want from {csv, pdf, png} and put it in brackets
+  output_dir: null
+plot_configs:  # todo add configs for plotting
+  fontsize: 8  # todo, differ the font sizes
+names:  # pretty names for the plot
+  # optimizer
+  adamw_baseline: AdamW
+  sgd_baseline: SGD
+  # metric
+  test_acc: Accuracy (Test)
+  learning_rate: Learning Rate
+  # tasks
+  classification: classification
+  classification_small: classification_small
+  detection: detection
+  graph: graph
+  graph_tiny: graph_tiny
+  mnist: mnist
+  segmentation: segmentation
+  tabular: tabular
+  template: template
+  translation: translation
+metric:  # maps task -> metric to plot

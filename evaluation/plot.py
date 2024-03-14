@@ -131,6 +131,7 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False, stat: 
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
     metric_legend = stat["metric"] if "metric" in stat.keys() else args.metric
+    metric_legend = pretty_name(names, metric_legend)
 
     # FINETUNE POSITION
     # left bottom width height
@@ -198,8 +199,8 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
         current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better, stat=some_stat_entry)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
-        current_plot.set_xlabel(current_plot.get_xlabel().replace('_', ' ').title())
-        current_plot.set_ylabel(current_plot.get_ylabel().replace('_', ' ').title())
+        current_plot.set_xlabel(pretty_name(names, current_plot.get_xlabel()))
+        current_plot.set_ylabel(pretty_name(names, current_plot.get_ylabel()))
 
         if i > 0:
             # remove y_label of all but first one
@@ -210,9 +211,9 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
             pass
 
         # title (heading) of the figure:
-        title = OPTIM_TO_TITLE[opti_name] if opti_name in OPTIM_TO_TITLE.keys() else opti_name.replace('_', ' ').title()
+        title = pretty_name(names, opti_name)
         title += " on "
-        title += some_stat_entry["task_name"]
+        title += pretty_name(names, some_stat_entry["task_name"])
         axs[i].set_title(title)
 
     fig.tight_layout()
@@ -255,6 +256,22 @@ def set_plotstyle():
     plt.rcParams["font.family"] = "serif"  # You can adjust the font family as needed
     plt.rcParams["font.size"] = 8  # Adjust the font size as needed
 
+def build_name_dict(filename: Path):
+    names = dict()
+    with open(filename, "r", encoding="utf8") as f:
+        names = yaml.safe_load(f)
+    if args.verbose:
+        print(f"{names=}")
+    return names
+
+def pretty_name(names: dict, name :str) -> str:
+    """tries to use a mapping for the name, else will do some general replacement"""
+    if name in names["names"].keys():
+        name = names["names"][name]
+    else:
+        name = name.replace('_', ' ').title()
+    return name
+
 
 def save_csv(do_save: bool, dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
     if not do_save:
@@ -293,11 +310,14 @@ if __name__ == "__main__":
     # default paths
     here = Path(__file__).parent.resolve()
     trials_dirs_default = [here / "sample-data" / "test-submission" / "test-workload"]
+    names_default = here / "default.yaml"
 
     # parsing
     parser = argparse.ArgumentParser(description="Create a heatmap plot of benchmarking results.")
     parser.add_argument("--trials_dirs", "-d", default=trials_dirs_default, required=False, nargs='+', type=Path,
                         help="Path to the experiment files (data to plot)")
+    parser.add_argument("--names_file", default=names_default, required=False, type=Path,
+                        help="Path to the yaml file that has plotting names")
     parser.add_argument("--depth", default=1, type=int,
                         help="the depth of the trial dirs relative to the given trial_dirs")
     parser.add_argument("--metric", "-m", default="test_acc", required=False, type=str,
@@ -329,5 +349,5 @@ if __name__ == "__main__":
     # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
     # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
     args = parser.parse_args()
-
+    names = build_name_dict(args.names_file)
     main(args)
