@@ -252,7 +252,7 @@ def get_output_filename(workloads: list[Path]) -> tuple[str, str]:
 
 
 def set_plotstyle():
-    plt.rcParams["text.usetex"] = True
+    plt.rcParams["text.usetex"] = False
     plt.rcParams["font.family"] = "serif"  # You can adjust the font family as needed
     plt.rcParams["font.size"] = 8  # Adjust the font size as needed
 

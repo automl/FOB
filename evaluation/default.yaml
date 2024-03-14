@@ -1,14 +1,29 @@
-engine:
-  output_type: [csv, pdf, png]  # choose all you want from {csv, pdf, png} and put it in brackets
+main:
+  data_dir: null
   output_dir: null
+  depth: 1  # the depth of the trial dirs relative to the given trial_dirs
+  output_type: [csv, pdf, png]  # choose all you want from {csv, pdf, png} and put it in brackets
+  last_instead_of_best: False  # use the last model, if not set the ebst model will be used
+  verbose: False  # debug prints
+plot_details:
+  # keeping the values on null -> automatically figure it out if possible
+  x_axis: null  # hp on x axis
+  y_axis: null  # hp on y axis
+  metric: null  # is automatically chosen from task name, this will overwrite it
+  limits: null  # sets the limits for the colormap, 2 ints, order does not matter
+  std: True
 plot_configs:  # todo add configs for plotting
+  scale: 1.0  # scales *figsize* argument by this value
+  use_latex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$
   fontsize: 8  # todo, differ the font sizes
+  format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
 names:  # pretty names for the plot
   # optimizer
   adamw_baseline: AdamW
   sgd_baseline: SGD
   # metric
   test_acc: Accuracy (Test)
+  # parameter
   learning_rate: Learning Rate
   # tasks
   classification: classification
@@ -21,4 +36,14 @@ names:  # pretty names for the plot
   tabular: tabular
   template: template
   translation: translation
-metric:  # maps task -> metric to plot
+task_to_metric:  # maps task -> metric to plot
+  classification: null # TODO
+  classification_small: null # TODO
+  detection: null # TODO
+  graph: null # TODO
+  graph_tiny: null # TODO
+  mnist: null # TODO
+  segmentation: null # TODO
+  tabular: null # TODO
+  template: null # TODO
+  translation: null # TODO
