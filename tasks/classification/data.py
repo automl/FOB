@@ -43,9 +43,9 @@ class ImagenetDataModule(TaskDataModule):
         # reading setting
         if config.train_transforms.random_crop.use:
             random_crop = v2.RandomCrop(
-                size = config.train_transforms.random_crop.size,
-                padding = config.train_transforms.random_crop.padding,
-                padding_mode = config.train_transforms.random_crop.padding_mode
+                size=config.train_transforms.random_crop.size,
+                padding=config.train_transforms.random_crop.padding,
+                padding_mode=config.train_transforms.random_crop.padding_mode
             )
         else:
             random_crop = v2.Identity()
@@ -101,5 +101,5 @@ class ImagenetDataModule(TaskDataModule):
             data_dir=self.data_dir,
             download=False
         )
-        rds =  Imagenet64Dataset(ds)
+        rds = Imagenet64Dataset(ds)
         return rds

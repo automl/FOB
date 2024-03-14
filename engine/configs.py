@@ -14,7 +14,7 @@ class NamedConfig(BaseConfig):
             config: dict[str, Any],
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
-        ) -> None:
+            ) -> None:
         super().__init__(config)
         self.name = config[identifier_key]
         self.output_dir_name = config[outdir_key]
@@ -28,7 +28,7 @@ class OptimizerConfig(NamedConfig):
             task_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
-        ) -> None:
+            ) -> None:
         cfg = dict(config[optimizer_key])
         self.max_steps = config[task_key]["max_steps"]
         cfg["max_steps"] = self.max_steps
@@ -43,7 +43,7 @@ class TaskConfig(NamedConfig):
             engine_key: str,
             identifier_key: str = "name",
             outdir_key: str = "output_dir_name"
-        ) -> None:
+            ) -> None:
         cfg = dict(config[task_key])
         self.batch_size: int = cfg["batch_size"]
         self.data_dir = Path(config[engine_key]["data_dir"]).resolve()

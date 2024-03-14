@@ -24,7 +24,7 @@ def cosine_warmup(
         warmup_steps: int,
         eta_min: float,
         optimizer
-    ) -> SequentialLR | CosineAnnealingLR:
+        ) -> SequentialLR | CosineAnnealingLR:
     if warmup_steps == 0:
         print("warmup = 0: using CosineAnnealingLR only")
         return CosineAnnealingLR(optimizer, T_max=total_steps)
@@ -34,8 +34,9 @@ def cosine_warmup(
     cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=eta_min)
     return SequentialLR(optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
+
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
-    lr=config.learning_rate
+    lr = config.learning_rate
     optimizer_args = dict(
         lr=lr,
         eps=config.epsilon,

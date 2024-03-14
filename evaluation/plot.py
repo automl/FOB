@@ -116,7 +116,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
     return df, stats
 
 
-def create_matrix_plot(dataframe, config: AttributeDict, ax=None, lower_is_better: bool = False, stat: dict={}):
+def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better: bool = False, stat: dict = {}):
     # create pivot table and format the score result
     # print(f"{dataframe=}")
     # print(f"{config.plot.x_axis=}")
@@ -136,7 +136,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, ax=None, lower_is_bette
     vmin = config.plot.limits and min(config.plot.limits)  # lower limit (or None if not given)
     vmax = config.plot.limits and max(config.plot.limits)  # upper limit (or None if not given)
     colormap_name = "rocket"
-    if lower_is_better:
+    if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
     # metric_legend = stat["metric"] if "metric" in stat.keys() else config.plot.metric
@@ -200,12 +200,12 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
-        some_stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
-        opti_name = some_stat_entry['optimizer_name']
-        s_target_metric_mode = some_stat_entry["target_metric_mode"]
-        lower_is_better = s_target_metric_mode == "min"
+        stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
+        opti_name = stat_entry['optimizer_name']
+        s_target_metric_mode = stat_entry["target_metric_mode"]
+        low_is_better = s_target_metric_mode == "min"
 
-        current_plot = create_matrix_plot(dataframe, config, ax=axs[i], lower_is_better=lower_is_better, stat=some_stat_entry)
+        current_plot = create_matrix_plot(dataframe, config, ax=axs[i], low_is_better=low_is_better, stat=stat_entry)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
@@ -222,14 +222,15 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
         # title (heading) of the figure:
         title = pretty_name(opti_name, config)
         title += " on "
-        title += pretty_name(some_stat_entry["task_name"], config)
+        title += pretty_name(stat_entry["task_name"], config)
         axs[i].set_title(title)
 
     fig.tight_layout()
     return fig, axs
 
 
-def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1) -> tuple[list[pd.DataFrame], list[dict]]:
+def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
+                       ) -> tuple[list[pd.DataFrame], list[dict]]:
     df_list: list[pd.DataFrame] = []
     stats_list: list[dict] = []
     num_dataframes: int = len(workload_paths)
@@ -247,16 +248,15 @@ def get_output_file_path(workloads: list[Path], config: AttributeDict) -> str:
     some_workload = workloads[0]
     # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    
     # TODO: we should get the name out of the yaml instead,
     #   this might be confusing if the dir name has parameter in them
     optimizer = Path(some_workload).resolve()
     task = Path(optimizer).parent
-    
+
     if config.verbose:
         print(f"{task.name=}")
         print(f"{optimizer.name=}")
-    
+
     here = Path(__file__).parent.resolve()
 
     output_dir = config.output_dir if config.output_dir else here
@@ -302,7 +302,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         config.output_types = [config.output_types]
         if config.verbose:
             print("fixing value for key <config.output_types> to be a list[str]")
-    
+
     if not isinstance(config.data_dirs, list):
         config.data_dirs = [config.data_dirs]
         if config.verbose:

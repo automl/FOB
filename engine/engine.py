@@ -24,7 +24,7 @@ class Run():
             optimizer_key: str,
             engine_key: str,
             identifier_key: str
-        ) -> None:
+            ) -> None:
         self._config = config
         self.task_key = task_key
         self.optimizer_key = optimizer_key

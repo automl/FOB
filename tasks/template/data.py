@@ -3,6 +3,7 @@ from lightning.pytorch.demos.boring_classes import RandomDataset
 from engine.configs import TaskConfig
 from tasks import TaskDataModule
 
+
 class TemplateDataModule(TaskDataModule):
     def __init__(self, config: TaskConfig) -> None:
         super().__init__(config)

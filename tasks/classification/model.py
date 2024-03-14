@@ -59,7 +59,6 @@ class ImagenetModel(TaskModel):
                 print(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
             # not throwing an error, its valid for the user to use an given default model
             print("WARNING: the model you have specified has no modification.")
-            
 
         return model
 
@@ -98,6 +97,7 @@ class ImagenetModel(TaskModel):
         loss = self.loss_fn(preds, labels)
         self.log(f"{stage}_loss", loss, sync_dist=True)
         return loss
+
 
 class LayerNorm2d(nn.LayerNorm):
     """ LayerNorm for channels of '2D' spatial BCHW tensors,

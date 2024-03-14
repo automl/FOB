@@ -30,7 +30,7 @@ class TaskModel(LightningModule):
             optimizer: Optimizer,
             config: TaskConfig,
             **kwargs: Any
-        ) -> None:
+            ) -> None:
         super().__init__(**kwargs)
         self.config = config
         self.optimizer = optimizer

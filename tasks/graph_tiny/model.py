@@ -58,7 +58,14 @@ class CoraModel(TaskModel):
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, hidden_channels=32, num_layers:int = 2, dropout=0.5, cached:bool=False, normalize:bool=True):
+    def __init__(
+            self,
+            hidden_channels=32,
+            num_layers: int = 2,
+            dropout=0.5,
+            cached: bool = False,
+            normalize: bool = True
+            ):
         self.dropout = dropout
         self.num_layers = num_layers
         super().__init__()
@@ -73,7 +80,7 @@ class GCN(torch.nn.Module):
                     cached=cached,
                     normalize=normalize,
                     dropout=dropout
-                )
+                    )
         )
 
         for _ in range(num_layers - 2):
@@ -95,7 +102,6 @@ class GCN(torch.nn.Module):
                 normalize=normalize,
             )
         )
-
 
     def forward(self, x, edge_index):
         # print(edge_index)

@@ -12,8 +12,7 @@ def cosine_warmup(
         step_hint: int,
         warmup_factor: float,
         eta_min: float,
-        optimizer
-    ) -> SequentialLR | CosineAnnealingLR:
+        optimizer) -> SequentialLR | CosineAnnealingLR:
     if step_hint < 1:
         raise ValueError("step hint should be at least 1!")
     warmup_steps = math.ceil(warmup_factor * step_hint)
@@ -27,9 +26,10 @@ def cosine_warmup(
     return SequentialLR(
         optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
+
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
-    lr=config.learning_rate
-    weight_decay=config.weight_decay
+    lr = config.learning_rate
+    weight_decay = config.weight_decay
     parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)
     optimizer = AdamW(
         parameter_groups,

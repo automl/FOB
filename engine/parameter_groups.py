@@ -152,7 +152,7 @@ def wd_group_named_parameters(model: Module):
     return param_groups
 
 
-def resolve_parameter_dicts( dict1: dict[str, Any], dict2: dict[str, Any]) -> list[dict[str, Any]]:
+def resolve_parameter_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> list[dict[str, Any]]:
     p1, p2 = dict1["params"], dict2["params"]
     n1, n2 = set(dict1["names"]), set(dict2["names"])
     n_to_p1 = dict(zip(dict1["names"], dict1["params"]))

@@ -6,8 +6,8 @@ from engine.configs import OptimizerConfig
 
 
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
-    lr=config.learning_rate
-    weight_decay=config.weight_decay
+    lr = config.learning_rate
+    weight_decay = config.weight_decay
     optimizer = SGD(
         params=model.grouped_parameters(lr=lr, weight_decay=weight_decay),
         lr=lr,

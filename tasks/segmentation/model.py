@@ -44,7 +44,7 @@ class SegmentationModel(TaskModel):
             id2label: dict[int, str],
             label2id: dict[str, int],
             config: TaskConfig
-        ):
+            ):
         model_name = "nvidia/mit-b0"
         model_config = SegformerConfig.from_pretrained(
             model_name,

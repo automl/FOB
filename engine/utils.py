@@ -103,7 +103,7 @@ def concatenate_dict_keys(
         parent_key: str = "",
         sep: str = ".",
         exclude_keys: Iterable[str] = tuple()
-    ) -> dict[str, Any]:
+        ) -> dict[str, Any]:
     """
     Example:
     >>> concatenate_dict_keys({ "A": { "B": { "C": 1, "D": 2 }, "E": { "F": 3 } } })
