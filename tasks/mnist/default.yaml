@@ -2,8 +2,8 @@ task:
   name: mnist
   output_dir_name: mnist
   batch_size: 512
-  max_epochs: 42
-  max_steps: 4_536
+  max_epochs: 8
+  max_steps: 864
   target_metric: val_acc
   target_metric_mode: max
   model:
@@ -11,3 +11,6 @@ task:
     activation: Sigmoid
 engine:
   devices: 1
+optimizer:
+  learning_rate: 1.0e-2
+  weight_decay: 0.1
