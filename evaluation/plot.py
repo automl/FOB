@@ -87,7 +87,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         # print(f"{type(config.plot.metric)=}")
         metric_of_value_to_plot = config.plot.metric
         if not metric_of_value_to_plot:
-            task_name = "mnist"  # TODO: find taskname
+            task_name = stat["task_name"]
             metric_of_value_to_plot = config.task_to_metric[task_name]
             if not metric_of_value_to_plot:
                 metric_of_value_to_plot = stat["target_metric"].replace("val_", "test_")
@@ -244,23 +244,28 @@ def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth:
     return df_list, stats_list
 
 
-def get_output_file_path(workloads: list[Path], config: AttributeDict) -> str:
+def get_output_file_path(workloads: list[Path], config: AttributeDict, stats: list[dict]) -> str:
     some_workload = workloads[0]
+    some_stat = stats[0][0]  # TODO: fix for multiple optim on one plot
     # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    # TODO: we should get the name out of the yaml instead,
-    #   this might be confusing if the dir name has parameter in them
-    optimizer = Path(some_workload).resolve()
-    task = Path(optimizer).parent
+    # optimizer = Path(some_workload).resolve()
+    # optim_name = optimizer.name
+    # task = Path(optimizer).parent
+    # task_name = task.name
+    # print(f"{stats=}")
+    # print(f"{some_stat=}")
+    task_name = some_stat["task_name"]
+    optim_name = some_stat["optimizer_name"]
 
     if config.verbose:
-        print(f"{task.name=}")
-        print(f"{optimizer.name=}")
+        print(f"{task_name=}")
+        print(f"{task_name=}")
 
     here = Path(__file__).parent.resolve()
 
     output_dir = config.output_dir if config.output_dir else here
-    experiment_name = config.experiment_name if config.experiment_name else f"{optimizer.name}-{task.name}"
+    experiment_name = config.experiment_name if config.experiment_name else f"{optim_name}-{task_name}"
     output_file_path = output_dir / experiment_name
 
     return output_file_path
@@ -325,12 +330,12 @@ def main(config: AttributeDict):
     if config.verbose:
         print(f"{workloads}=")
 
-    output_file_path = get_output_file_path(workloads, config)
-
     set_plotstyle(config)
 
     dfs, stats = extract_dataframes(workloads, depth=config.depth, config=config)
     fig, axs = create_figure(dfs, stats, config)
+
+    output_file_path = get_output_file_path(workloads, config, stats)
 
     for file_type in config.output_types:
         if file_type == "csv":
