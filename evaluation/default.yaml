@@ -5,33 +5,49 @@ depth: 1  # the depth of the trial dirs relative to the given data_dirs
 output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
 last_instead_of_best: False  # use the last model, if not set the ebst model will be used
 verbose: False  # debug prints
+
 plot:
   # keeping the values on null -> automatically figure it out if possible
-  x_axis: weight_decay  # hp on x axis
-  y_axis: learning_rate  # hp on y axis
+  x_axis: weight_decay  # index on x axis
+  y_axis: learning_rate  # index on y axis
   metric: null  # is automatically chosen from task name, this will overwrite it
-  limits: null  # sets the limits for the colormap, 2 ints, order does not matter
-  std: False
+  limits: null  # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
+  std: False  # aggreagte over std
   format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
-plotstyle:  # todo add configs for plotting
+
+plotstyle:
+  tight_layout: True
   text:
-    usetex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$
+    usetex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$ but some cluster dont have it installed# the font in the tiles of the matrix
+
+  # general font
   font:
-    family: "serif"
-    size: 8
-  scale: 1.0  # scales *figsize* argument by this value
+    family: "serif" # matplotlib {serif, sans-serif, cursive, fantasy, monospace}
+    size: 14
+
+  # the font in the tiles of the matrix
+  matrix_font:
+    size: 12
+
+  scale: 1.0  # scales *figsize* argument by this value, useful for ".png"
+
+# the name of the files storing the hyperparameters of the experiments and the scores
 experiment_files:
   best_model: results_best_model.json
   last_model: results_final_model.json
   config: config.yaml
-names:  # pretty names for the plot
+
+# pretty names for the plot
+names:  
   # optimizer
   adamw_baseline: AdamW
+  adamcpr: AdamCPR
   sgd_baseline: SGD
   # metric
   test_acc: Accuracy (Test)
   # parameter
   learning_rate: Learning Rate
+  weight_decay: Weight Decay
   # tasks
   classification: classification
   classification_small: classification_small
@@ -43,14 +59,16 @@ names:  # pretty names for the plot
   tabular: tabular
   template: template
   translation: translation
-task_to_metric:  # maps task -> metric to plot
-  classification: null # TODO
-  classification_small: null # TODO
-  detection: null # TODO
-  graph: null # TODO
-  graph_tiny: null # TODO
-  mnist: null # TODO
-  segmentation: null # TODO
-  tabular: null # TODO
-  template: null # TODO
-  translation: null # TODO
+
+# maps task -> metric to plot
+task_to_metric:
+  classification: test_top5_err
+  classification_small: test_acc
+  detection: test_AP
+  graph: test_rocauc
+  graph_tiny: test_acc
+  mnist: test_acc
+  segmentation: test_mIoU
+  tabular: test_loss  # TODO
+  template: test_loss
+  translation: test_loss  # TODO

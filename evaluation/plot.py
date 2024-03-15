@@ -1,7 +1,5 @@
 import json
-import yaml
 from pathlib import Path
-import argparse
 from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -118,10 +116,6 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
 
 def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better: bool = False, stat: dict = {}):
     # create pivot table and format the score result
-    # print(f"{dataframe=}")
-    # print(f"{config.plot.x_axis=}")
-    # print(f"{config.plot.y_axis=}")
-    # print(f"{stat['metric']=}")
     pivot_table = pd.pivot_table(dataframe,
                                  columns=config.plot.x_axis, index=config.plot.y_axis, values=stat["metric"],
                                  aggfunc='mean')
@@ -150,7 +144,8 @@ def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better:
 
     if not config.plot.std:
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=True, fmt=f".{decimal_points}f", annot_kws={'fontsize': 8},
+                           annot=True, fmt=f".{decimal_points}f",
+                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
                            vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # PRECISION TO DISPLAY
@@ -171,7 +166,8 @@ def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better:
 
         fmt = ""  # cannot format like before, as we do not only have a number
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=annot_matrix, fmt=fmt, annot_kws={'fontsize': 5},
+                           annot=annot_matrix, fmt=fmt,
+                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
                            vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
@@ -213,7 +209,8 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
 
         if i > 0:
             # remove y_label of all but first one
-            axs[i].set_ylabel('', fontsize=8, labelpad=8)
+            # axs[i].set_ylabel('', fontsize=8, labelpad=8)
+            axs[i].set_ylabel('', labelpad=8)
         else:
             # TODO format parameter just as in submission name
             # axs[i].set_ylabel
@@ -225,7 +222,14 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
         title += pretty_name(stat_entry["task_name"], config)
         axs[i].set_title(title)
 
-    fig.tight_layout()
+    if config.plotstyle.tight_layout:
+        fig.tight_layout()
+    if len(config.data_dirs) > 1:
+        # set experiment name as title when multiple matrices in image
+        # super title TODO fix when used together with tight layout
+        # print(config.experiment_name)
+        if name := config.experiment_name:
+            fig.suptitle(name)
     return fig, axs
 
 
@@ -304,22 +308,18 @@ def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
 def clean_config(config: AttributeDict) -> AttributeDict:
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):
-        config.output_types = [config.output_types]
+        config["output_types"] = [config.output_types]
         if config.verbose:
             print("fixing value for key <config.output_types> to be a list[str]")
 
     if not isinstance(config.data_dirs, list):
-        config.data_dirs = [config.data_dirs]
+        config["data_dirs"] = [Path(config.data_dirs)]
         if config.verbose:
             print("fixing value for key <config.data_dirs> to be a list[str]")
 
     # something weird going here, we just cast it again
-    # print(f"{type(config)=}")
-    # print(f"{type(config.plotstyle)=}")
     config = convert_type_inside_dict(config, dict, AttributeDict)
     config = AttributeDict(config)
-    # print(f"{type(config)=}")
-    # print(f"{type(config.plotstyle)=}")
 
     return config
 

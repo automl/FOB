@@ -1,14 +1,8 @@
-data_dirs: [evaluation/example/experiments/mnist/adamw_baseline]  # List of Paths
-output_dir: evaluation/example # output filename is output_dir / experiment_name
+data_dirs: evaluation/example/experiments/mnist/adamw_baseline  # just the folder with our 12 trials
+output_dir: evaluation/example  # output filename is output_dir / experiment_name
 experiment_name: mnist_example
-depth: 1  # the depth of the trial dirs relative to the given data_dirs
-output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
-last_instead_of_best: False  # use the last model, if not set the ebst model will be used
-verbose: False  # debug prints
+output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png}
 plot:
-  # metric: test_acc  # is automatically chosen from task name, this will overwrite it
-  metric: null
-  std: True
-  format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
-task_to_metric:  # maps task -> metric to plot
-  classification_small: null # TODO
+  std: True  # aggregate over our 3 seeds
+  format: "2.1"  # 2 digits -> in percent, 1 decimal place precision
+
