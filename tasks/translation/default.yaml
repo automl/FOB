@@ -2,8 +2,8 @@ task:
   name: translation
   output_dir_name: translation
   max_epochs: 18
-  max_steps: 412326
-  batch_size: 64
+  max_steps: 206172
+  batch_size: 128
   target_metric: val_loss
   target_metric_mode: min
 engine:
