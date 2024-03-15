@@ -132,6 +132,3 @@ class AttributeDict(dict):
         except AttributeError:
             pass
         return super().__getitem__(key)
-
-    def __setattr__(self, key: str, value: Any):
-        super().__setitem__(key, value)

@@ -33,7 +33,7 @@ class WMTDataModule(TaskDataModule):
                 self.train_data_len = info["train_data_len"]
         else:
             self.train_data_len = 0
-        self.tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-base", cache_dir=str(self.cache_dir))
+        self.tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-small", cache_dir=str(self.cache_dir))
 
     def _get_dataset(self) -> DatasetDict:
         ds = datasets.load_dataset("wmt17",

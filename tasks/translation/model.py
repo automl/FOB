@@ -12,14 +12,14 @@ from tasks.translation.data \
 
 
 class GroupedTransformer(GroupedModel):
-    def generate(self, inputs: list[str], tokenizer, device) -> list[str]:
+    def generate(self, inputs: list[str], tokenizer, device, num_beams=4, length_penalty=0.6) -> list[str]:
         token_inputs = tokenizer(inputs, return_tensors="pt", padding=True).to(device)
         output = self.model.generate(input_ids=token_inputs["input_ids"],
                                      attention_mask=token_inputs["attention_mask"],
                                      do_sample=False,
                                      max_length=MAX_TOKENS_PER_SENTENCE - 2,
-                                     num_beams=4,
-                                     length_penalty=0.6)
+                                     num_beams=num_beams,
+                                     length_penalty=length_penalty)
         return tokenizer.batch_decode(output, skip_special_tokens=True)
 
 
@@ -33,7 +33,7 @@ class WMTModel(TaskModel):
         self.metric_cache_trues: list[str] = []
         if self.tokenizer is None:
             raise Exception("prepare dataset before running the model!")
-        model_config = T5Config.from_pretrained("google-t5/t5-base", cache_dir=str(data_module.cache_dir))
+        model_config = T5Config.from_pretrained("google-t5/t5-small", cache_dir=str(data_module.cache_dir))
         model = AutoModelForSeq2SeqLM.from_config(model_config)
         model = GroupedTransformer(model)
         super().__init__(model, optimizer, config)
@@ -56,7 +56,7 @@ class WMTModel(TaskModel):
         batch = self.tokenizer(de, text_target=en, padding=True, return_tensors="pt").to(self.device)
         self.compute_and_log_loss(batch, "val_loss")
         self.metric_cache_trues += en
-        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device)
+        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device, num_beams=1)
 
     def test_step(self, batch, _batch_idx):
         de, en = batch
