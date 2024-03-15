@@ -2,8 +2,8 @@ task:
   name: mnist
   output_dir_name: mnist
   batch_size: 512
-  max_epochs: 8
-  max_steps: 864
+  max_epochs: 10
+  max_steps: 1080
   target_metric: val_acc
   target_metric_mode: max
   model:
