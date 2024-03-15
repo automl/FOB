@@ -264,8 +264,8 @@ def get_output_file_path(workloads: list[Path], config: AttributeDict, stats: li
 
     here = Path(__file__).parent.resolve()
 
-    output_dir = config.output_dir if config.output_dir else here
-    experiment_name = config.experiment_name if config.experiment_name else f"{optim_name}-{task_name}"
+    output_dir = Path(config.output_dir) if config.output_dir else here
+    experiment_name = Path(config.experiment_name) if config.experiment_name else f"{optim_name}-{task_name}"
     output_file_path = output_dir / experiment_name
 
     return output_file_path
@@ -342,3 +342,4 @@ def main(config: AttributeDict):
             save_csv(dfs, output_file_path, config.verbose)
         elif file_type == "png" or file_type == "pdf":
             save_plot(fig, axs, output_file_path, file_type, config.verbose)
+    print(f"Saved results into <{output_file_path}>")

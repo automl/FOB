@@ -1,7 +1,7 @@
 data_dirs: null  # List of Paths
 output_dir: null # output filename is output_dir / experiment_name
 experiment_name: null
-depth: 1  # the depth of the trial dirs relative to the given trial_dirs
+depth: 1  # the depth of the trial dirs relative to the given data_dirs
 output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
 last_instead_of_best: False  # use the last model, if not set the ebst model will be used
 verbose: False  # debug prints
@@ -11,7 +11,7 @@ plot:
   y_axis: learning_rate  # hp on y axis
   metric: null  # is automatically chosen from task name, this will overwrite it
   limits: null  # sets the limits for the colormap, 2 ints, order does not matter
-  std: True
+  std: False
   format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
 plotstyle:  # todo add configs for plotting
   text:
