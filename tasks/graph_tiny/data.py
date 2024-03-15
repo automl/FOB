@@ -17,7 +17,7 @@ class CoraDataModule(TaskDataModule):
 
     def prepare_data(self):
         """Load citation network dataset (cora)"""
-        self.data_dir.mkdir(exist_ok=True)
+        self.data_dir.mkdir(exist_ok=True, parents=True)
 
         # dataset split:
         # https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.Planetoid.html

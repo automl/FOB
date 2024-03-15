@@ -44,8 +44,8 @@ class TaskDataModule(LightningDataModule):
     def __init__(self, config: TaskConfig) -> None:
         super().__init__()
         self.config = config
-        self.workers = min(config.workers, 16)
-        self.data_dir = config.data_dir / config.name
+        self.workers: int = min(config.workers, 16)
+        self.data_dir: Path = config.data_dir / config.name
         self.batch_size: int = config.batch_size
         self.data_train: Any
         self.data_val: Any
