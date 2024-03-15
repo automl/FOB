@@ -1,7 +1,7 @@
 from pathlib import Path
 import argparse
 
-from engine import Engine
+from engine.engine import Engine
 from engine.utils import begin_timeout
 
 
