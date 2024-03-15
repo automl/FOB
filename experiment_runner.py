@@ -69,7 +69,7 @@ def run_trial(run: Run):
         ckpt_path = run.engine.resume
         mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)
-        write_results(score, run.engine.output_dir / f"results_{mode}_model.json")
+        write_results(score, run.run_dir / f"results_{mode}_model.json")
     else:
         start_time = time.time()
         with torch.backends.cuda.sdp_kernel(

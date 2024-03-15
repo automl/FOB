@@ -43,7 +43,7 @@ class OGBGModel(TaskModel):
         # print(self.evaluator.expected_input_format)
         self.evaluator = Evaluator(name=dataset_name)
 
-        self.loss_fn = torch.nn.BCELoss()
+        self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
     def forward(self, data) -> torch.Tensor:
         return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
