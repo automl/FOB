@@ -1,12 +1,12 @@
 # Data creation
 
-Lets create some data that we can plot
+Lets create some data that we can plot; from the root directory call:
 
 ```
 python experiment_runner.py evaluation/example/example_experiment.yaml 
 ```
 
-This will download and run the mnist task into the ```evaluation/example/``` directory (path can be changed in ```evaluation/example/example_experiment.yaml```).
+This will download and run the mnist task into the ```evaluation/example/``` directory (path can be changed in ```evaluation/example/example_experiment.yaml``` if you have already set up your benchmark).
 
 Estimated disk usage: ~93MB
 
@@ -18,6 +18,8 @@ The task will be run on 2x2 hyperparameter on 3 different seeds for a total of 1
 Estimated time to finish: ~17min
 
 # Plotting the experiment
+
+To plot the performance heatmap, you can use the following from the root directory:
 
 ```
 python evaluate_experiment.py evaluation/example/example_plot_instructions.yaml
