@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 from typing import Any, Iterable, Type
 import json
 import math
@@ -39,6 +40,13 @@ def gpu_suited_for_compile():
     if torch.cuda.is_available():
         device_cap = torch.cuda.get_device_capability()
         return device_cap in ((7, 0), (8, 0), (9, 0))
+
+
+def precision_with_fallback(precision: str) -> str:
+    if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
+        print("Warning: GPU does not support bfloat16, using float16. Results can be different!", file=sys.stderr)  
+        return precision[2:]
+    return precision
 
 
 def seconds_to_str(total_seconds: int, sep: str = ":") -> str:

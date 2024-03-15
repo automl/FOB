@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from .utils import AttributeDict, convert_type_inside_dict
 
 
@@ -61,15 +61,18 @@ class TaskConfig(NamedConfig):
 class EngineConfig(BaseConfig):
     def __init__(self, config: dict[str, Any], task_key: str, engine_key: str) -> None:
         cfg = dict(config[engine_key])
-        self.deterministic: bool = cfg.get("deterministic", True)
+        self.accelerator = cfg["accelerator"]
+        self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
         self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.log_extra: bool = cfg.get("log_extra", False)
-        self.max_steps = config[task_key]["max_steps"]
+        self.max_steps: int = config[task_key]["max_steps"]
         self.optimize_memory: bool = cfg.get("optimize_memory", False)
         self.output_dir = Path(cfg["output_dir"]).resolve()
+        self.precision: str = cfg["precision"]
         maybe_resume = cfg.get("resume", None)
         self.resume: Optional[Path] = Path(maybe_resume).resolve() if maybe_resume is not None else None
+        self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
         self.silent: bool = cfg.get("silent", False)

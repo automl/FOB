@@ -1,14 +1,20 @@
+from typing import Any, Callable, Iterable, Iterator, Optional
 from pathlib import Path
-from typing import Any, Callable, Iterable
 import hashlib
+import time
 import sys
+import torch
 import yaml
+from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
+from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
-from .grid_search import gridsearch
 from .configs import EngineConfig, OptimizerConfig, TaskConfig
+from .callbacks import LogParamsAndGrads, PrintEpoch
+from .grid_search import gridsearch
 from .parser import YAMLParser
-from .utils import path_to_str_inside_dict, dict_differences, concatenate_dict_keys
+from .utils import AttributeDict, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
 
 
 def engine_path() -> Path:
@@ -33,20 +39,42 @@ class Run():
         self.optimizer = OptimizerConfig(config, optimizer_key, task_key, identifier_key)
         self.task = TaskConfig(config, task_key, engine_key, identifier_key)
         self._set_outpath(default_config)
-        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self._callbacks = AttributeDict({})
 
-    def _set_outpath(self, default_config: dict[str, Any]):
-        base = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
-        exclude_keys = ["name", "output_dir_name"]
-        include_engine = ["deterministic", "optimize_memory", "seed"]
-        exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
-        diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
-        run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
-        if len(run_dir) > 254:  # max file name length
-            hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
-            run_dir = hashdir
-        self.run_dir = base / run_dir
+    def start(self):
+        torch.set_float32_matmul_precision('high')
+        seed_everything(self.engine.seed, workers=True)
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.export_config()
+        model, data_module = self.get_task()
+        if not self.engine.test_only:
+            trainer = self.get_trainer()
+            self.train(trainer, model, data_module)
+        tester = self.get_tester()
+        self.test(tester, model, data_module)
+        if not self.engine.test_only:
+            self.test(tester, model, data_module, Path(self._callbacks.model_checkpoint.best_model_path))
+
+    def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
+        start_time = time.time()
+        if self.engine.accelerator == "gpu" and torch.cuda.is_available():
+            with torch.backends.cuda.sdp_kernel(
+                enable_flash=True,
+                enable_math=True,
+                enable_mem_efficient=(self.engine.optimize_memory or not self.engine.deterministic)
+            ):
+                trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
+        else:
+            trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
+        end_time = time.time()
+        train_time = int(end_time - start_time)
+        print(f"Finished training in {seconds_to_str(train_time)}.")
+
+    def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
+        ckpt_path = self.engine.resume if ckpt is None else ckpt
+        mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"
+        score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)  # type: ignore
+        write_results(score, self.run_dir / f"results_{mode}_model.json")
 
     def export_config(self):
         with open(self.run_dir / "config.yaml", "w", encoding="utf8") as f:
@@ -63,6 +91,74 @@ class Run():
         task_module = import_task(self.task.name)
         return task_module.get_datamodule(self.task)
 
+    def get_callbacks(self) -> list[Callback]:
+        if len(self._callbacks) < 1:
+            self._init_callbacks()
+        return list(self._callbacks.values())
+
+    def get_loggers(self) -> list[Logger]:
+        return [
+            TensorBoardLogger(
+                save_dir=self.run_dir,
+                name="tb_logs"
+            ),
+            CSVLogger(
+                save_dir=self.run_dir,
+                name="csv_logs"
+            )
+        ]
+
+    def get_trainer(self) -> Trainer:
+        return Trainer(
+            max_steps=self.engine.max_steps,
+            logger=self.get_loggers(),
+            callbacks=self.get_callbacks(),
+            devices=self.engine.devices,
+            strategy=trainer_strategy(self.engine.devices),
+            enable_progress_bar=(not self.engine.silent),
+            deterministic=self.engine.deterministic,
+            precision=precision_with_fallback(self.engine.precision),  # type: ignore
+            accelerator=self.engine.accelerator
+        )
+
+    def get_tester(self) -> Trainer:
+        return Trainer(
+            devices=1,
+            enable_progress_bar=(not self.engine.silent),
+            deterministic=self.engine.deterministic,
+            precision=precision_with_fallback(self.engine.precision)  # type: ignore
+        )
+
+    def _init_callbacks(self):
+        self._callbacks["model_checkpoint"] = ModelCheckpoint(
+            dirpath=self.run_dir / "checkpoints",
+            filename="best-{epoch}-{step}",
+            monitor=self.task.target_metric,
+            mode=self.task.target_metric_mode,
+            save_last=True
+        )
+        self._callbacks["lr_monitor"] = LearningRateMonitor(logging_interval=self.optimizer.lr_interval)
+        self._callbacks["extra"] = LogParamsAndGrads(
+            log_gradient=self.engine.log_extra,
+            log_params=self.engine.log_extra,
+            log_quantiles=self.engine.log_extra,
+            log_every_n_steps=100  # maybe add arg for this?
+        )
+        self._callbacks["print_epoch"] = PrintEpoch(self.engine.silent)
+
+    def _set_outpath(self, default_config: dict[str, Any]):
+        base = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
+        exclude_keys = ["name", "output_dir_name"]
+        include_engine = ["deterministic", "optimize_memory", "seed"]
+        exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
+        diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
+        run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
+        if len(run_dir) > 254:  # max file name length
+            hashdir = hashlib.md5(run_dir.encode()).hexdigest()
+            print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
+            run_dir = hashdir
+        self.run_dir = base / run_dir
+
 
 class Engine():
     def __init__(self) -> None:
@@ -74,6 +170,19 @@ class Engine():
         self.identifier_key = "name"
         self.default_file_name = "default.yaml"
         self.parser = YAMLParser()
+
+    def run_experiment(self):
+        assert len(self._runs) > 0, "No runs in experiment, make sure to call 'parse_experiment' first."
+        scheduler = self._runs[0][self.engine_key]["run_scheduler"]
+        assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
+            "You cannot perform gridsearch on 'run_scheduler'."
+        if scheduler == "sequential":
+            for i, run in enumerate(self.runs()):
+                print(f"Starting run {i + 1}/{len(self._runs)}.")
+                run.start()
+        # TODO: support differnt ways to schedule runs
+        else:
+            raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
     def parse_experiment(self, file: Path, extra_args: Iterable[str] = tuple()):
         searchspace = self.parser.parse_yaml(file)
@@ -87,8 +196,7 @@ class Engine():
         self._fill_runs_from_default(self._runs)
         self._fill_defaults()
 
-    def runs(self) -> list[Run]:
-        runs = []
+    def runs(self) -> Iterator[Run]:
         for config, default_config in zip(self._runs, self._defaults):
             run = Run(
                 config,
@@ -98,8 +206,7 @@ class Engine():
                 self.engine_key,
                 self.identifier_key
             )
-            runs.append(run)
-        return runs
+            yield run
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)

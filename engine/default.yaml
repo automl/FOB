@@ -1,13 +1,16 @@
 engine:
-  deterministic: True
-  # devices: 1
+  accelerator: gpu
   data_dir: ./data
-  log_extra: False
-  optimize_memory: False
+  deterministic: warn  # 'warn' tries to use deterministic algorithms if possible, also accepts true or false.
+  # devices: 1
+  log_extra: false
+  optimize_memory: false
   output_dir: ./experiments
-  # resume: path/to/checkpoint
+  precision: bf16-mixed  # floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
+  resume: null  # you can pass the path to your checkpoint here
+  run_scheduler: sequential
   seed: 42
   seed_mode: fixed
-  silent: False
-  test_only: False
+  silent: false
+  test_only: false
   workers: 16
