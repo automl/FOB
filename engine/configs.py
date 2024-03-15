@@ -30,6 +30,7 @@ class OptimizerConfig(NamedConfig):
             outdir_key: str = "output_dir_name"
             ) -> None:
         cfg = dict(config[optimizer_key])
+        self.lr_interval: Literal["step", "epoch"] = cfg.get("lr_interval", "step")
         self.max_steps = config[task_key]["max_steps"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg, identifier_key, outdir_key)

@@ -88,6 +88,6 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         "optimizer": optimizer,
         "lr_scheduler": {
             "scheduler": scheduler,
-            "interval": "step"
+            "interval": config.lr_interval
         }
     }

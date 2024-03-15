@@ -13,3 +13,4 @@ optimizer:
   kappa_adapt: False
   kappa_update: 1.0
   apply_lr: False
+  lr_interval: step

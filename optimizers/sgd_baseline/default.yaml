@@ -6,3 +6,4 @@ optimizer:
   weight_decay: 1.e-4
   eta_min_factor: 0.01
   nesterov: False
+  lr_interval: step

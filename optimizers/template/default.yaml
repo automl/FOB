@@ -2,3 +2,4 @@ optimizer:
   name: template
   output_dir_name: template
   learning_rate: 1.e-3
+  lr_interval: step
