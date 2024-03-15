@@ -46,15 +46,15 @@ class ImagenetModel(TaskModel):
                 # off the shelf DaVit
                 pass
             elif config.model.stem == "wrn_conv":
-                model.stem = nn.Sequential([
+                model.stem = nn.Sequential(
                     nn.Conv2d(in_channels=3, out_channels=96, kernel_size=3, stride=1, padding=1),
                     LayerNorm2d((96,))
-                ])
+                )
             elif config.model.stem == "custom_conv":
-                model.stem = nn.Sequential([
+                model.stem = nn.Sequential(
                     nn.Conv2d(in_channels=3, out_channels=96, kernel_size=15, stride=1, padding=3),
                     LayerNorm2d((96,))
-                ])
+                )
             else:
                 print(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
             # not throwing an error, its valid for the user to use an given default model
