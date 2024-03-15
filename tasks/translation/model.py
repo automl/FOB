@@ -56,7 +56,7 @@ class WMTModel(TaskModel):
         batch = self.tokenizer(de, text_target=en, padding=True, return_tensors="pt").to(self.device)
         self.compute_and_log_loss(batch, "val_loss")
         self.metric_cache_trues += en
-        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device, num_beams=1)
+        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device, num_beams=1, length_penalty=1.0)
 
     def test_step(self, batch, _batch_idx):
         de, en = batch
