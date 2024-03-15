@@ -4,8 +4,11 @@ task:
   batch_size: 16
   max_epochs: 32
   max_steps: 10_112
-  target_metric: val_mean_iou
+  target_metric: val_mIoU
   target_metric_mode: max
+  model:
+    name: nvidia/mit-b0
+    use_pretrained_model: false  # just to compare performance, use this with 'engine.test_only=true'
 engine:
   devices: 4
 optimizer:

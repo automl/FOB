@@ -1,9 +1,7 @@
-from pathlib import Path
-import evaluate
-import numpy as np
 import torch
 from torch.nn.functional import interpolate
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
+from mmseg.evaluation.metrics import IoUMetric
 from tasks import TaskModel
 from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from engine.configs import TaskConfig
@@ -45,25 +43,26 @@ class SegmentationModel(TaskModel):
             label2id: dict[str, int],
             config: TaskConfig
             ):
-        model_name = "nvidia/mit-b0"
+        model_name = config.model.name
         model_config = SegformerConfig.from_pretrained(
             model_name,
             cache_dir=config.data_dir,
             id2label=id2label,
             label2id=label2id
         )
-        model = SegformerForSemanticSegmentation.from_pretrained(
-            model_name,
-            cache_dir=config.data_dir,
-            config=model_config
-        )
-        # model = SegformerForSemanticSegmentation.from_pretrained(
-        #     "nvidia/segformer-b0-finetuned-ade-512-512",
-        #     cache_dir=data_dir
-        # )
-        super().__init__(SegFormerGroupedModel(model), optimizer, config)
+        if config.use_pretrained_model:
+            model = SegformerForSemanticSegmentation.from_pretrained(
+                "nvidia/segformer-b0-finetuned-ade-512-512",
+                cache_dir=config.data_dir
+            )
+        else:
+            model = SegformerForSemanticSegmentation.from_pretrained(
+                model_name,
+                cache_dir=config.data_dir,
+                config=model_config
+            )
+        super().__init__(SegFormerGroupedModel(model), optimizer, config)  # type:ignore
         self.metric = self._get_metric()
-        self._reset_metrics()
 
     def forward(self, x):
         return self.model(**x)
@@ -89,46 +88,36 @@ class SegmentationModel(TaskModel):
             size=labels.shape[-2:],
             mode="bilinear",
             align_corners=False
-        ).argmax(dim=1).detach().cpu().numpy()
-        labels = labels.detach().cpu().numpy()
-        # currently compute is very slow, using _compute instead
-        # see: https://github.com/huggingface/evaluate/pull/328#issuecomment-1286866576
-        metrics = self.metric._compute(
-            predictions=preds,
-            references=labels,
-            num_labels=150,
-            ignore_index=255,
-            reduce_labels=False
-        )
-        if metrics is not None:
-            for metric in metrics.keys():
-                if metric.startswith("mean"):
-                    self.metrics[metric].append(metrics[metric])
+        ).argmax(dim=1).detach().cpu().split(logits.size(0))
+        labels = labels.detach().cpu().split(logits.size(0))
+        samples = [{
+            'pred_sem_seg': {'data': pred},
+            'gt_sem_seg': {'data': label},
+        } for pred, label in zip(preds, labels)]
+        self.metric.process({}, samples)
 
-    def _reset_metrics(self):
-        self.metrics = {
-            "mean_iou": [],
-            "mean_accuracy": []
-        }
+    def _reset_metric(self):
+        self.metric = self._get_metric()
 
-    def _get_metric(self, num_process: int = 4):
-        # TODO: get num_process from devices
-        return evaluate.load(
-            "mean_iou",
-            num_process=num_process,
-            cache_dir=str(self.config.data_dir)
-        )
+    def _get_metric(self):
+        metric = IoUMetric()
+        metric.dataset_meta = {"classes": list(range(150))}
+        return metric
 
     def _compute_and_log_metrics(self, stage: str):
-        for k, v in self.metrics.items():
-            self.log(f"{stage}_{k}", np.mean(v), sync_dist=True)  # type:ignore
-        self._reset_metrics()
+        metrics = self.metric.compute_metrics(self.metric.results)
+        for k, v in metrics.items():
+            self.log(f"{stage}_{k}", v, sync_dist=True)
+        self._reset_metric()
+
+    def on_validation_start(self) -> None:
+        self._reset_metric()
 
     def on_validation_epoch_end(self) -> None:
         self._compute_and_log_metrics("val")
 
     def on_test_start(self) -> None:
-        self.metric = self._get_metric(num_process=1)
+        self._reset_metric()
 
     def on_test_epoch_end(self) -> None:
         self._compute_and_log_metrics("test")
