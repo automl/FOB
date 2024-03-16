@@ -52,8 +52,9 @@ class Run():
             self.train(trainer, model, data_module)
         tester = self.get_tester()
         self.test(tester, model, data_module)
-        if not self.engine.test_only:
-            self.test(tester, model, data_module, Path(self._callbacks.model_checkpoint.best_model_path))
+        best_path = self._callbacks.model_checkpoint.best_model_path
+        if not self.engine.test_only and best_path:
+            self.test(tester, model, data_module, Path(best_path))
 
     def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
         start_time = time.time()
