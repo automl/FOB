@@ -4,6 +4,7 @@ data_dirs:  # List of Paths
 output_dir: evaluation/example
 experiment_name: adamw vs sgd
 output_types:
+  - pdf
   - png
 plot:
   limits: [10, 95] # by manually setting the limits we force the same one for both subfigures
