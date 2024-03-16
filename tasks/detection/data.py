@@ -21,8 +21,8 @@ class COCODataModule(TaskDataModule):
     def __init__(self, config: TaskConfig):
         super().__init__(config)
 
-        if config.train_transform.horizontal_flip.use:
-            horizontal_flip = v2.RandomHorizontalFlip(p=config.train_transform.horizontal_flip.p)
+        if config.train_transforms.horizontal_flip.use:
+            horizontal_flip = v2.RandomHorizontalFlip(p=config.train_transforms.horizontal_flip.p)
         else:
             horizontal_flip = v2.Identity()
 

@@ -14,7 +14,7 @@ from .configs import EngineConfig, OptimizerConfig, TaskConfig
 from .callbacks import LogParamsAndGrads, PrintEpoch
 from .grid_search import gridsearch
 from .parser import YAMLParser
-from .utils import AttributeDict, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
+from .utils import AttributeDict, calculate_steps, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
 
 
 def engine_path() -> Path:
@@ -35,13 +35,13 @@ class Run():
         self.task_key = task_key
         self.optimizer_key = optimizer_key
         self.engine_key = engine_key
-        self.engine = EngineConfig(config, task_key, engine_key)
-        self.optimizer = OptimizerConfig(config, optimizer_key, task_key, identifier_key)
-        self.task = TaskConfig(config, task_key, engine_key, identifier_key)
+        self.identifier_key = identifier_key
+        self._generate_configs()
         self._set_outpath(default_config)
         self._callbacks = AttributeDict({})
 
     def start(self):
+        self._ensure_max_steps()
         torch.set_float32_matmul_precision('high')
         seed_everything(self.engine.seed, workers=True)
         self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -127,8 +127,23 @@ class Run():
             devices=1,
             enable_progress_bar=(not self.engine.silent),
             deterministic=self.engine.deterministic,
-            precision=precision_with_fallback(self.engine.precision)  # type: ignore
+            precision=precision_with_fallback(self.engine.precision),  # type: ignore
+            accelerator=self.engine.accelerator
         )
+
+    def _ensure_max_steps(self):
+        if self.task.max_steps is None:
+            max_steps = self._calc_max_steps()
+            self._config[self.task_key]["max_steps"] = max_steps
+            self._generate_configs()
+            print(f"Info: 'max_steps' not set explicitly, using {max_steps=} (calculated from \
+                  max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
+
+    def _calc_max_steps(self) -> int:
+        dm = self.get_datamodule()
+        dm.setup("fit")
+        train_samples = len(dm.data_train)
+        return calculate_steps(self.task.max_epochs, train_samples, self.engine.devices, self.task.batch_size)
 
     def _init_callbacks(self):
         self._callbacks["model_checkpoint"] = ModelCheckpoint(
@@ -159,6 +174,11 @@ class Run():
             print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
             run_dir = hashdir
         self.run_dir = base / run_dir
+
+    def _generate_configs(self):
+        self.engine = EngineConfig(self._config, self.task_key, self.engine_key)
+        self.optimizer = OptimizerConfig(self._config, self.optimizer_key, self.task_key, self.identifier_key)
+        self.task = TaskConfig(self._config, self.task_key, self.engine_key, self.identifier_key)
 
 
 class Engine():

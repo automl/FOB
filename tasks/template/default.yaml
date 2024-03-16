@@ -3,7 +3,7 @@ task:
   output_dir_name: template
   batch_size: 10
   max_epochs: 15
-  max_steps: 150
+  max_steps: null  # The maximum number of optimizer steps to train the model. Is automatically calculated from epochs but can be manually set.
   target_metric: val_loss  # choose a metric that is being logged
   target_metric_mode: min  # min or max 
   dataset_split_lengths: [80, 10, 10]

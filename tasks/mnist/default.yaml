@@ -3,7 +3,7 @@ task:
   output_dir_name: mnist
   batch_size: 512
   max_epochs: 30
-  max_steps: 3240
+  max_steps: null
   target_metric: val_acc
   target_metric_mode: max
   model:

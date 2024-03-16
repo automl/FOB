@@ -31,8 +31,10 @@ class OptimizerConfig(NamedConfig):
             ) -> None:
         cfg = dict(config[optimizer_key])
         self.lr_interval: Literal["step", "epoch"] = cfg.get("lr_interval", "step")
-        self.max_steps = config[task_key]["max_steps"]
+        self.max_steps: int = config[task_key].get("max_steps", None)
+        self.max_epochs: int = config[task_key]["max_epochs"]
         cfg["max_steps"] = self.max_steps
+        cfg["max_epochs"] = self.max_epochs
         super().__init__(cfg, identifier_key, outdir_key)
 
 
@@ -49,7 +51,7 @@ class TaskConfig(NamedConfig):
         self.batch_size: int = cfg["batch_size"]
         self.data_dir = Path(config[engine_key]["data_dir"]).resolve()
         self.max_epochs: int = cfg["max_epochs"]
-        self.max_steps: int = cfg["max_steps"]
+        self.max_steps: int = cfg.get("max_steps", None)
         self.target_metric: str = cfg["target_metric"]
         self.target_metric_mode: str = cfg["target_metric_mode"]
         self.workers = config[engine_key]["workers"]
@@ -66,7 +68,7 @@ class EngineConfig(BaseConfig):
         self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.log_extra: bool = cfg.get("log_extra", False)
-        self.max_steps: int = config[task_key]["max_steps"]
+        self.max_steps: int = config[task_key].get("max_steps", None)
         self.optimize_memory: bool = cfg.get("optimize_memory", False)
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.precision: str = cfg["precision"]

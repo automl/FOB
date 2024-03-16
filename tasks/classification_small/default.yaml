@@ -3,7 +3,7 @@ task:
   output_dir_name: classification_small
   batch_size: 128
   max_epochs: 50
-  max_steps: 19_550
+  max_steps: null
   model:
     name: resnet18
     hidden_channel: 64

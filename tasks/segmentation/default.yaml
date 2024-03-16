@@ -3,7 +3,7 @@ task:
   output_dir_name: segmentation
   batch_size: 16
   max_epochs: 32
-  max_steps: 10_112
+  max_steps: null
   target_metric: val_mIoU
   target_metric_mode: max
   model:

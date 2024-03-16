@@ -3,7 +3,7 @@ task:
   output_dir_name: classification
   batch_size: 512
   max_epochs: 80
-  max_steps: 50_080
+  max_steps: null
   target_metric: val_top5_err
   target_metric_mode: min
   # make sure to comment out the other model when switching to davit

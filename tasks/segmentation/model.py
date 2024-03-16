@@ -50,7 +50,7 @@ class SegmentationModel(TaskModel):
             id2label=id2label,
             label2id=label2id
         )
-        if config.use_pretrained_model:
+        if config.model.use_pretrained_model:
             model = SegformerForSemanticSegmentation.from_pretrained(
                 "nvidia/segformer-b0-finetuned-ade-512-512",
                 cache_dir=config.data_dir
