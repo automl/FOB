@@ -27,3 +27,4 @@ opencv-python==4.9.0.80
 pytorch-cpr==0.1.0
 mmsegmentation==1.2.2
 mmcv==2.1.0
+--extra-index-url https://download.openmmlab.com/mmcv/dist/cu121/torch2.1/index.html
