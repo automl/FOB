@@ -12,7 +12,7 @@ from tasks.translation.data \
 
 
 class GroupedTransformer(GroupedModel):
-    def generate(self, inputs: list[str], tokenizer, device, num_beams=4, length_penalty=0.6) -> list[str]:
+    def generate(self, inputs: list[str], tokenizer, device, num_beams=4, length_penalty=1.0) -> list[str]:
         token_inputs = tokenizer(inputs, return_tensors="pt", padding=True).to(device)
         output = self.model.generate(input_ids=token_inputs["input_ids"],
                                      attention_mask=token_inputs["attention_mask"],
