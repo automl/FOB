@@ -37,7 +37,6 @@ How to write your own can be found [here](tasks/README.md)
 | detection | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | speech | librispeech | conformer | speech recognition | ? | ? | ? | ? |
 | diffusion | FFHQ | ? | image diffusion | ? | ? | ? | ? |
-| | ? | ? | Finetuning | ? | ? | ? | ? |
 
 
 ## Optimizer and Scheduler

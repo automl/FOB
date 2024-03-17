@@ -17,7 +17,7 @@ class NamedConfig(BaseConfig):
             ) -> None:
         super().__init__(config)
         self.name = config[identifier_key]
-        self.output_dir_name = config[outdir_key]
+        self.output_dir_name = config.get(outdir_key, self.name)
 
 
 class OptimizerConfig(NamedConfig):

@@ -1,7 +1,6 @@
 # Warmup + AdamW + CosineAnnealing
 optimizer:
-  name: adamw_baseline
-  output_dir_name: adamw_baseline
+  name: adamw_baseline  # same as folder name
   learning_rate: 1.e-3  # AdamW parameter 
   one_minus_beta1: 0.1  # 1 - beta1 AdamW parameter
   beta2: 0.999          # AdamW parameter
