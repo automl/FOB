@@ -59,7 +59,7 @@ How to write your own can be found [here](optimizers/README.md)
 This repo was tested with python 3.10, but any version >= 3.10 should work.  
 Create conda environment:
 ```
-conda create -n fob python 3.10 -y
+conda create -n fob python=3.10 -y
 ```
 Activate and install requirements
 ```
@@ -70,7 +70,7 @@ pip install -r requirements.txt
 ### How to run an experiment
 
 Make sure you have the conda environment set up and activated.
-Then you write an `experiment.yaml` (can be named differently) where you specify which optimizer and task you want to use. Everything can be a list if you want to use multiple.
+Then you write an `experiment.yaml` (can be named differently) where you specify which optimizer and task you want to use. Every value can also be a list of values if you want to perform a gridsearch over them (more details below).
 
 As an example we use this `experiment.yaml`:
 ```yaml
