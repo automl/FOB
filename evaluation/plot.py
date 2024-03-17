@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 import pandas as pd
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
@@ -164,15 +165,23 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
-                                         columns=cols, index=idx, values=stat["metric"],
-                                         aggfunc='std')
+                                        columns=cols, index=idx, values=stat["metric"],
+                                        aggfunc='std',  fill_value=float("inf"), dropna=False
+                                        )
+        
+        if float("inf") in pivot_table_std.values.flatten():
+            print("WARNING: Not enough data to calculate the std, skipping std in plot")
+
+        
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
+
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}\n±({round(std, std_decimal_points)})"
+                std_string = f"\n±({round(std, std_decimal_points)})" if std != float("inf") else ""
+                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}{std_string}"
 
         fmt = ""  # cannot format like before, as we do not only have a number
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
@@ -182,6 +191,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 
 
 def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict):
+
     """Takes a list of workloads Paths (submission + workload)
     and plots them together in one figure side by side"""
     num_subfigures: int = len(dataframe_list)
