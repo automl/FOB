@@ -2,27 +2,31 @@
 
 Lets create some data that we can plot; from the root directory call:
 
+## Data Download
+
+(first make sure the data is already downloaded beforehand)
 ```
-python experiment_runner.py evaluation/example/example_experiment_adamw.yaml
+python dataset_setup.py evaluation/example/example_experiment_adamw.yaml
 ```
+This will download the mnist task into the ```evaluation/example/``` directory (path can be changed in ```evaluation/example/example_experiment_adamw.yaml``` if you have already set up your benchmark).
 
-This will download and run the mnist task into the ```evaluation/example/``` directory (path can be changed in ```evaluation/example/example_experiment_adamw.yaml``` if you have already set up your benchmark).
+Estimated disk usage for the data: ~64M
 
-Estimated disk usage: ~93MB
-
-- data: ~64M
-- experiments: ~29M
+## Training
 
 The task will be run on 2x2 hyperparameter on 3 different seeds for a total of 12 times.
 
-Estimated time to finish: ~17min (TODO: might be 3x longer now)
-
-alternatively add ```task.max_steps=108``` like in the following command. this will reduce the train time (which is fine since we do not really care for performace here) TODO: change this to ```task.max_epochs=1``` once steps are calcualted automatically
-
 ```
-python experiment_runner.py evaluation/example/example_experiment_adamw.yaml task.max_steps=108
+python experiment_runner.py evaluation/example/example_experiment_adamw.yaml task.max_epochs=1
 ```
 
+Here we do not really care for the performance; alternatively remove the ```task.max_epochs=1``` argument like in the following command. this will perform a full training on the default epochs 
+
+```
+python experiment_runner.py evaluation/example/example_experiment_adamw.yaml 
+```
+
+After training finished you should find 12 trial directories in ```evaluation/example/experiments/mnist/adamw_baseline```
 
 # Plotting the experiment
 
@@ -53,13 +57,7 @@ You can also plot two experiments into the same file for easier comparison.
 In this example we are going to compare SGD to AdamW; you can run one of the following commands to get the additional data:
 
 ```
-python experiment_runner.py evaluation/example/example_experiment_sgd.yaml 
-```
-
-TODO: as above, change to ```task.max_epoch=1```
-
-```
-python experiment_runner.py evaluation/example/example_experiment_sgd.yaml task.max_steps=108
+python experiment_runner.py evaluation/example/example_experiment_sgd.yaml task.max_epochs=1
 ```
 
 The second instrucion file has the path already set up, to get a plot you can simply call:
