@@ -137,7 +137,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     if config.plot.limits:
         vmin = min(config.plot.limits)  # lower limit (or None if not given)
         vmax = max(config.plot.limits)  # upper limit (or None if not given)
-    colormap_name = "rocket"
+    colormap_name = config.plotstyle.color_palette
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
@@ -211,12 +211,14 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
         key = stats_list[i][0]["metric"]
         min_value_present_in_current_df = dataframe_list[i][key].min()
         max_value_present_in_current_df = dataframe_list[i][key].max()
+        mean_value_present_in_current_df = dataframe_list[i][key].mean()
         if config.verbose:    
             print(f"subfigure number {i+1}, checking for metric {key}: \
                 min value is {min_value_present_in_current_df}, \
-                max value is {max_value_present_in_current_df}")
-        vmin = min(vmin, min_value_present_in_current_df)
-        vmax = max(vmax, max_value_present_in_current_df)
+                max value is {max_value_present_in_current_df}, \
+                mean value is {mean_value_present_in_current_df}")
+        vmin = min(vmin, mean_value_present_in_current_df)
+        vmax = max(vmax, mean_value_present_in_current_df)
         
     if config.verbose:
         print(f"setting cbar limits to {vmin}, {vmax} ")

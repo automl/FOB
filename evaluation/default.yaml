@@ -32,6 +32,7 @@ plotstyle:
     size: 12
 
   scale: 1.0  # scales *figsize* argument by this value, useful for ".png"
+  color_palette: "rocket"
 
 # the name of the files storing the hyperparameters of the experiments and the scores
 experiment_files:
