@@ -126,8 +126,10 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     value_exp_factor, decimal_points = config.plot.format.split(".")
     value_exp_factor = int(value_exp_factor)
     decimal_points = int(decimal_points)
-    vmin *= (10 ** value_exp_factor)
-    vmax *= (10 ** value_exp_factor)
+    if vmin:
+        vmin *= (10 ** value_exp_factor)
+    if vmax:
+        vmax *= (10 ** value_exp_factor)
 
     pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
     if config.verbose:
@@ -203,26 +205,33 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
-    
-    # all subplots should have same colors -> we need to find the limits
-    vmin = float('inf')
-    vmax = float('-inf')
-    for i in range(num_subfigures):
-        key = stats_list[i][0]["metric"]
-        min_value_present_in_current_df = dataframe_list[i][key].min()
-        max_value_present_in_current_df = dataframe_list[i][key].max()
-        mean_value_present_in_current_df = dataframe_list[i][key].mean()
-        if config.verbose:    
-            print(f"subfigure number {i+1}, checking for metric {key}: \
-                min value is {min_value_present_in_current_df}, \
-                max value is {max_value_present_in_current_df}, \
-                mean value is {mean_value_present_in_current_df}")
-        vmin = min(vmin, mean_value_present_in_current_df)
-        vmax = max(vmax, mean_value_present_in_current_df)
-        
-    if config.verbose:
-        print(f"setting cbar limits to {vmin}, {vmax} ")
 
+    # None -> plt will chose vmin and vmax
+    vmin = None
+    vmax = None
+    if num_subfigures > 1:
+        # all subplots should have same colors -> we need to find the limits
+        vmin = float('inf')
+        vmax = float('-inf')
+        if config.verbose:
+            print(f"===== cbar limits =====")
+            print()
+        for i in range(num_subfigures):
+            key = stats_list[i][0]["metric"]
+            min_value_present_in_current_df = dataframe_list[i][key].min()
+            max_value_present_in_current_df = dataframe_list[i][key].max()
+            mean_value_present_in_current_df = dataframe_list[i][key].mean()
+            if config.verbose:    
+                print(f"subfigure number {i+1}, checking for metric {key}: \n" +
+                    f" min value is {min_value_present_in_current_df},\n" +
+                    f" max value is {max_value_present_in_current_df},\n" +
+                    f" mean value is {mean_value_present_in_current_df}\n")
+            vmin = min(vmin, mean_value_present_in_current_df)
+            vmax = max(vmax, mean_value_present_in_current_df)
+            
+        if config.verbose:
+            print(f"setting cbar limits to {vmin}, {vmax} ")
+            print("=" * 40)
 
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
