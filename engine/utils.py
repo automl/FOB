@@ -1,6 +1,6 @@
 from pathlib import Path
 import sys
-from typing import Any, Iterable, Type
+from typing import Any, Callable, Iterable, Type
 import json
 import math
 import signal
@@ -27,6 +27,13 @@ def some(*args, default):
     if first is not None:
         return first
     return some(*rest, default=default)
+
+
+def findfirst(f: Callable, xs: Iterable):
+    for x in xs:
+        if f(x):
+            return x
+    return None
 
 
 def trainer_strategy(devices: int | list[int] | str) -> str:

@@ -72,8 +72,8 @@ class EngineConfig(BaseConfig):
         self.optimize_memory: bool = cfg.get("optimize_memory", False)
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.precision: str = cfg["precision"]
-        maybe_resume = cfg.get("resume", None)
-        self.resume: Optional[Path] = Path(maybe_resume).resolve() if maybe_resume is not None else None
+        resume = cfg.get("resume", False)
+        self.resume: Optional[Path] | bool = Path(resume).resolve() if isinstance(resume, str) else resume
         self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]

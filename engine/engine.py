@@ -14,7 +14,7 @@ from .configs import EngineConfig, OptimizerConfig, TaskConfig
 from .callbacks import LogParamsAndGrads, PrintEpoch
 from .grid_search import gridsearch
 from .parser import YAMLParser
-from .utils import AttributeDict, calculate_steps, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
+from .utils import AttributeDict, calculate_steps, findfirst, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
 
 
 def engine_path() -> Path:
@@ -42,6 +42,7 @@ class Run():
 
     def start(self):
         self._ensure_max_steps()
+        self._ensure_resume_path()
         torch.set_float32_matmul_precision('high')
         seed_everything(self.engine.seed, workers=True)
         self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -52,8 +53,8 @@ class Run():
             self.train(trainer, model, data_module)
         tester = self.get_tester()
         self.test(tester, model, data_module)
-        best_path = self._callbacks.model_checkpoint.best_model_path
-        if not self.engine.test_only and best_path:
+        best_path = self.get_best_checkpoint()
+        if best_path is not None:
             self.test(tester, model, data_module, Path(best_path))
 
     def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
@@ -131,6 +132,36 @@ class Run():
             accelerator=self.engine.accelerator
         )
 
+    def get_best_checkpoint(self) -> Optional[Path]:
+        model_checkpoint = self._callbacks.get("model_checkpoint", None)
+        if model_checkpoint is not None:
+            model_checkpoint = model_checkpoint.best_model_path
+        if model_checkpoint is None:
+            available_checkpoints = self.get_available_checkpoints()
+            model_checkpoint = findfirst(lambda x: x.stem.startswith("best"), available_checkpoints)
+        return model_checkpoint
+
+    def get_available_checkpoints(self) -> list[Path]:
+        if self.checkpoint_dir.exists():
+            return list(filter(lambda x: x.suffix == ".ckpt", self.checkpoint_dir.iterdir()))
+        return []
+
+    def _ensure_resume_path(self):
+        if isinstance(self.engine.resume, Path):
+            pass
+        elif isinstance(self.engine.resume, bool):
+            resume_path = None
+            if self.engine.resume:
+                available_checkpoints = self.get_available_checkpoints()
+                if len(available_checkpoints) < 1:
+                    print("Warning: engine.resume=True but no checkpoint was found. Starting run from scratch.")
+                else:
+                    resume_path = findfirst(lambda x: x.stem == "last", available_checkpoints)
+            self._config[self.engine_key]["resume"] = resume_path
+            self._generate_configs()
+        else:
+            raise TypeError(f"Unsupportet type for 'resume', got {type(self.engine.resume)=}.")
+
     def _ensure_max_steps(self):
         if self.task.max_steps is None:
             max_steps = self._calc_max_steps()
@@ -147,7 +178,7 @@ class Run():
 
     def _init_callbacks(self):
         self._callbacks["model_checkpoint"] = ModelCheckpoint(
-            dirpath=self.run_dir / "checkpoints",
+            dirpath=self.checkpoint_dir,
             filename="best-{epoch}-{step}",
             monitor=self.task.target_metric,
             mode=self.task.target_metric_mode,
@@ -163,7 +194,7 @@ class Run():
         self._callbacks["print_epoch"] = PrintEpoch(self.engine.silent)
 
     def _set_outpath(self, default_config: dict[str, Any]):
-        base = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
+        base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = ["name", "output_dir_name"]
         include_engine = ["deterministic", "optimize_memory", "seed"]
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
@@ -174,6 +205,7 @@ class Run():
             print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
             run_dir = hashdir
         self.run_dir = base / run_dir
+        self.checkpoint_dir = self.run_dir / "checkpoints"
 
     def _generate_configs(self):
         self.engine = EngineConfig(self._config, self.task_key, self.engine_key)
