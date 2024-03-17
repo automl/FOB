@@ -1,0 +1,20 @@
+task:
+  name: graph_tiny
+  output_dir_name: graph_tiny
+  batch_size: 1
+  max_epochs: 50
+  max_steps: 50
+  target_metric: val_acc
+  target_metric_mode: max
+  dataset_split: public  # public, full, geom-gcn, random
+  model:  # GCN
+    hidden_channels: 64
+    num_layers: 2
+    dropout: 0.5
+    cached: False
+    normalize: True
+engine:
+  devices: 1
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.0e-2

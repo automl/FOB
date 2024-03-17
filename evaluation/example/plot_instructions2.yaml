@@ -1,0 +1,14 @@
+data_dirs:  # List of Paths
+  - evaluation/example/experiments/mnist/adamw_baseline
+  - evaluation/example/experiments/mnist/sgd_baseline
+output_dir: evaluation/example
+experiment_name: adamw vs sgd
+output_types:
+  - pdf
+  - png
+plot:
+  std: True
+  format: "2.1"
+plotstyle:
+  # tight_layout: False  # the title is a little bit squeezed with this
+  tight_layout: True

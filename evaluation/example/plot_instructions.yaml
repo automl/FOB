@@ -1,0 +1,8 @@
+data_dirs: evaluation/example/experiments/mnist/adamw_baseline  # just the folder with our 12 trials
+output_dir: evaluation/example  # output filename is output_dir / experiment_name
+experiment_name: mnist_example
+output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png}
+plot:
+  std: True  # aggregate over our 3 seeds
+  format: "2.1"  # 2 digits -> in percent, 1 decimal place precision
+

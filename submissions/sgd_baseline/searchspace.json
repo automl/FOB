@@ -1,7 +1,0 @@
-{
-    "learning_rate": [1e-2, 3.16e-3, 1e-3, 3.16e-4, 1e-4],
-    "momentum": 0.9,
-    "weight_decay": [0.0, 1e-4, 1e-3, 1e-2, 1e-1],
-    "eta_min_factor": 0.01,
-    "nesterov": false
-}

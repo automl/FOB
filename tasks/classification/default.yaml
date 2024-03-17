@@ -1,0 +1,36 @@
+task:
+  name: classification
+  output_dir_name: classification
+  batch_size: 512
+  max_epochs: 80
+  max_steps: null
+  target_metric: val_top5_err
+  target_metric_mode: min
+  # davit_tiny takes too long to train for us; performance was fine with custom stem
+  # make sure to comment out the other model when switching to davit
+  # model:
+  #   name: davit_tiny.msft_in1k
+  #   stem: custom_conv  # {default, wrn_conv, custom_conv}
+  # wide res net
+  model:
+   name: wide_resnet50_2
+   kernel_size: 3
+   stride: 1
+   padding: 1
+   maxpool: True
+  train_transforms:
+    random_crop:
+      use: True
+      size: 64
+      padding: 4
+      padding_mode: reflect
+    horizontal_flip:
+      use: True
+      p: 0.5
+    trivial_augment:
+      use: True
+engine:
+  devices: 4
+optimizer:
+  name: adamw_baseline
+  weight_decay: 1.0

@@ -1,30 +1,19 @@
 import json
 from pathlib import Path
-import argparse
 from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 import pandas as pd
-
-# TODO: these should probably all be made into parser args, or dynamically extracted
-SEED = "seed"
-
-# default file names
-HP_FILENAME = "hyperparameters.json"
-RESULT_BEST_FILENAME = "results_best_model.json"
-RESULT_LAST_FILENAME = "results_final_model.json"
-ARGS_FILENAME = "runtime_args.json"
-SPECS_FILENAME = "runtime_specs.json"
-DEFAULT_FILE_ENDING = "png"
-WORKLOAD_TO_TITLE = {
-    "adamw_baseline": "AdamW",
-    "sgd_baseline": "SGD"
-}
+from engine.parser import YAMLParser
+from engine.utils import AttributeDict, convert_type_inside_dict
+from itertools import repeat
 
 
-def get_available_trials(dirname: Path, depth: int = 1):
+def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
     """finds the path for all trials in the *dirname* directory"""
     # RECURSIVELY FIND ALL DIRS IN DIRNAME (up to depth)
+    assert isinstance(dirname, Path)
     subdirs: list[Path] = [dirname]
     all_results_must_be_same_depth = True
     for _ in range(depth):
@@ -37,24 +26,26 @@ def get_available_trials(dirname: Path, depth: int = 1):
             for subdir in subdirs:
                 subdirs += [x for x in subdir.iterdir() if x.is_dir()]
 
-    if args.verbose:
+    if config.verbose:
         format_string = "\n  "
         print(f"found the following directories:{format_string}{format_string.join(str(i) for i in subdirs)}.")
 
     def is_trial(path: Path):
         # here we could do additional checks to filter the subdirectories
+        # currently we only check if there is a config file
         for x in path.iterdir():
-            if x.name == "hyperparameters.json":
+            found_a_config_file = x.name == config.experiment_files.config
+            if found_a_config_file:
                 return True
         return False
 
     subdirs = list(filter(is_trial, subdirs[::-1]))
-    if args.verbose:
+    if config.verbose:
         print(f"we assume the following to be trials:{format_string}{format_string.join(str(i) for i in subdirs)}.")
     return subdirs
 
 
-def dataframe_from_trials(trial_dir_paths: List[Path]):
+def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
     """takes result from get_available_trials and packs them in a dataframe,
     does not filter duplicate hyperparameter settings."""
     dfs: List[pd.DataFrame] = []
@@ -62,89 +53,111 @@ def dataframe_from_trials(trial_dir_paths: List[Path]):
 
     for path in trial_dir_paths:
         stat = {}
+        hp_dict = {}
 
-        # checking for files
-        args_file = path / ARGS_FILENAME
-        specs_file = path / SPECS_FILENAME
-        hyperparameters_file = path / HP_FILENAME
-        result_file = path / RESULT_BEST_FILENAME
-        if args.last_instead_of_best:
-            result_file = path / RESULT_LAST_FILENAME
-        all_files_exist = all([args_file.is_file(),
-                               specs_file.is_file(),
-                               hyperparameters_file.is_file(),
-                               result_file.is_file()])
+        config_file = path / config.experiment_files.config
+        if config.last_instead_of_best:
+            result_file = path / config.experiment_files.last_model
+        else:
+            result_file = path / config.experiment_files.best_model
+        all_files_exist = all([
+            config_file.is_file(),
+            result_file.is_file()
+        ])
         if not all_files_exist:
             print(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting.")
             continue
 
-        # reading content
-        with open(args_file, 'r') as f:
-            content = json.load(f)
-            stat["seed"] = content[SEED]
-            stat["workload_name"] = content["workload_name"]
-            stat["submission_name"] = content["submission_name"]
+        yaml_parser = YAMLParser()
+        yaml_content = yaml_parser.parse_yaml(config_file)
+        # convert the sub dicts first, then the dict itself
+        yaml_content = convert_type_inside_dict(yaml_content, src=dict, tgt=AttributeDict)
+        yaml_content = AttributeDict(yaml_content)
+        if config.verbose:
+            print(f"{yaml_content=}\n")
 
-        with open(specs_file) as f:
-            content = json.load(f)
-            stat["target_metric_mode"] = content["target_metric_mode"]
-            stat["target_metric"] = content["target_metric"]
-            TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
+        stat["seed"] = yaml_content.engine.seed
+        stat["task_name"] = yaml_content.task.name
+        stat["optimizer_name"] = yaml_content["optimizer"]["name"]
+        stat["target_metric_mode"] = yaml_content["task"]["target_metric_mode"]
+        stat["target_metric"] = yaml_content["task"]["target_metric"]
+        # TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
+        hp_dict = yaml_content["optimizer"]
+
+        # print(f"{type(config.plot.metric)=}")
+        metric_of_value_to_plot = config.plot.metric
+        if not metric_of_value_to_plot:
+            task_name = stat["task_name"]
+            metric_of_value_to_plot = config.task_to_metric[task_name]
+            if not metric_of_value_to_plot:
+                metric_of_value_to_plot = stat["target_metric"].replace("val_", "test_")
+                print(f"WARNING: no metric given'... " +
+                      f"Using '{metric_of_value_to_plot}' because '{stat['target_metric']}' was the target metric.")
+        stat['metric'] = metric_of_value_to_plot
 
         with open(result_file) as f:
             content = json.load(f)
-            if args.metric in content[0]:
-                stat["score"] = content[0][args.metric]
+            if metric_of_value_to_plot in content[0]:
+                stat["score"] = content[0][metric_of_value_to_plot]
             else:
-                stat["metric"] = stat["target_metric"].replace("val_", "test_")
-                print(f"WARNING: given metric '{args.metric}' does not exist, please check for typos!... " +
-                      f"Using '{stat['metric']}' because '{stat['target_metric']}' was the target metric.")
-                stat["score"] = content[0][stat["metric"]]
+                stat["score"] = f"could not find value for {metric_of_value_to_plot} in json"
 
-        with open(hyperparameters_file) as f:
-            data = pd.json_normalize(json.loads(f.read()))
-            data.at[0, args.metric] = stat["score"]  # will trim to 4 digits after comma
-            data.at[0, SEED] = stat["seed"]  # saved as float
-            dfs.append(data)  # append the data frame to the list
+        data = pd.json_normalize(hp_dict)
+        data.at[0, metric_of_value_to_plot] = stat["score"]  # will trim to 4 digits after comma
+        data.at[0, "seed"] = stat["seed"]  # saved as float
+        dfs.append(data)  # append the data frame to the list
 
-        if args.verbose:
-            print(stat)
+        if config.verbose:
+            print(f"{stat=}")
         stats.append(stat)
 
     df = pd.concat(dfs, sort=False)
-    # print(df)
+
     return df, stats
 
 
-def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
+def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {},
+                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
-                                 columns=args.x_axis, index=args.y_axis, values=args.metric,
+                                 columns=cols, index=idx, values=stat["metric"],
                                  aggfunc='mean')
-    value_exp_factor, decimal_points = args.format.split(".")
+    
+    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
+    value_exp_factor, decimal_points = config.plot.format.split(".")
     value_exp_factor = int(value_exp_factor)
     decimal_points = int(decimal_points)
+    if vmin:
+        vmin *= (10 ** value_exp_factor)
+    if vmax:
+        vmax *= (10 ** value_exp_factor)
+
     pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
-    if args.verbose:
+    if config.verbose:
         print(pivot_table)
 
-    # setting the COLORMAP and the RANGE of the values for the colors (legend bar)
-    vmin = args.limits and min(args.limits)  # lower limit (or None if not given)
-    vmax = args.limits and max(args.limits)  # upper limit (or None if not given)
-    colormap_name = "rocket"
-    if lower_is_better:
+    # overwriting the COLORMAP and the RANGE of the values for the colors (legend bar)
+    if config.plot.limits:
+        vmin = min(config.plot.limits)  # lower limit (or None if not given)
+        vmax = max(config.plot.limits)  # upper limit (or None if not given)
+    colormap_name = config.plotstyle.color_palette
+    if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
+    # metric_legend = stat["metric"] if "metric" in stat.keys() else config.plot.metric
+    metric_legend = stat["metric"]
+    metric_legend = pretty_name(metric_legend, config)
 
     # FINETUNE POSITION
     # left bottom width height
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
 
-    if not args.std:
+    if not config.plot.std:
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=True, fmt=f".{decimal_points}f", annot_kws={'fontsize': 8},
-                           vmin=vmin, vmax=vmax, cmap=colormap_name)
+                           annot=True, fmt=f".{decimal_points}f",
+                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # PRECISION TO DISPLAY
         std_decimal_points = decimal_points  # good default would be 2
@@ -152,23 +165,33 @@ def create_matrix_plot(dataframe, ax=None, lower_is_better: bool = False):
 
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
-                                         columns=args.x_axis, index=args.y_axis, values=args.metric,
-                                         aggfunc='std')
+                                        columns=cols, index=idx, values=stat["metric"],
+                                        aggfunc='std',  fill_value=float("inf"), dropna=False
+                                        )
+        
+        if float("inf") in pivot_table_std.values.flatten():
+            print("WARNING: Not enough data to calculate the std, skipping std in plot")
+
+        
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
+
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}\n±({round(std, std_decimal_points)})"
+                std_string = f"\n±({round(std, std_decimal_points)})" if std != float("inf") else ""
+                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}{std_string}"
 
         fmt = ""  # cannot format like before, as we do not only have a number
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=annot_matrix, fmt=fmt, annot_kws={'fontsize': 5},
-                           vmin=vmin, vmax=vmax, cmap=colormap_name)
+                           annot=annot_matrix, fmt=fmt,
+                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
-def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
+def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict):
+
     """Takes a list of workloads Paths (submission + workload)
     and plots them together in one figure side by side"""
     num_subfigures: int = len(dataframe_list)
@@ -183,8 +206,8 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
     # figsize=(5*n_cols + margin, 2.5)
     figsize = None
     if num_subfigures == 2:
-        figsize = None
-        figsize = (12 * args.scale, 5.4 * args.scale)
+        pass  # TODO: after removing cbar from left subifgure, it is squished
+        figsize = (12 * config.plotstyle.scale, 5.4 * config.plotstyle.scale)
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=figsize)
     if num_subfigures == 1:
@@ -192,75 +215,146 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict]):
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
+
+    # None -> plt will chose vmin and vmax
+    vmin = None
+    vmax = None
+    if num_subfigures > 1:
+        # all subplots should have same colors -> we need to find the limits
+        vmin = float('inf')
+        vmax = float('-inf')
+        if config.verbose:
+            print(f"===== cbar limits =====")
+            print()
+        for i in range(num_subfigures):
+            dataframe = dataframe_list[i]
+            cols = config.plot.x_axis[i]
+            idx = config.plot.y_axis[i]
+            key = stats_list[i][0]["metric"]
+
+            pivot_table = pd.pivot_table(dataframe,
+                                 columns=cols, index=idx, values=stats_list[i][0]["metric"],
+                                 aggfunc='mean')
+
+            min_value_present_in_current_df = pivot_table.min().min()
+            max_value_present_in_current_df = pivot_table.max().max()
+
+            if config.verbose:    
+                print(f"subfigure number {i+1}, checking for metric {key}: \n" +
+                    f" min value is {min_value_present_in_current_df},\n" +
+                    f" max value is {max_value_present_in_current_df},\n")
+            vmin = min(vmin, min_value_present_in_current_df)
+            vmax = max(vmax, max_value_present_in_current_df)
+            
+        if config.verbose:
+            print(f"setting cbar limits to {vmin}, {vmax} ")
+            print("=" * 40)
+
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
-        some_stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
-        s_name = some_stat_entry['submission_name']
-        s_target_metric_mode = some_stat_entry["target_metric_mode"]
-        lower_is_better = s_target_metric_mode == "min"
+        stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
+        opti_name = stat_entry['optimizer_name']
+        s_target_metric_mode = stat_entry["target_metric_mode"]
+        low_is_better = s_target_metric_mode == "min"
 
-        current_plot = create_matrix_plot(dataframe, ax=axs[i], lower_is_better=lower_is_better)
+        cols = config.plot.x_axis[i]
+        idx = config.plot.y_axis[i]
+        # only include colorbar once
+        include_cbar: bool = i == num_subfigures - 1
+
+        current_plot = create_matrix_plot(dataframe, config,
+                                          cols, idx,
+                                          ax=axs[i], low_is_better=low_is_better, stat=stat_entry,
+                                          cbar=include_cbar, vmin=vmin, vmax=vmax)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
-        current_plot.set_xlabel(current_plot.get_xlabel().replace('_', ' ').title())
-        current_plot.set_ylabel(current_plot.get_ylabel().replace('_', ' ').title())
+        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
+        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel(), config))
 
         if i > 0:
             # remove y_label of all but first one
-            axs[i].set_ylabel('', fontsize=8, labelpad=8)
+            # axs[i].set_ylabel('', fontsize=8, labelpad=8)
+            axs[i].set_ylabel('', labelpad=8)
         else:
             # TODO format parameter just as in submission name
             # axs[i].set_ylabel
             pass
 
-        if s_name in WORKLOAD_TO_TITLE.keys():
-            axs[i].set_title(WORKLOAD_TO_TITLE[s_name])
-        else:
-            axs[i].set_title(f"{s_name.replace('_', ' ').title()}")
-    fig.tight_layout()
+        # title (heading) of the figure:
+        title = pretty_name(opti_name, config)
+        title += " on "
+        title += pretty_name(stat_entry["task_name"], config)
+        axs[i].set_title(title)
+
+    if config.plotstyle.tight_layout:
+        fig.tight_layout()
+    if len(config.data_dirs) > 1:
+        # set experiment name as title when multiple matrices in image
+        # super title TODO fix when used together with tight layout
+        # print(config.experiment_name)
+        if name := config.experiment_name:
+            fig.suptitle(name)
     return fig, axs
 
 
-def extract_dataframes(workload_paths: List[Path], depth: int = 1) -> tuple[list[pd.DataFrame], list[dict]]:
+def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
+                       ) -> tuple[list[pd.DataFrame], list[dict]]:
     df_list: list[pd.DataFrame] = []
     stats_list: list[dict] = []
     num_dataframes: int = len(workload_paths)
 
     for i in range(num_dataframes):
-        available_trials = get_available_trials(workload_paths[i], depth)
-        dataframe, stats = dataframe_from_trials(available_trials)
+        available_trials = get_available_trials(workload_paths[i], config, depth)
+        dataframe, stats = dataframe_from_trials(available_trials, config)
         df_list.append(dataframe)
         stats_list.append(stats)
 
     return df_list, stats_list
 
 
-def get_output_filename(workloads: list[Path]) -> tuple[str, str]:
+def get_output_file_path(workloads: list[Path], config: AttributeDict, stats: list[dict]) -> str:
     some_workload = workloads[0]
+    some_stat = stats[0][0]  # TODO: fix for multiple optim on one plot
     # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    workload = Path(some_workload).resolve()
-    submission = Path(workload).parent
-    if args.verbose:
-        print(f"{workload.name=}")
-        print(f"{submission.name=}")
-    file_type = DEFAULT_FILE_ENDING if not args.pdf else "pdf"
-    output_filename = f"{submission.name}-{workload.name}"
-    output_filename = here / output_filename
-    if args.output:
-        output_filename = args.output
-    return output_filename, file_type
+    # optimizer = Path(some_workload).resolve()
+    # optim_name = optimizer.name
+    # task = Path(optimizer).parent
+    # task_name = task.name
+    # print(f"{stats=}")
+    # print(f"{some_stat=}")
+    task_name = some_stat["task_name"]
+    optim_name = some_stat["optimizer_name"]
+
+    if config.verbose:
+        print(f"{task_name=}")
+        print(f"{task_name=}")
+
+    here = Path(__file__).parent.resolve()
+
+    output_dir = Path(config.output_dir) if config.output_dir else here
+    experiment_name = Path(config.experiment_name) if config.experiment_name else f"{optim_name}-{task_name}"
+    output_file_path = output_dir / experiment_name
+
+    return output_file_path
 
 
-def set_plotstyle():
-    plt.rcParams["text.usetex"] = True
-    plt.rcParams["font.family"] = "serif"  # You can adjust the font family as needed
-    plt.rcParams["font.size"] = 8  # Adjust the font size as needed
+def set_plotstyle(config: AttributeDict):
+    plt.rcParams["text.usetex"] = config.plotstyle.text.usetex
+    plt.rcParams["font.family"] = config.plotstyle.font.family
+    plt.rcParams["font.size"] = config.plotstyle.font.size
 
 
-def save_csv(do_save: bool, dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
-    if not do_save:
-        return
+def pretty_name(name: str, config: AttributeDict) -> str:
+    """tries to use a mapping for the name, else will do some general replacement"""
+    if name in config.names.keys():
+        name = config.names[name]
+    else:
+        name = name.replace('_', ' ').title()
+    return name
+
+
+def save_csv(dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
     for i, df in enumerate(dfs):
         csv_output_filename = f"{output_filename}-{i}.csv"
         if verbose:
@@ -268,68 +362,66 @@ def save_csv(do_save: bool, dfs: list[pd.DataFrame], output_filename: str, verbo
         df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
-def save_plot(fig, axs, output_filename: str, file_type: str):
-    plot_output_filename = f"{output_filename}-heatmap.{file_type}"
-    if args.verbose:
+def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
+    plot_output_filename = f"{output_file_path}-heatmap.{file_type}"
+    if verbose:
         print(f"saving figure as {plot_output_filename}")
     plt.savefig(plot_output_filename)
 
 
-def main(args: argparse.Namespace):
-    workloads: List[Path] = args.trials_dirs
-    if args.verbose:
+def clean_config(config: AttributeDict) -> AttributeDict:
+    # allow the user to write a single string instead of a list of strings
+    if not isinstance(config.output_types, list):
+        config["output_types"] = [config.output_types]
+        if config.verbose:
+            print("fixing value for key <config.output_types> to be a list[str]")
+
+    if not isinstance(config.data_dirs, list):
+        config["data_dirs"] = [Path(config.data_dirs)]
+        if config.verbose:
+            print("fixing value for key <config.data_dirs> to be a list[Path]")
+    
+    # x_axis
+    if not isinstance(config.plot.x_axis, list):
+        config["plot"]["x_axis"] = [config.plot.x_axis]
+        if config.verbose:
+            print("fixing value for key <config.plot.x_axis> to be a list[str]")
+    if len(config.plot.x_axis) < len(config.data_dirs):
+        # use same x axis for all if only one given
+        missing_elements = len(config.data_dirs) - len(config.plot.x_axis)
+        config["plot"]["x_axis"] += repeat(config.plot.x_axis[0], missing_elements)
+
+    # y_axis
+    if not isinstance(config.plot.y_axis, list):
+        config["plot"]["y_axis"] = [config.plot.y_axis]
+        if config.verbose:
+            print("fixing value for key <config.plot.y_axis> to be a list[str]")
+    if len(config.plot.y_axis) < len(config.data_dirs):
+        # use same x axis for all if only one given
+        missing_elements = len(config.data_dirs) - len(config.plot.y_axis)
+        config["plot"]["y_axis"] += repeat(config.plot.y_axis[0], missing_elements)
+
+    return config
+
+
+def main(config: AttributeDict):
+    config = clean_config(config)
+    workloads: List[Path] = [Path(name) for name in config.data_dirs]
+    if config.verbose:
         print(f"{workloads}=")
 
-    output_filename, file_type = get_output_filename(workloads)
+    set_plotstyle(config)
 
-    set_plotstyle()
+    dfs, stats = extract_dataframes(workloads, depth=config.depth, config=config)
+    fig, axs = create_figure(dfs, stats, config)
 
-    dfs, stats = extract_dataframes(workloads, depth=args.depth)
-    fig, axs = create_figure(dfs, stats)
+    output_file_path = get_output_file_path(workloads, config, stats)
+    
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
 
-    save_csv(args.csv, dfs, output_filename, args.verbose)
-    save_plot(fig, axs, output_filename, file_type)
-
-
-if __name__ == "__main__":
-    # default paths
-    here = Path(__file__).parent.resolve()
-    trials_dirs_default = [here / "sample-data" / "test-submission" / "test-workload"]
-
-    # parsing
-    parser = argparse.ArgumentParser(description="Create a heatmap plot of benchmarking results.")
-    parser.add_argument("--trials_dirs", "-d", default=trials_dirs_default, required=False, nargs='+', type=Path,
-                        help="Path to the experiment files (data to plot)")
-    parser.add_argument("--depth", default=1, type=int,
-                        help="the depth of the trial dirs relative to the given trial_dirs")
-    parser.add_argument("--metric", "-m", default="test_acc", required=False, type=str,
-                        help="name of metric that should be extracted from result json.")
-    parser.add_argument("--x_axis", "-x", required=False, type=str, default="weight_decay",
-                        help="parameter for x-axis of the heatmap.")
-    parser.add_argument("--y_axis", "-y", required=False, type=str, default="learning_rate",
-                        help="parameter for y-axis of the heatmap.")
-    parser.add_argument("--output", "-o", required=False, type=Path,
-                        help="Filename of the generated output plot. default is *here*.")
-    parser.add_argument("--pdf", action="store_true",
-                        help="create a pdf instead of a png file")
-    parser.add_argument("--limits", required=False, type=int, nargs=2,
-                        help="sets the limits for the colormap, 2 ints, order does not matter")
-    parser.add_argument("--scale", default=1.0, type=float,
-                        help="scales *figsize* argument by this value")
-    parser.add_argument("--format", default="2.3", type=str,
-                        help="how many digits to display, expects a value seperated by a dot (e.g. 2.3):\
-                            multiply by 10^2 and display 3 digits after decimal point. 2.0 for percent")
-    parser.add_argument("--last_instead_of_best", "-l", action="store_true",
-                        help="use the final model instead of the best one for the plot")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                        help="include debug prints")
-    parser.add_argument("--std", action="store_true",
-                        help="include standard deviation")
-    parser.add_argument("--csv", action="store_true",
-                        help="additionaly save data as csv")
-
-    # parser.add_argument("--submission", "-s", required=True, type=Path, help="")
-    # parser.add_argument("--workload", "-w", required=True, type=Path, help="")
-    args = parser.parse_args()
-
-    main(args)
+    for file_type in config.output_types:
+        if file_type == "csv":
+            save_csv(dfs, output_file_path, config.verbose)
+        elif file_type == "png" or file_type == "pdf":
+            save_plot(fig, axs, output_file_path, file_type, config.verbose)
+    print(f"Saved results into <{output_file_path}>")

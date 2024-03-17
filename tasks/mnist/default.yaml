@@ -1,0 +1,17 @@
+task:
+  name: mnist
+  output_dir_name: mnist
+  batch_size: 512
+  max_epochs: 30
+  max_steps: null
+  target_metric: val_acc
+  target_metric_mode: max
+  model:
+    num_hidden: 128
+    activation: Sigmoid
+engine:
+  devices: 1
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.0e-2
+  weight_decay: 0.1
