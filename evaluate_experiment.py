@@ -17,8 +17,7 @@ if __name__ == "__main__":
     args, extra_args = parser.parse_known_args()
     yaml_parser = YAMLParser()
     config = yaml_parser.parse_yamls_and_extra_args(default_yaml, args.settings, extra_args)
-    convert_type_inside_dict(config, src=dict, tgt=AttributeDict)
+    config = convert_type_inside_dict(config, src=dict, tgt=AttributeDict)
     config = AttributeDict(config)
-    # config = convert_type_inside_dict(config, dict, AttributeDict)
 
     main(config)

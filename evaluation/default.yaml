@@ -8,11 +8,13 @@ verbose: False  # debug prints
 
 plot:
   # keeping the values on null -> automatically figure it out if possible
-  x_axis: weight_decay  # index on x axis
-  y_axis: learning_rate  # index on y axis
+  x_axis:  # indices on x axis (same order as order of subigures given in data_dirs)
+    - weight_decay
+  y_axis:  # indices on y axis (same order as order of subigures given in data_dirs)
+    - learning_rate
   metric: null  # is automatically chosen from task name, this will overwrite it
   limits: null  # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
-  std: False  # aggreagte over std
+  std: True  # aggreagte over std
   format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
 
 plotstyle:
@@ -45,6 +47,7 @@ names:
   sgd_baseline: SGD
   # metric
   test_acc: Accuracy (Test)
+  test_loss: Test Loss (lower is better)
   # parameter
   learning_rate: Learning Rate
   weight_decay: Weight Decay

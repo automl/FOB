@@ -6,6 +6,7 @@ import seaborn as sns
 import pandas as pd
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
+from itertools import repeat
 
 
 def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
@@ -114,10 +115,10 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
     return df, stats
 
 
-def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better: bool = False, stat: dict = {}):
+def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {}):
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
-                                 columns=config.plot.x_axis, index=config.plot.y_axis, values=stat["metric"],
+                                 columns=cols, index=idx, values=stat["metric"],
                                  aggfunc='mean')
     value_exp_factor, decimal_points = config.plot.format.split(".")
     value_exp_factor = int(value_exp_factor)
@@ -154,7 +155,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, ax=None, low_is_better:
 
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
-                                         columns=config.plot.x_axis, index=config.plot.y_axis, values=stat["metric"],
+                                         columns=cols, index=idx, values=stat["metric"],
                                          aggfunc='std')
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
@@ -201,7 +202,11 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
         s_target_metric_mode = stat_entry["target_metric_mode"]
         low_is_better = s_target_metric_mode == "min"
 
-        current_plot = create_matrix_plot(dataframe, config, ax=axs[i], low_is_better=low_is_better, stat=stat_entry)
+        cols = config.plot.x_axis[i]
+        idx = config.plot.y_axis[i]
+        current_plot = create_matrix_plot(dataframe, config,
+                                          cols, idx,
+                                          ax=axs[i], low_is_better=low_is_better, stat=stat_entry)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
@@ -315,11 +320,27 @@ def clean_config(config: AttributeDict) -> AttributeDict:
     if not isinstance(config.data_dirs, list):
         config["data_dirs"] = [Path(config.data_dirs)]
         if config.verbose:
-            print("fixing value for key <config.data_dirs> to be a list[str]")
+            print("fixing value for key <config.data_dirs> to be a list[Path]")
+    
+    # x_axis
+    if not isinstance(config.plot.x_axis, list):
+        config["plot"]["x_axis"] = [config.plot.x_axis]
+        if config.verbose:
+            print("fixing value for key <config.plot.x_axis> to be a list[str]")
+    if len(config.plot.x_axis) < len(config.data_dirs):
+        # use same x axis for all if only one given
+        missing_elements = len(config.data_dirs) - len(config.plot.x_axis)
+        config["plot"]["x_axis"] += repeat(config.plot.x_axis[0], missing_elements)
 
-    # something weird going here, we just cast it again
-    config = convert_type_inside_dict(config, dict, AttributeDict)
-    config = AttributeDict(config)
+    # y_axis
+    if not isinstance(config.plot.y_axis, list):
+        config["plot"]["y_axis"] = [config.plot.y_axis]
+        if config.verbose:
+            print("fixing value for key <config.plot.y_axis> to be a list[str]")
+    if len(config.plot.y_axis) < len(config.data_dirs):
+        # use same x axis for all if only one given
+        missing_elements = len(config.data_dirs) - len(config.plot.y_axis)
+        config["plot"]["y_axis"] += repeat(config.plot.y_axis[0], missing_elements)
 
     return config
 
