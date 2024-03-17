@@ -5,9 +5,8 @@ from engine.utils import AttributeDict, convert_type_inside_dict
 from evaluation.plot import main
 
 if __name__ == "__main__":
-    # default paths
+    # default path to settings
     here = Path(__file__).parent.resolve()
-    trials_dirs_default = [here / "evaluation" / "sample-data" / "test-submission" / "test-workload"]
     default_yaml = here / "evaluation" / "default.yaml"
 
     # parsing
