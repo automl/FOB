@@ -22,14 +22,14 @@ Here we use a GCN (Graph Convolutional Network)
 
 ## performance
 
-The model achieves a performance of
+The model achieves a performance of 80%
 
 ### performance comparison
 
 Performance using a GCN was reported in 
 https://paperswithcode.com/paper/semi-supervised-classification-with-graph
 
-The authors report a classificationa accuracy of 81.5
+The authors report a classificationa accuracy of 81.5%
 
 Their GCN has hyperparameter:
  - hidden_channel: 16

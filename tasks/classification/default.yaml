@@ -31,3 +31,6 @@ task:
       use: True
 engine:
   devices: 4
+optimizer:
+  name: adamw_baseline
+  weight_decay: 1.0

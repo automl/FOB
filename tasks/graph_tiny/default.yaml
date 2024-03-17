@@ -15,3 +15,6 @@ task:
     normalize: True
 engine:
   devices: 1
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.0e-2

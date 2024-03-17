@@ -36,7 +36,7 @@ class CoraDataModule(TaskDataModule):
 
         dataset = Planetoid(root=self.data_dir, name='Cora', split=self.split, transform=NormalizeFeatures())
 
-        print_cora_stats = True
+        print_cora_stats = False
         if print_cora_stats:
             print()
             print(f'Dataset: {dataset}:')

@@ -232,6 +232,8 @@ class Engine():
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)
         for key, opts in zip(keys, valid_options):
+            if key not in searchspace:
+                continue
             if isinstance(searchspace[key], dict) and all(name in opts for name in searchspace[key]):
                 searchspace[key] = [cfg | {self.identifier_key: name} for name, cfg in searchspace[key].items()]
 
