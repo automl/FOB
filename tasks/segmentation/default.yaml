@@ -12,4 +12,4 @@ task:
 engine:
   devices: 4
 optimizer:
-  learning_rate: 6.e-4
+  name: adamw_baseline

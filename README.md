@@ -23,7 +23,7 @@ How to write your own can be found [here](tasks/README.md)
 | mnist | MNIST | MLP | Image classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
 | classification | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
 | classification_small | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
-| segmentation | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 0.26? | 5h | 4 gpu |
+| segmentation | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 0.35 | 5h | 4 gpu |
 | graph_tiny | [cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.80 | 1min | 1 gpu |
 | tabular | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test MSE | 0.11 | 2 min | 1 gpu |
 | translation | [WMT17(de-en)](https://machinetranslate.org/wmt17) (maybe subset in the future) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | machine translation | BLEU (sacrebleu) | 28.8 | 12h | 4 gpus |
