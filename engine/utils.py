@@ -44,7 +44,7 @@ def gpu_suited_for_compile():
 
 def precision_with_fallback(precision: str) -> str:
     if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
-        print("Warning: GPU does not support bfloat16, using float16. Results can be different!", file=sys.stderr)  
+        print("Warning: GPU does not support bfloat16. Results can be different!", file=sys.stderr)
         return precision[2:]
     return precision
 
