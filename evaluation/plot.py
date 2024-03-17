@@ -194,6 +194,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
     # figsize=(5*n_cols + margin, 2.5)
     figsize = None
     if num_subfigures == 2:
+        pass  # TODO: after removing cbar from left subifgure, it is squished
         figsize = (12 * config.plotstyle.scale, 5.4 * config.plotstyle.scale)
 
     fig, axs = plt.subplots(n_rows, n_cols, figsize=figsize)
@@ -218,8 +219,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
         vmax = max(vmax, max_value_present_in_current_df)
         
     if config.verbose:
-        pass  
-    print(f"setting cbar limits to {vmin}, {vmax} ")
+        print(f"setting cbar limits to {vmin}, {vmax} ")
 
 
     for i in range(num_subfigures):
