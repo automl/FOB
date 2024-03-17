@@ -49,6 +49,8 @@ names:
   # metric
   test_acc: Accuracy (Test)
   test_loss: Test Loss (lower is better)
+  test_mIoU: Intersection over Union
+  test_mAcc: Test mean Accuracy
   # parameter
   learning_rate: Learning Rate
   weight_decay: Weight Decay
