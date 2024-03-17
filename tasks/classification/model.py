@@ -29,7 +29,7 @@ class ImagenetModel(TaskModel):
         if model_name == "wide_resnet50_2":
             # 7x7 conv might be pretty large for 64x64 images
             model.conv1 = nn.Conv2d(3,  # rgb color
-                                    config.model.hidden_channel,
+                                    64,
                                     kernel_size=config.model.kernel_size,
                                     stride=config.model.stride,
                                     padding=config.model.padding,
