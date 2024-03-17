@@ -18,3 +18,14 @@ task:
       norm: "batch_norm"
 engine:
   devices: 1
+# TODO: currently the task is pretty unstable
+# we had good results some months ago with this maybe seed was 42?
+optimizer:
+  name: sgd_baseline
+  weight_decay: 0.001
+  learning_rate: 0.00316
+# and with (TODO see discord plot)
+# optimizer:
+#   name: adamw_baseline
+#   weight_decay: [0.0, 0.001, 0.1]
+#   learning_rate: [0.001, 0.0001]
