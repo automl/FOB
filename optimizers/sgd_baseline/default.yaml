@@ -1,9 +1,9 @@
 optimizer:
   name: sgd_baseline
   output_dir_name: sgd_baseline
-  learning_rate: 1.e-2
-  momentum: 0.9
-  weight_decay: 1.e-4
-  eta_min_factor: 0.01
-  nesterov: False
-  lr_interval: step
+  learning_rate: 1.e-2  # SGD parameter
+  momentum: 0.9         # SGD parameter
+  weight_decay: 1.e-4   # SGD parameter
+  eta_min_factor: 0.01  # the minimum learning rate of the cosine annealing given as a factor of the initial learning rate
+  nesterov: false       # enables Nesterov momentum for SGD
+  lr_interval: step     # epoch is possible but step is preferred

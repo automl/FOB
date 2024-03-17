@@ -10,7 +10,7 @@ optimizer:
   kappa_init_param: 1.0
   kappa_init_method: warm_start_factor
   reg_function: l2
-  kappa_adapt: False
+  kappa_adapt: false
   kappa_update: 1.0
-  apply_lr: False
+  apply_lr: false
   lr_interval: step
