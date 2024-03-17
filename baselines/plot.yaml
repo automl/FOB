@@ -1,0 +1,8 @@
+output_dir: ./plots/
+output_types:
+  - pdf
+plot:
+  std: True
+  format: "2.1"
+plotstyle:
+  tight_layout: False  # the title is a little bit squeezed with this

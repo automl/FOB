@@ -388,6 +388,8 @@ def main(config: AttributeDict):
     fig, axs = create_figure(dfs, stats, config)
 
     output_file_path = get_output_file_path(workloads, config, stats)
+    
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
 
     for file_type in config.output_types:
         if file_type == "csv":
