@@ -69,6 +69,6 @@ task_to_metric:
   graph_tiny: test_acc
   mnist: test_acc
   segmentation: test_mIoU
-  tabular: test_loss  # TODO
+  tabular: test_loss
   template: test_loss
-  translation: test_loss  # TODO
+  translation: test_bleu
