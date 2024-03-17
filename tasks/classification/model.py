@@ -57,6 +57,7 @@ class ImagenetModel(TaskModel):
                 )
             else:
                 print(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
+        else:
             # not throwing an error, its valid for the user to use an given default model
             print("WARNING: the model you have specified has no modification.")
 

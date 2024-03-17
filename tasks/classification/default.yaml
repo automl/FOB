@@ -6,18 +6,18 @@ task:
   max_steps: null
   target_metric: val_top5_err
   target_metric_mode: min
+  # davit_tiny takes too long to train for us; performance was fine with custom stem
   # make sure to comment out the other model when switching to davit
-  # model: davit_tiny
-  model:
-    name: davit_tiny.msft_in1k
-    stem: default  # {default, wrn_conv, custom_conv}
-  # model: wide res net
   # model:
-  #  name: wide_resnet50_2
-  #  kernel_size: 3
-  #  stride: 1
-  #  padding: 1
-  #  maxpool: True
+  #   name: davit_tiny.msft_in1k
+  #   stem: custom_conv  # {default, wrn_conv, custom_conv}
+  # wide res net
+  model:
+   name: wide_resnet50_2
+   kernel_size: 3
+   stride: 1
+   padding: 1
+   maxpool: True
   train_transforms:
     random_crop:
       use: True
