@@ -57,7 +57,7 @@ Some of these are still under development.
 | Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ----- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
 | detection | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
-| translation | WMT17(de-en) | transformer | machine translation | cross-entropy loss / BLEU score | ? | 4h | 4 gpus |
+| translation | WMT17(de-en) | T5 small transformer | machine translation | BLEU score (sacrebleu) | 28.8 | 12h | 4 gpus |
 | graph_tiny | [cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | test accuracy | TODO (in paper 81.5) | TODO (very fast, just some minutes) | 1 gpu |
 | speech | librispeech | conformer | speech recognition | ? | ? | ? | ? |
 | diffusion | FFHQ | ? | image diffusion | ? | ? | ? | ? |
