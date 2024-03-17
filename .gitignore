@@ -4,3 +4,4 @@ data
 lightning_logs
 experiments
 *.ipynb
+experiment.yaml
