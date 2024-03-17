@@ -217,17 +217,24 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
             print(f"===== cbar limits =====")
             print()
         for i in range(num_subfigures):
+            dataframe = dataframe_list[i]
+            cols = config.plot.x_axis[i]
+            idx = config.plot.y_axis[i]
             key = stats_list[i][0]["metric"]
-            min_value_present_in_current_df = dataframe_list[i][key].min()
-            max_value_present_in_current_df = dataframe_list[i][key].max()
-            mean_value_present_in_current_df = dataframe_list[i][key].mean()
+
+            pivot_table = pd.pivot_table(dataframe,
+                                 columns=cols, index=idx, values=stats_list[i][0]["metric"],
+                                 aggfunc='mean')
+
+            min_value_present_in_current_df = pivot_table.min().min()
+            max_value_present_in_current_df = pivot_table.max().max()
+
             if config.verbose:    
                 print(f"subfigure number {i+1}, checking for metric {key}: \n" +
                     f" min value is {min_value_present_in_current_df},\n" +
-                    f" max value is {max_value_present_in_current_df},\n" +
-                    f" mean value is {mean_value_present_in_current_df}\n")
-            vmin = min(vmin, mean_value_present_in_current_df)
-            vmax = max(vmax, mean_value_present_in_current_df)
+                    f" max value is {max_value_present_in_current_df},\n")
+            vmin = min(vmin, min_value_present_in_current_df)
+            vmax = max(vmax, max_value_present_in_current_df)
             
         if config.verbose:
             print(f"setting cbar limits to {vmin}, {vmax} ")
