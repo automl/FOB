@@ -115,21 +115,28 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
     return df, stats
 
 
-def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {}):
+def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {},
+                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
                                  columns=cols, index=idx, values=stat["metric"],
                                  aggfunc='mean')
+    
+    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
     value_exp_factor, decimal_points = config.plot.format.split(".")
     value_exp_factor = int(value_exp_factor)
     decimal_points = int(decimal_points)
+    vmin *= (10 ** value_exp_factor)
+    vmax *= (10 ** value_exp_factor)
+
     pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
     if config.verbose:
         print(pivot_table)
 
-    # setting the COLORMAP and the RANGE of the values for the colors (legend bar)
-    vmin = config.plot.limits and min(config.plot.limits)  # lower limit (or None if not given)
-    vmax = config.plot.limits and max(config.plot.limits)  # upper limit (or None if not given)
+    # overwriting the COLORMAP and the RANGE of the values for the colors (legend bar)
+    if config.plot.limits:
+        vmin = min(config.plot.limits)  # lower limit (or None if not given)
+        vmax = max(config.plot.limits)  # upper limit (or None if not given)
     colormap_name = "rocket"
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
@@ -147,7 +154,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=True, fmt=f".{decimal_points}f",
                            annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
+                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # PRECISION TO DISPLAY
         std_decimal_points = decimal_points  # good default would be 2
@@ -169,7 +176,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=annot_matrix, fmt=fmt,
                            annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
+                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
 def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict):
@@ -195,6 +202,26 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
+    
+    # all subplots should have same colors -> we need to find the limits
+    vmin = float('inf')
+    vmax = float('-inf')
+    for i in range(num_subfigures):
+        key = stats_list[i][0]["metric"]
+        min_value_present_in_current_df = dataframe_list[i][key].min()
+        max_value_present_in_current_df = dataframe_list[i][key].max()
+        if config.verbose:    
+            print(f"subfigure number {i+1}, checking for metric {key}: \
+                min value is {min_value_present_in_current_df}, \
+                max value is {max_value_present_in_current_df}")
+        vmin = min(vmin, min_value_present_in_current_df)
+        vmax = max(vmax, max_value_present_in_current_df)
+        
+    if config.verbose:
+        pass  
+    print(f"setting cbar limits to {vmin}, {vmax} ")
+
+
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
         stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
@@ -204,9 +231,13 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
 
         cols = config.plot.x_axis[i]
         idx = config.plot.y_axis[i]
+        # only include colorbar once
+        include_cbar: bool = i == num_subfigures - 1
+
         current_plot = create_matrix_plot(dataframe, config,
                                           cols, idx,
-                                          ax=axs[i], low_is_better=low_is_better, stat=stat_entry)
+                                          ax=axs[i], low_is_better=low_is_better, stat=stat_entry,
+                                          cbar=include_cbar, vmin=vmin, vmax=vmax)
 
         # Pretty name for label "learning_rate" => "Learning Rate"
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))

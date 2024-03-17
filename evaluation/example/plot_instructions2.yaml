@@ -7,7 +7,6 @@ output_types:
   - pdf
   - png
 plot:
-  limits: [10, 95] # by manually setting the limits we force the same one for both subfigures
   std: True
   format: "2.1"
 plotstyle:
