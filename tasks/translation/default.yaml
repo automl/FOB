@@ -10,4 +10,7 @@ engine:
   devices: 4
 optimizer:
   name: adamw_baseline
-  learning_rate: 1.0e-4
+  learning_rate: 3.0e-4
+  weight_decay: 0.1
+  epsilon: 1.0e-9
+  beta2: 0.98
