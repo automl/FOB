@@ -36,7 +36,9 @@ How to write your own can be found [here](tasks/README.md)
 | graph | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | 0.73? | 20min | 1 gpu |
 | detection | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | speech | librispeech | conformer | speech recognition | ? | ? | ? | ? |
+| rna_folding | bpRNA | RNAformer | RNA secondary structure prediction | F1 | ? | ~4h | 4 gpus |
 | diffusion | FFHQ | ? | image diffusion | ? | ? | ? | ? |
+
 
 
 ## Optimizer and Scheduler
