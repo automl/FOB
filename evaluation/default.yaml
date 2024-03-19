@@ -22,7 +22,6 @@ evaluation:
     #  to make accuracy -> percent use a '2' in front of the dot
     #  to display 3 digits after the decimal point, write a '3' behind the dot
     format: null                 # for example {"2.0", "2.1", "2.3", "0.2", ...}
-    format_details: null         # this value is used for details in plot (e.g. the std) same syntax as format
 
   plotstyle:
     tight_layout: True
@@ -74,14 +73,48 @@ evaluation:
     translation: translation
 
   # maps task -> metric to plot
-  task_to_metric:
-    classification: test_top5_err
-    classification_small: test_acc
-    detection: test_AP
-    graph: test_rocauc
-    graph_tiny: test_acc
-    mnist: test_acc
-    segmentation: test_mIoU
-    tabular: test_loss
-    template: test_loss
-    translation: test_bleu
+  task_to:
+    metric:
+      classification: test_top5_err
+      classification_small: test_acc
+      detection: test_AP
+      graph: test_rocauc
+      graph_tiny: test_acc
+      mnist: test_acc
+      segmentation: test_mIoU
+      tabular: test_loss
+      template: test_loss
+      translation: test_bleu
+    test_metric_mode:
+      classification: min
+      classification_small: max
+      detection: max
+      graph: max
+      graph_tiny: max
+      mnist: max
+      segmentation: max
+      tabular: min
+      template: min
+      translation: max
+    format:
+      classification: "2.1"
+      classification_small: "2.1"
+      detection: "2.1"
+      graph: "2.1"
+      graph_tiny: "2.1"
+      mnist: "2.1"
+      segmentation: "0.3"
+      tabular: "0.1"
+      template: "2.1"
+      translation: "0.3"
+    limits:
+      classification: [55, 69]
+      classification_small: [65, 77]
+      detection: [0, 100]
+      graph: [60, 75]
+      graph_tiny: [65, 80]
+      mnist: [85, 97]
+      segmentation: [25, 35]
+      tabular: [11, 20]
+      template: [0, 100]
+      translation: [25, 31]

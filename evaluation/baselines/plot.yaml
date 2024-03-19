@@ -1,10 +1,9 @@
 evaluation:
   output_dir: ./plots/
   output_types:
-    - png
+    - pdf
   plot:
     std: True
-    format: "2.1"
     x_axis:
       - weight_decay
       - kappa_init_param

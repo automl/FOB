@@ -1,9 +1,10 @@
 import json
+from sys import exit
 from pathlib import Path
+from os import PathLike
 from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 import pandas as pd
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
@@ -88,7 +89,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         metric_of_value_to_plot = config.plot.metric
         if not metric_of_value_to_plot:
             task_name = stat["task_name"]
-            metric_of_value_to_plot = config.task_to_metric[task_name]
+            metric_of_value_to_plot = config.task_to.metric[task_name]
             if not metric_of_value_to_plot:
                 metric_of_value_to_plot = stat["target_metric"].replace("val_", "test_")
                 print(f"WARNING: no metric given'... " +
@@ -118,17 +119,30 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
 
 def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {},
                        cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
+    task_name = stat["task_name"]
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
                                  columns=cols, index=idx, values=stat["metric"],
                                  aggfunc='mean')
-    
+
+    task_format_exists = stat["task_name"] in config.task_to.format.keys()
+    explicit_format_exists = config.plot.format is not None
+    specified_format = task_format_exists or explicit_format_exists
+
     fmt = None
-    if config.plot.format:
+    format_string = ""
+    if task_format_exists:
+        format_string = config.task_to.format[stat["task_name"]]
+
+    if explicit_format_exists:
+        format_string = config.plot.format
+
+    if specified_format:
         # scaline the values given by the user to fit his format needs (-> and adapting the limits)
-        value_exp_factor, decimal_points = config.plot.format.split(".")
+        value_exp_factor, decimal_points = format_string.split(".")
         value_exp_factor = int(value_exp_factor)
         decimal_points = int(decimal_points)
+        specified_format = True
         if vmin:
             vmin *= (10 ** value_exp_factor)
         if vmax:
@@ -136,13 +150,21 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
         fmt=f".{decimal_points}f"
 
-    if config.verbose:
-        print(pivot_table)
-
-    # overwriting the COLORMAP and the RANGE of the values for the colors (legend bar)
+    # overwriting the RANGE of the values for the colors (legend bar) with default tasks values
+    if task_name in config.task_to.limits.keys() and config.task_to.limits[task_name] is not None:
+        vmin = min(config.task_to.limits[task_name])
+        vmax = max(config.task_to.limits[task_name])
+    # overwriting the RANGE of the values for the colors (legend bar) with explicit values
     if config.plot.limits:
         vmin = min(config.plot.limits)  # lower limit (or None if not given)
         vmax = max(config.plot.limits)  # upper limit (or None if not given)
+
+    if config.verbose:
+        print(f"setting cbar limits to {vmin}, {vmax} ")
+
+    if config.verbose:
+        print(pivot_table)
+
     colormap_name = config.plotstyle.color_palette
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
@@ -170,14 +192,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         if float("inf") in pivot_table_std.values.flatten():
             print("WARNING: Not enough data to calculate the std, skipping std in plot")
 
-        # PRECISION TO DISPLAY
-        if not config.plot.format:
-            std_decimal_points = 2
-            mean_decimal_points = 1
-        else:
-            std_decimal_points = decimal_points  # good default would be 2
-            mean_decimal_points = decimal_points  # good default would be 1
-            # multiplication for 0.9 -> 90%
+        if specified_format:
             pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
 
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
@@ -185,8 +200,8 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                std_string = f"\n±({round(std, std_decimal_points)})" if std != float("inf") else ""
-                annot_matrix.loc[i, j] = f"{round(mean, mean_decimal_points)}{std_string}"
+                std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""
+                annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"
 
         fmt = ""  # cannot format like before, as we do not only have a number
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
@@ -250,17 +265,17 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
                     f" max value is {max_value_present_in_current_df},\n")
             vmin = min(vmin, min_value_present_in_current_df)
             vmax = max(vmax, max_value_present_in_current_df)
-            
-        if config.verbose:
-            print(f"setting cbar limits to {vmin}, {vmax} ")
-            print("=" * 40)
 
     for i in range(num_subfigures):
         dataframe, stats = dataframe_list[i], stats_list[i]
         stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
         opti_name = stat_entry['optimizer_name']
-        s_target_metric_mode = stat_entry["target_metric_mode"]
+        task_name = stat_entry['task_name']
+        s_target_metric_mode = stat_entry['target_metric_mode']
         low_is_better = s_target_metric_mode == "min"
+        if task_name in config.task_to.test_metric_mode.keys():
+            low_is_better = config.task_to.test_metric_mode[task_name] == "min"
+
 
         cols = config.plot.x_axis[i]
         idx = config.plot.y_axis[i]
@@ -376,9 +391,24 @@ def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
 
 def clean_config(config: AttributeDict) -> AttributeDict:
     """some processing that allows the user to be lazy, shortcut for the namespace, hidden values are found and config.all_values"""
-    evaluation_config = config.evaluation
-    evaluation_config["all_values"] = config
-    config = evaluation_config
+    print(f"{config=}")
+    if "evaluation" in config.keys():
+        evaluation_config: AttributeDict = config.evaluation
+        evaluation_config["all_values"] = config
+        print(f"{evaluation_config=}")
+        config = evaluation_config
+    else:
+        print("WARNING: there is no 'evaluation' in the yaml provided!")
+    if "data_dirs" in config.keys():
+        value_is_none = not config.data_dirs
+        value_has_wrong_type = not any(
+            isinstance(config.data_dirs, t) for t in (PathLike, str, list)
+        )
+        if value_is_none or value_has_wrong_type:
+            exit(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
+
+
+    # print(f"{config=}")
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):
         config["output_types"] = [config.output_types]

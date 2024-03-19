@@ -22,7 +22,7 @@ for i in "${!input_dir_list[@]}"; do
     input_dir="${input_dir_list[i]}"
     exp_name="${exp_name_list[i]}"
 
-    python_output=$(python "$plotting_script" "$yaml" "data_dirs=$input_dir" "experiment_name=$exp_name")
+    python_output=$(python "$plotting_script" "$yaml" "evaluation.data_dirs=$input_dir" "evaluation.experiment_name=$exp_name")
     echo "Output of Python command for directory '$input_dir' is:" >> "$output_file"
     echo "  $python_output" >> "$output_file"
     echo "" >> "$output_file"
