@@ -391,11 +391,11 @@ def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
 
 def clean_config(config: AttributeDict) -> AttributeDict:
     """some processing that allows the user to be lazy, shortcut for the namespace, hidden values are found and config.all_values"""
-    print(f"{config=}")
+    # print(f"{config=}")
     if "evaluation" in config.keys():
         evaluation_config: AttributeDict = config.evaluation
         evaluation_config["all_values"] = config
-        print(f"{evaluation_config=}")
+        # print(f"{evaluation_config=}")
         config = evaluation_config
     else:
         print("WARNING: there is no 'evaluation' in the yaml provided!")
