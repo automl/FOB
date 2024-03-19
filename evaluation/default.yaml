@@ -1,81 +1,82 @@
-data_dirs: null  # List of Paths
-output_dir: null # output filename is output_dir / experiment_name
-experiment_name: null
-depth: 1  # the depth of the trial dirs relative to the given data_dirs
-output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
-last_instead_of_best: False  # use the last model, if not set the ebst model will be used
-verbose: False  # debug prints
+evaluation:
+  data_dirs: null  # List of Paths
+  output_dir: null # output filename is output_dir / experiment_name
+  experiment_name: null
+  depth: 1  # the depth of the trial dirs relative to the given data_dirs
+  output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
+  last_instead_of_best: False  # use the last model, if not set the ebst model will be used
+  verbose: False  # debug prints
 
-plot:
-  # keeping the values on null -> automatically figure it out if possible
-  x_axis:  # indices on x axis (same order as order of subigures given in data_dirs)
-    - weight_decay
-  y_axis:  # indices on y axis (same order as order of subigures given in data_dirs)
-    - learning_rate
-  metric: null  # is automatically chosen from task name, this will overwrite it
-  limits: null  # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
-  std: True  # aggreagte over std
-  # format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
-  format: null
+  plot:
+    # keeping the values on null -> automatically figure it out if possible
+    x_axis:  # indices on x axis (same order as order of subigures given in data_dirs)
+      - weight_decay
+    y_axis:  # indices on y axis (same order as order of subigures given in data_dirs)
+      - learning_rate
+    metric: null  # is automatically chosen from task name, this will overwrite it
+    limits: null  # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
+    std: True  # aggreagte over std
+    # format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
+    format: null
 
-plotstyle:
-  tight_layout: True
-  text:
-    usetex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$ but some cluster dont have it installed# the font in the tiles of the matrix
+  plotstyle:
+    tight_layout: True
+    text:
+      usetex: True  # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$ but some cluster dont have it installed# the font in the tiles of the matrix
 
-  # general font
-  font:
-    family: "serif" # matplotlib {serif, sans-serif, cursive, fantasy, monospace}
-    size: 14
+    # general font
+    font:
+      family: "serif" # matplotlib {serif, sans-serif, cursive, fantasy, monospace}
+      size: 14
 
-  # the font in the tiles of the matrix
-  matrix_font:
-    size: 12
+    # the font in the tiles of the matrix
+    matrix_font:
+      size: 12
 
-  scale: 1.0  # scales *figsize* argument by this value, useful for ".png"
-  color_palette: "rocket"
+    scale: 1.0  # scales *figsize* argument by this value, useful for ".png"
+    color_palette: "rocket"
 
-# the name of the files storing the hyperparameters of the experiments and the scores
-experiment_files:
-  best_model: results_best_model.json
-  last_model: results_final_model.json
-  config: config.yaml
+  # the name of the files storing the hyperparameters of the experiments and the scores
+  experiment_files:
+    best_model: results_best_model.json
+    last_model: results_final_model.json
+    config: config.yaml
 
-# pretty names for the plot
-names:  
-  # optimizer
-  adamw_baseline: AdamW
-  adamcpr: AdamCPR
-  sgd_baseline: SGD
-  # metric
-  test_acc: Accuracy (Test)
-  test_loss: Test Loss (lower is better)
-  test_mIoU: Intersection over Union
-  test_mAcc: Test mean Accuracy
-  # parameter
-  learning_rate: Learning Rate
-  weight_decay: Weight Decay
-  # tasks
-  classification: classification
-  classification_small: classification_small
-  detection: detection
-  graph: graph
-  graph_tiny: graph_tiny
-  mnist: mnist
-  segmentation: segmentation
-  tabular: tabular
-  template: template
-  translation: translation
+  # pretty names for the plot
+  names:  
+    # optimizer
+    adamw_baseline: AdamW
+    adamcpr: AdamCPR
+    sgd_baseline: SGD
+    # metric
+    test_acc: Accuracy (Test)
+    test_loss: Test Loss (lower is better)
+    test_mIoU: Intersection over Union
+    test_mAcc: Test mean Accuracy
+    # parameter
+    learning_rate: Learning Rate
+    weight_decay: Weight Decay
+    # tasks
+    classification: classification
+    classification_small: classification_small
+    detection: detection
+    graph: graph
+    graph_tiny: graph_tiny
+    mnist: mnist
+    segmentation: segmentation
+    tabular: tabular
+    template: template
+    translation: translation
 
-# maps task -> metric to plot
-task_to_metric:
-  classification: test_top5_err
-  classification_small: test_acc
-  detection: test_AP
-  graph: test_rocauc
-  graph_tiny: test_acc
-  mnist: test_acc
-  segmentation: test_mIoU
-  tabular: test_loss
-  template: test_loss
-  translation: test_bleu
+  # maps task -> metric to plot
+  task_to_metric:
+    classification: test_top5_err
+    classification_small: test_acc
+    detection: test_AP
+    graph: test_rocauc
+    graph_tiny: test_acc
+    mnist: test_acc
+    segmentation: test_mIoU
+    tabular: test_loss
+    template: test_loss
+    translation: test_bleu

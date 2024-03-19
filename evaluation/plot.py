@@ -375,6 +375,10 @@ def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
 
 
 def clean_config(config: AttributeDict) -> AttributeDict:
+    """some processing that allows the user to be lazy, shortcut for the namespace, hidden values are found and config.all_values"""
+    evaluation_config = config.evaluation
+    evaluation_config["all_values"] = config
+    config = evaluation_config
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):
         config["output_types"] = [config.output_types]
@@ -410,7 +414,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
 
 
 def main(config: AttributeDict):
-    config = clean_config(config)
+    config = clean_config(config)  # sets config to config.evaluation, cleans some data
     workloads: List[Path] = [Path(name) for name in config.data_dirs]
     if config.verbose:
         print(f"{workloads}=")
