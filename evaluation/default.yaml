@@ -104,7 +104,7 @@ evaluation:
       graph_tiny: "2.1"
       mnist: "2.1"
       segmentation: "0.3"
-      tabular: "0.1"
+      tabular: "0.3"
       template: "2.1"
       translation: "0.3"
     limits:
@@ -115,6 +115,6 @@ evaluation:
       graph_tiny: [65, 80]
       mnist: [85, 97]
       segmentation: [25, 35]
-      tabular: [11, 20]
+      tabular: [0.11, 0.25]
       template: [0, 100]
       translation: [25, 31]
