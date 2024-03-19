@@ -1,7 +1,8 @@
 evaluation:
   output_dir: ./plots/
   output_types:
-    - pdf, png
+    - pdf
+    - png
   plot:
     std: True
     x_axis:
