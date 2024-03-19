@@ -1,8 +1,11 @@
 output_dir: ./plots/
 output_types:
-  - pdf
+  - png
 plot:
   std: True
   format: "2.1"
+  x_axis:
+    - weight_decay
+    - kappa_init_param
 plotstyle:
   tight_layout: False  # the title is a little bit squeezed with this

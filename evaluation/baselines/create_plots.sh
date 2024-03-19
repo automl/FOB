@@ -10,7 +10,7 @@ exp_name_list=("mnist_adamw"
                 "mnist_adamw-sgd"
                 )
 
-output_file="create_plots_log.txt"
+output_file="log_create_plots.txt"
 yaml="plot.yaml"
 plotting_script="../../evaluate_experiment.py"
 

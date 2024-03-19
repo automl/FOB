@@ -123,16 +123,19 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
                                  columns=cols, index=idx, values=stat["metric"],
                                  aggfunc='mean')
     
-    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
-    value_exp_factor, decimal_points = config.plot.format.split(".")
-    value_exp_factor = int(value_exp_factor)
-    decimal_points = int(decimal_points)
-    if vmin:
-        vmin *= (10 ** value_exp_factor)
-    if vmax:
-        vmax *= (10 ** value_exp_factor)
+    fmt = None
+    if config.plot.format:
+        # scaline the values given by the user to fit his format needs (-> and adapting the limits)
+        value_exp_factor, decimal_points = config.plot.format.split(".")
+        value_exp_factor = int(value_exp_factor)
+        decimal_points = int(decimal_points)
+        if vmin:
+            vmin *= (10 ** value_exp_factor)
+        if vmax:
+            vmax *= (10 ** value_exp_factor)
+        pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
+        fmt=f".{decimal_points}f"
 
-    pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
     if config.verbose:
         print(pivot_table)
 
@@ -155,25 +158,27 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 
     if not config.plot.std:
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=True, fmt=f".{decimal_points}f",
+                           annot=True, fmt=fmt,
                            annot_kws={'fontsize': config.plotstyle.matrix_font.size},
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
-        # PRECISION TO DISPLAY
-        std_decimal_points = decimal_points  # good default would be 2
-        mean_decimal_points = decimal_points  # good default would be 1
-
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
                                         columns=cols, index=idx, values=stat["metric"],
                                         aggfunc='std',  fill_value=float("inf"), dropna=False
                                         )
-        
         if float("inf") in pivot_table_std.values.flatten():
             print("WARNING: Not enough data to calculate the std, skipping std in plot")
 
-        
-        pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
+        # PRECISION TO DISPLAY
+        if not config.plot.format:
+            std_decimal_points = 2
+            mean_decimal_points = 1
+        else:
+            std_decimal_points = decimal_points  # good default would be 2
+            mean_decimal_points = decimal_points  # good default would be 1
+            # multiplication for 0.9 -> 90%
+            pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
 
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
         for i in pivot_table.index:

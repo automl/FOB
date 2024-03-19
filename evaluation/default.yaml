@@ -15,7 +15,8 @@ plot:
   metric: null  # is automatically chosen from task name, this will overwrite it
   limits: null  # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
   std: True  # aggreagte over std
-  format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
+  # format: "2.3"  # string, how many digits to display, expects a value seperated by a dot (e.g. 2.3)
+  format: null
 
 plotstyle:
   tight_layout: True
