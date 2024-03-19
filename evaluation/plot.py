@@ -165,7 +165,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
                                         columns=cols, index=idx, values=stat["metric"],
-                                        aggfunc='std',  fill_value=float("inf"), dropna=False
+                                        aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
                                         )
         if float("inf") in pivot_table_std.values.flatten():
             print("WARNING: Not enough data to calculate the std, skipping std in plot")
