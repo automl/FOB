@@ -21,6 +21,7 @@ task:
       p: 0.5
     trivial_augment:
       use: True
+  label_smoothing: 0.0
   target_metric: val_acc
   target_metric_mode: max
 engine:
