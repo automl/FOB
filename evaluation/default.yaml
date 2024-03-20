@@ -75,7 +75,7 @@ evaluation:
   # maps task -> metric to plot
   task_to:
     metric:
-      classification: test_top5_err
+      classification: test_top1_acc
       classification_small: test_acc
       detection: test_AP
       graph: test_rocauc
@@ -86,7 +86,7 @@ evaluation:
       template: test_loss
       translation: test_bleu
     test_metric_mode:
-      classification: min
+      classification: max
       classification_small: max
       detection: max
       graph: max
