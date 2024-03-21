@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 
 class CoraModel(TaskModel):
-    """simple GCN implementation / GAT from pytorch geometric"""
+    """simple GCN implementation from pytorch geometric"""
     def __init__(self, optimizer: Optimizer, config: TaskConfig):
         self.batch_size = config.batch_size
         hidden_channels = config.model.hidden_channels
