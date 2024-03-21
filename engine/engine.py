@@ -8,6 +8,7 @@ import yaml
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning_utilities.core.rank_zero import rank_zero_info
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .configs import EngineConfig, OptimizerConfig, TaskConfig
@@ -70,7 +71,7 @@ class Run():
             trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
         end_time = time.time()
         train_time = int(end_time - start_time)
-        print(f"Finished training in {seconds_to_str(train_time)}.")
+        rank_zero_info(f"Finished training in {seconds_to_str(train_time)}.")
 
     def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
         ckpt_path = self.engine.resume if ckpt is None else ckpt
@@ -167,7 +168,7 @@ class Run():
             max_steps = self._calc_max_steps()
             self._config[self.task_key]["max_steps"] = max_steps
             self._generate_configs()
-            print(f"Info: 'max_steps' not set explicitly, using {max_steps=} (calculated from " +
+            rank_zero_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
             f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
 
     def _calc_max_steps(self) -> int:
@@ -231,7 +232,7 @@ class Engine():
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
             for i, run in enumerate(self.runs()):
-                print(f"Starting run {i + 1}/{len(self._runs)}.")
+                rank_zero_info(f"Starting run {i + 1}/{len(self._runs)}.")
                 run.start()
         # TODO: support differnt ways to schedule runs
         else:
