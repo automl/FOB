@@ -46,7 +46,8 @@ class OGBGModel(TaskModel):
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
     def forward(self, data) -> torch.Tensor:
-        return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
+        # return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
+        return self.model.forward(data.x, data.edge_index, data.batch)
 
     def training_step(self, data, batch_idx):
         y_hat = self.forward(data)
