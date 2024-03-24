@@ -71,11 +71,9 @@ class OGBGDataModule(TaskDataModule):
         """
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
         split_idx = dataset.get_idx_split()
-        self.data_train = dataset[split_idx["train"]]
-        self.data_val = dataset[split_idx["valid"]]
-        self.data_test = dataset[split_idx["test"]]
         if stage == "fit":
             self.data_train = dataset[split_idx["train"]]
+            self.data_val = dataset[split_idx["valid"]]
         if stage == "validate":
             self.data_val = dataset[split_idx["valid"]]
         if stage == "test":

@@ -46,7 +46,6 @@ class OGBGModel(TaskModel):
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
     def forward(self, data) -> torch.Tensor:
-        # return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
         return self.model.forward(data.x, data.edge_index, data.batch)
 
     def training_step(self, data, batch_idx):
@@ -82,8 +81,8 @@ class OGBGModel(TaskModel):
         """
         https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#validation-epoch-level-metrics
         """
-        all_trues = torch.cat(self.metric_trues)
-        all_preds = torch.cat(self.metric_preds)
+        all_trues = torch.cat(self.metric_trues).float()
+        all_preds = torch.cat(self.metric_preds).float()
 
         validation_dict = {"y_true": all_trues, "y_pred": all_preds}
         ogb_score = self.evaluator.eval(validation_dict)
