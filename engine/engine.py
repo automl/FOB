@@ -8,7 +8,7 @@ import yaml
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
-from lightning_utilities.core.rank_zero import rank_zero_info
+from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .configs import EngineConfig, OptimizerConfig, TaskConfig
@@ -155,7 +155,7 @@ class Run():
             if self.engine.resume:
                 available_checkpoints = self.get_available_checkpoints()
                 if len(available_checkpoints) < 1:
-                    print("Warning: engine.resume=True but no checkpoint was found. Starting run from scratch.")
+                    rank_zero_warn("engine.resume=True but no checkpoint was found. Starting run from scratch.")
                 else:
                     resume_path = findfirst(lambda x: x.stem == "last", available_checkpoints)
             self._config[self.engine_key]["resume"] = resume_path
@@ -203,7 +203,7 @@ class Run():
         run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            print(f"Warning: folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
+            rank_zero_warn(f"folder name {run_dir} is too long, using {hashdir} instead.", file=sys.stderr)
             run_dir = hashdir
         self.run_dir = base / run_dir
         self.checkpoint_dir = self.run_dir / "checkpoints"
