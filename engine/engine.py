@@ -120,6 +120,9 @@ class Run():
             strategy=trainer_strategy(self.engine.devices),
             enable_progress_bar=(not self.engine.silent),
             deterministic=self.engine.deterministic,
+            detect_anomaly=self.engine.detect_anomaly,
+            gradient_clip_val=self.engine.gradient_clip_val,
+            gradient_clip_algorithm=self.engine.gradient_clip_algorithm,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
             accelerator=self.engine.accelerator
         )
@@ -197,7 +200,7 @@ class Run():
     def _set_outpath(self, default_config: dict[str, Any]):
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = ["name", "output_dir_name"]
-        include_engine = ["deterministic", "optimize_memory", "seed"]
+        include_engine = ["deterministic", "gradient_clip_val", "gradient_clip_algorithm", "optimize_memory", "seed"]
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
         diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
         run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"

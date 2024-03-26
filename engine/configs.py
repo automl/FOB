@@ -65,6 +65,9 @@ class EngineConfig(BaseConfig):
         cfg = dict(config[engine_key])
         self.accelerator = cfg["accelerator"]
         self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
+        self.detect_anomaly: bool = cfg["detect_anomaly"]
+        self.gradient_clip_val: float | None = cfg["gradient_clip_val"]
+        self.gradient_clip_algorithm: str = cfg["gradient_clip_algorithm"]
         self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.log_extra: bool = cfg.get("log_extra", False)
