@@ -5,6 +5,12 @@ import json
 import math
 import signal
 import torch
+from lightning_utilities.core.rank_zero import rank_zero_only
+
+
+@rank_zero_only
+def rank_zero_print(*args: Any, **kwargs: Any):
+    return print(*args, **kwargs)
 
 
 def write_results(results, filepath: Path):
