@@ -10,9 +10,9 @@ evaluation:
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:
     x_axis:                      # indices on x axis (same order as order of subigures given in data_dirs)
-      - weight_decay
+      - optimizer.weight_decay
     y_axis:                      # indices on y axis (same order as order of subigures given in data_dirs)
-      - learning_rate
+      - optimizer.learning_rate
     metric: null                 # is automatically chosen from task name, this will overwrite it
     limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
     std: True                    # aggreagte over std

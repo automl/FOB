@@ -83,7 +83,10 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         stat["target_metric_mode"] = yaml_content["task"]["target_metric_mode"]
         stat["target_metric"] = yaml_content["task"]["target_metric"]
         # TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
-        hp_dict = yaml_content["optimizer"]
+        
+        # earlier we were only plotting optimizer parameter, now we just take yaml.config names
+        # hp_dict = yaml_content["optimizer"]
+        hp_dict = yaml_content
 
         # print(f"{type(config.plot.metric)=}")
         metric_of_value_to_plot = config.plot.metric
@@ -119,7 +122,20 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
 
 def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {},
                        cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
+    """ """
     task_name = stat["task_name"]
+
+    # CLEANING LAZY USER INPUT
+    # cols are x-axis, idx are y-axis
+    if cols not in dataframe.columns:
+        print("Warning: x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
+              f"  using '{'optimizer.' + cols}' as 'x-axis' instead.")
+        cols = "optimizer." + cols
+    if idx not in dataframe.columns:
+        print("Warning: y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
+              f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
+        idx = "optimizer." + idx
+
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
                                  columns=cols, index=idx, values=stat["metric"],
@@ -210,15 +226,51 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
+def get_num_rows(dataframe: pd.DataFrame, stats_list: list[dict], config: AttributeDict
+                 ) -> tuple[int, list[str]]:
+    """each matrix has 2 params (on for x and y each), one value, and we aggregate over seeds;
+    if there are more than than these 4 parameter with different values,
+    we want to put that in seperate rows instead of aggregating over them.
+    returning: the number of rows (atleast 1) and the names of the cols"""
+    atleast_one_row = 1
+
+    metric = stats_list[0]["metric"]
+    ignored_cols = ["optimizer.weight_decay", "optimizer.learning_rate", "seed", metric]
+    columns_ith_non_unique_values = []
+    for col in dataframe.columns:
+        if col in ignored_cols:
+            if config.verbose:
+                print(f"ignoring {col}")
+            continue
+        if dataframe[col].nunique(dropna=False) > 1:
+            if config.verbose:
+                print(f"adding {col=}")
+            columns_ith_non_unique_values.append(col)
+
+    return len(columns_ith_non_unique_values) + atleast_one_row, columns_ith_non_unique_values
+
 def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict):
 
     """Takes a list of workloads Paths (submission + workload)
     and plots them together in one figure side by side"""
     num_subfigures: int = len(dataframe_list)
 
+    # calculate the number of rows for each dataframe
+    n_rows = []
+    row_names = []
+    for i in range(len(dataframe_list)):
+        current_n_rows, current_names = get_num_rows(dataframe_list[i], stats_list[i], config)
+        n_rows.append(current_n_rows)
+        row_names.append(current_names)
+
+
     # Create a 1x2 subplot layout
     n_rows = 1
+    # n_rows = max(n_rows)
     n_cols = num_subfigures
+    if config.verbose:
+        print(f"{n_rows=}")
+        print(f"{n_cols=}")
 
     # TODO, figsize is just hardcoded for (1, 2) grid and left to default for (1, 1) grid
     #       probably not worth the hazzle to create something dynamic (atleast not now)
@@ -367,8 +419,11 @@ def set_plotstyle(config: AttributeDict):
 
 def pretty_name(name: str, config: AttributeDict) -> str:
     """tries to use a mapping for the name, else will do some general replacement"""
+    name_without_yaml_prefix = name.split(".")[-1]
     if name in config.names.keys():
         name = config.names[name]
+    elif name_without_yaml_prefix in config.names.keys():
+        name = config.names[name_without_yaml_prefix]
     else:
         name = name.replace('_', ' ').title()
     return name
