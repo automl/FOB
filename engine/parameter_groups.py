@@ -135,8 +135,7 @@ def wd_group_named_parameters(model: Module):
 
     if not apply_no_decay:
         param_groups = [ParameterGroup(
-            named_parameters=dict(zip(sorted(union_params), (param_dict[pn] for pn in sorted(union_params)))),
-            weight_decay_multiplier=0.
+            named_parameters=dict(zip(sorted(union_params), (param_dict[pn] for pn in sorted(union_params))))
         )]
     else:
         param_groups = [

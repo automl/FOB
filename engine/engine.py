@@ -199,7 +199,7 @@ class Run():
 
     def _set_outpath(self, default_config: dict[str, Any]):
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
-        exclude_keys = ["name", "output_dir_name"]
+        exclude_keys = ["output_dir_name"]
         include_engine = ["deterministic", "gradient_clip_val", "gradient_clip_algorithm", "optimize_memory", "seed"]
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
         diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
