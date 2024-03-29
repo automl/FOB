@@ -2,6 +2,7 @@ evaluation:
   data_dirs: null                # List of Paths
   output_dir: null               # output filename is output_dir / experiment_name
   experiment_name: null
+  split_groups: false            # if set to true, plot will create a group for each param that differs
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
   last_instead_of_best: False    # use the last model, if not set the ebst model will be used
