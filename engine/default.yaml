@@ -10,8 +10,8 @@ engine:
   optimize_memory: false         # use nondeterministic, but memory-efficient algorithms for self-attention
   output_dir: ./experiments      # where you want to store the results
   precision: bf16-mixed          # floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
-  resume: false                  # you can pass the path to your checkpoint here or set to true, which loads the last checkpoint.
-  run_scheduler: sequential      # How to schedule the runs of the experiment. Currently only supports 'sequential'.
+  resume: true                   # you can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
+  run_scheduler: sequential      # How to schedule the runs of the experiment. Supports 'sequential' and 'single:N' where N is the number of the run starting from 1.
   seed: 42                       # the seed to use for the experiment
   seed_mode: fixed               # currently only supports 'fixed'
   silent: false                  # whether to hide progress bars. Recommended when writing outputs to a log file.

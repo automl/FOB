@@ -234,9 +234,15 @@ class Engine():
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
-            for i, run in enumerate(self.runs()):
-                rank_zero_info(f"Starting run {i + 1}/{len(self._runs)}.")
+            for i, run in enumerate(self.runs(), start=1):
+                rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
                 run.start()
+        elif scheduler.startswith("single"):
+            n = int(scheduler.rsplit(":", 1)[-1])
+            for i, run in enumerate(self.runs(), start=1):
+                if i == n:
+                    rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
+                    run.start()
         # TODO: support differnt ways to schedule runs
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
