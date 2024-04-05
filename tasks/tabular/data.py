@@ -6,7 +6,7 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, StandardScaler
 from tasks import TaskDataModule
 
 
@@ -81,18 +81,25 @@ class TabularDataModule(TaskDataModule):
         return np.load(path)
 
     def _get_feature_preprocessor(self, train_features: np.ndarray, train_index: list) -> Callable:
-        noise = (
-            np.random.default_rng(0)
-            .normal(0.0, 1e-5, train_features.shape)
-            .astype(train_features.dtype)
-        )
-        qt = QuantileTransformer(
-            n_quantiles=max(min(len(train_index) // 30, 1000), 10),
-            output_distribution="normal",
-            subsample=10**9,
-        ).fit(train_features + noise)
+        noise = self.config.train_transforms.noise
+        if noise > 0:
+            stds = np.std(train_features, axis=0, keepdims=True)
+            noise_std = noise / np.maximum(stds, noise)
+            noise = np.random.normal(0.0, noise_std, train_features.shape).astype(train_features.dtype)
+        else:
+            noise = 0.0
+        if self.config.train_transforms.normalizer == "quantile":
+            normalizer = QuantileTransformer(
+                n_quantiles=max(min(len(train_index) // 30, 1000), 10),
+                output_distribution="normal",
+                subsample=10**9,
+            ).fit(train_features + noise)
+        elif self.config.train_transforms.normalizer == "standard":
+            normalizer = StandardScaler().fit(train_features + noise)
+        else:
+            raise ValueError(f"Unknown normalizer {self.config.train_transforms.normalizer}")
         def preprocessor(features: np.ndarray) -> np.ndarray:
-            return qt.transform(features)  # type:ignore
+            return normalizer.transform(features)  # type:ignore
         return preprocessor
 
     def _get_target_preprocessor(self, train_targets: np.ndarray) -> Callable:

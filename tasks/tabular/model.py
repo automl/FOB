@@ -1,17 +1,31 @@
 import torch
 from sklearn.metrics import r2_score, mean_squared_error
-from rtdl_revisiting_models import FTTransformer
+from rtdl_revisiting_models import FTTransformer, _CLSEmbedding, LinearEmbeddings, CategoricalEmbeddings
 from engine.configs import TaskConfig
-from engine.parameter_groups import GroupedModel
+from engine.parameter_groups import GroupedModel, ParameterGroup, group_named_parameters
 from tasks import TaskModel
 from optimizers import Optimizer
 
 
 class GroupedFTTransformer(GroupedModel):
-    def grouped_parameters(self, lr, weight_decay):
-        return self.model.make_parameter_groups()
+    def parameter_groups(self) -> list[ParameterGroup]:
+        blacklist_modules = (_CLSEmbedding, LinearEmbeddings, CategoricalEmbeddings)
+        # same conditions as in FTTransformer.make_parameter_groups()
+        apply_no_decay_conds = [
+            lambda m, _, pn: isinstance(m, blacklist_modules),
+            lambda m, _, pn: pn.endswith('bias'),
+            lambda m, _, pn: pn.endswith('_normalization'),
+        ]
+        # ignore top-level (params are added through its children):
+        ignore_conds = [lambda m, p, pn: isinstance(m, FTTransformer)]
+        return group_named_parameters(
+            self.model,
+            g1_conds=apply_no_decay_conds,
+            g1_kwargs={'weight_decay_multiplier': 0.0},
+            ignore_conds=ignore_conds
+        )
 
-# TODO: grouped model / call `make_parameter_groups`
+
 class TabularModel(TaskModel):
     """
     Lightning Module for tabular data task.

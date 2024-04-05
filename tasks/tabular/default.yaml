@@ -11,6 +11,9 @@ task:
   target_metric_mode: min
   model:  # FTTransformer
     n_blocks: 3  # The supported values are: 1, 2, 3, 4, 5, 6
+  train_transforms:
+    normalizer: quantile  # supports 'standard' and 'quantile'
+    noise: 1.e-3
 engine:
   devices: 1
 optimizer:
