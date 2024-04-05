@@ -80,8 +80,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         kappa_init_method=kappa_init_method,
         reg_function=config.reg_function,
         kappa_adapt=config.kappa_adapt,
-        kappa_update=config.kappa_update,
-        apply_lr=config.apply_lr
+        kappa_update=config.kappa_update
     )
     scheduler = cosine_warmup(step_hint, lr_warmup_steps, config.eta_min_factor * lr, optimizer)
     return {
