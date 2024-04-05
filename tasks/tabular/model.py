@@ -1,10 +1,17 @@
 import torch
+from sklearn.metrics import r2_score, mean_squared_error
 from rtdl_revisiting_models import FTTransformer
-from tasks import TaskModel
 from engine.configs import TaskConfig
+from engine.parameter_groups import GroupedModel
+from tasks import TaskModel
 from optimizers import Optimizer
 
 
+class GroupedFTTransformer(GroupedModel):
+    def grouped_parameters(self, lr, weight_decay):
+        return self.model.make_parameter_groups()
+
+# TODO: grouped model / call `make_parameter_groups`
 class TabularModel(TaskModel):
     """
     Lightning Module for tabular data task.
@@ -25,7 +32,7 @@ class TabularModel(TaskModel):
             d_out=d_out,
             **default_kwargs,
         )
-        super().__init__(model, optimizer, config)
+        super().__init__(GroupedFTTransformer(model), optimizer, config)
         self.loss_fn = torch.nn.MSELoss()
 
     def forward(self, x):
@@ -35,19 +42,33 @@ class TabularModel(TaskModel):
         features, labels = batch
         preds = self.forward(features)
         loss = self.compute_and_log_loss(preds, labels, "train_loss")
+        self.compute_and_log_metrics(preds, labels, stage="train")
         return loss
 
     def validation_step(self, batch, batch_idx):
         features, labels = batch
         preds = self.forward(features)
         self.compute_and_log_loss(preds, labels, "val_loss")
+        self.compute_and_log_metrics(preds, labels, stage="val")
 
     def test_step(self, batch, batch_idx):
         features, labels = batch
         preds = self.forward(features)
         self.compute_and_log_loss(preds, labels, "test_loss")
+        self.compute_and_log_metrics(preds, labels, stage="test")
 
     def compute_and_log_loss(self, preds: torch.Tensor, targets: torch.Tensor, log_label: str) -> torch.Tensor:
         loss = self.loss_fn(preds, targets)
         self.log(log_label, loss)
         return loss
+
+    def compute_and_log_metrics(self, preds: torch.Tensor, targets: torch.Tensor, stage: str):
+        preds = preds.detach().cpu().float().numpy()
+        targets = targets.detach().cpu().float().numpy()
+        metrics = {
+            "rmse": mean_squared_error(targets, preds, squared=False),
+            "r2_score": r2_score(targets, preds)
+        }
+        for k, v in metrics.items():
+            self.log(f"{stage}_{k}", v) # type: ignore
+        return metrics

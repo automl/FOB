@@ -83,7 +83,7 @@ evaluation:
       graph_tiny: test_acc
       mnist: test_acc
       segmentation: test_mIoU
-      tabular: test_loss
+      tabular: test_rmse
       template: test_loss
       translation: test_bleu
     test_metric_mode:

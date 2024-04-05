@@ -1,9 +1,11 @@
 task:
   name: tabular
   output_dir_name: tabular
-  train_split: 0.8
+  train_size: 13209
+  val_size: 3303
+  test_size: 4128
   batch_size: 256
-  max_epochs: 100
+  max_epochs: 50
   max_steps: null
   target_metric: val_loss
   target_metric_mode: min

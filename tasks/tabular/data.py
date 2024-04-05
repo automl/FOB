@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable
 import numpy as np
 import torch
@@ -7,7 +8,6 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import QuantileTransformer
 from tasks import TaskDataModule
-from engine.configs import TaskConfig
 
 
 class TabularDataset(Dataset):
@@ -26,9 +26,6 @@ class TabularDataModule(TaskDataModule):
     """
     DataModule for california housing tabular data task.
     """
-    def __init__(self, config: TaskConfig):
-        super().__init__(config)
-        self.train_split = config.train_split
 
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
@@ -43,12 +40,14 @@ class TabularDataModule(TaskDataModule):
         features = features.astype(np.float32)  # type:ignore
 
         all_idx = np.arange(len(targets))
-        trainval_idx, test_idx = train_test_split(
-            all_idx, train_size=self.train_split
-        )
+        test_idx = self._load_test_idx()
+        trainval_idx = np.setdiff1d(all_idx, test_idx)
         train_idx, val_idx = train_test_split(
-            trainval_idx, train_size=self.train_split
+            trainval_idx, train_size=self.config.train_size
         )
+        assert len(train_idx) == self.config.train_size
+        assert len(val_idx) == self.config.val_size
+        assert len(test_idx) == self.config.test_size
         feature_preprocessor = self._get_feature_preprocessor(features[train_idx], train_idx)
         target_preprocessor = self._get_target_preprocessor(targets[train_idx])
         if stage == "fit":
@@ -75,6 +74,11 @@ class TabularDataModule(TaskDataModule):
                 feature_preprocessor(features[test_idx]),
                 target_preprocessor(targets[test_idx])
             )
+
+    def _load_test_idx(self) -> np.ndarray:
+        # using test idx from https://github.com/yandex-research/rtdl-revisiting-models
+        path = Path(__file__).resolve().parent / "idx_test.npy"
+        return np.load(path)
 
     def _get_feature_preprocessor(self, train_features: np.ndarray, train_index: list) -> Callable:
         noise = (
