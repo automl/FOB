@@ -1,5 +1,6 @@
+import sys
 import torch
-from torch_geometric.nn import GIN, MLP, global_add_pool
+from torch_geometric.nn import GIN, MLP, global_add_pool, global_mean_pool, global_max_pool
 from ogb.graphproppred import Evaluator
 from tasks import TaskModel
 from engine.configs import TaskConfig
@@ -27,10 +28,13 @@ class OGBGModel(TaskModel):
             num_classes=num_classes,
             hidden_channels=gin_params.hidden_channels,
             num_layers=gin_params.num_layers,
+            activation=gin_params.activation,
             dropout=gin_params.dropout,
+            graph_pool=gin_params.graph_pooling,
             jumping_knowledge=gin_params.jumping_knowledge,
             classifier_hidden_channel=mlp_params.hidden_channels,
             classifier_num_layers=mlp_params.layers,
+            classifier_activation=mlp_params.activation,
             classifier_dropout=mlp_params.dropout,
             classifier_norm=mlp_params.norm
             )
@@ -85,7 +89,11 @@ class OGBGModel(TaskModel):
         all_preds = torch.cat(self.metric_preds).float()
 
         validation_dict = {"y_true": all_trues, "y_pred": all_preds}
-        ogb_score = self.evaluator.eval(validation_dict)
+        try:
+            ogb_score = self.evaluator.eval(validation_dict)
+        except ValueError:
+            print("Error: Input contains NaN.", file=sys.stderr)
+            ogb_score = {"rocauc": 0}
         self.log(log_label, ogb_score["rocauc"])  # type: ignore
 
         # free memory
@@ -100,10 +108,13 @@ class GINwithClassifier(torch.nn.Module):
         num_classes,
         hidden_channels=300,
         num_layers=5,
+        activation="relu",
         dropout=0.5,
+        graph_pool="add",
         jumping_knowledge="last",
         classifier_hidden_channel=300,
         classifier_num_layers=2,
+        classifier_activation="relu",
         classifier_norm="batch_norm",
         classifier_dropout=0.5
     ):
@@ -112,21 +123,33 @@ class GINwithClassifier(torch.nn.Module):
             in_channels=node_feature_dim,
             hidden_channels=hidden_channels,
             num_layers=num_layers,
+            act=activation,
             dropout=dropout,
             jk=jumping_knowledge
         )
+
+        if graph_pool == "add":
+            self.graph_pool = global_add_pool
+        elif graph_pool == "mean":
+            self.graph_pool = global_mean_pool
+        elif graph_pool == "max":
+            self.graph_pool = global_max_pool
+        else:
+            raise ValueError('Unknown Graph Pool Type')
+            
 
         self.classifier = MLP(
             in_channels=hidden_channels,
             hidden_channels=classifier_hidden_channel,
             out_channels=num_classes,
             num_layers=classifier_num_layers,
+            act=classifier_activation,
             norm=classifier_norm,
             dropout=classifier_dropout
         )
 
     def forward(self, x, edge_index, batch):
         x = self.gin(x, edge_index)
-        x = global_add_pool(x, batch)
+        x = self.graph_pool(x, batch)
         x = self.classifier(x)
         return x
