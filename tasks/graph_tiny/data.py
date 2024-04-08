@@ -58,10 +58,23 @@ class CoraDataModule(TaskDataModule):
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
+        for this task the forward pass will use masks and
+        only calculate the loss on the nodes corresponding to the mask
         """
         split = self.split
         self.dataset = Planetoid(root=self.data_dir, name='Cora', split=split, transform=NormalizeFeatures())
         self.loader = geom_loader.DataLoader(self.dataset, batch_size=self.batch_size, num_workers=self.workers)
+        if stage == "fit":
+            self.data_train = self.loader
+            self.data_val = self.loader
+        elif stage == "validate":
+            self.data_val = self.loader
+        elif stage == "test":
+            self.data_test = self.loader
+        elif stage == "predict":
+            raise NotImplementedError()
+        else:
+            raise NotImplementedError()
 
     def train_dataloader(self):
         return self.loader

@@ -16,11 +16,13 @@ class CoraModel(TaskModel):
         cached = config.model.cached
         normalize = config.model.normalize
         dropout = config.model.dropout
+        reset_params = config.model.reset_params
         model = GCN(hidden_channels=hidden_channels,
                     num_layers=num_layers,
                     dropout=dropout,
                     cached=cached,
-                    normalize=normalize)
+                    normalize=normalize,
+                    reset_params=reset_params)
         super().__init__(model, optimizer, config)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -64,7 +66,8 @@ class GCN(torch.nn.Module):
             num_layers: int = 2,
             dropout=0.5,
             cached: bool = False,
-            normalize: bool = True
+            normalize: bool = True,
+            reset_params: bool = False
             ):
         self.dropout = dropout
         self.num_layers = num_layers
@@ -102,12 +105,30 @@ class GCN(torch.nn.Module):
                 normalize=normalize,
             )
         )
+        if reset_params:
+            self._reset_parameters()
+
+    def _reset_parameters(self):
+        """
+        initialization from https://github.com/tkipf/pygcn/blob/master/pygcn/layers.py
+        which follows https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
+        """
+        for conv in self.convs:
+            for param in conv.parameters():
+                if param.dim() > 1:  # weight parameter
+                    stdv = 1. / torch.sqrt(torch.tensor(param.size(1)))
+                    torch.nn.init.uniform_(param, -stdv, stdv)
+                else:  # bias
+                    stdv = 1. / torch.sqrt(torch.tensor(param.size(0)))
+                    torch.nn.init.uniform_(param, -stdv.item(), stdv.item())
 
     def forward(self, x, edge_index):
         # print(edge_index)
         for idx, conv in enumerate(self.convs):
             x = conv(x, edge_index)
-            if idx < self.num_layers - 1:
+
+            not_last: bool = idx < self.num_layers - 1
+            if not_last:
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
             else:

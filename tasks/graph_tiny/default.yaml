@@ -3,7 +3,6 @@ task:
   output_dir_name: graph_tiny
   batch_size: 1
   max_epochs: 50
-  max_steps: 50
   target_metric: val_acc
   target_metric_mode: max
   dataset_split: public  # public, full, geom-gcn, random
@@ -13,6 +12,7 @@ task:
     dropout: 0.5
     cached: False
     normalize: True
+    reset_params: False
 engine:
   devices: 1
 optimizer:
