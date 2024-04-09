@@ -1,11 +1,11 @@
 import torch
 from torch.nn.functional import interpolate
-from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from mmseg.evaluation.metrics import IoUMetric
 from tasks import TaskModel
 from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from engine.configs import TaskConfig
 from optimizers import Optimizer
+from .modeling_segformer import SegformerForSemanticSegmentation, SegformerConfig
 
 
 class SegFormerGroupedModel(GroupedModel):
