@@ -108,7 +108,7 @@ class SegformerOverlapPatchEmbeddings(nn.Module):
         _, _, height, width = embeddings.shape
         # (batch_size, num_channels, height, width) -> (batch_size, num_channels, height*width) -> (batch_size, height*width, num_channels)
         # this can be fed to a Transformer layer
-        embeddings = embeddings.flatten(2).transpose(1, 2)
+        embeddings = embeddings.flatten(2).transpose(1, 2).contiguous()
         embeddings = self.layer_norm(embeddings)
         return embeddings, height, width
 
@@ -172,7 +172,7 @@ class SegformerEfficientSelfAttention(nn.Module):
         value_layer = self.transpose_for_scores(self.value(hidden_states))
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2)).contiguous()
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
 
@@ -251,9 +251,9 @@ class SegformerDWConv(nn.Module):
 
     def forward(self, hidden_states, height, width):
         batch_size, seq_len, num_channels = hidden_states.shape
-        hidden_states = hidden_states.transpose(1, 2).view(batch_size, num_channels, height, width)
+        hidden_states = hidden_states.transpose(1, 2).view(batch_size, num_channels, height, width).contiguous()
         hidden_states = self.dwconv(hidden_states)
-        hidden_states = hidden_states.flatten(2).transpose(1, 2)
+        hidden_states = hidden_states.flatten(2).transpose(1, 2).contiguous()
 
         return hidden_states
 
@@ -543,7 +543,7 @@ class SegformerMLP(nn.Module):
         self.proj = nn.Linear(input_dim, config.decoder_hidden_size)
 
     def forward(self, hidden_states: torch.Tensor):
-        hidden_states = hidden_states.flatten(2).transpose(1, 2)
+        hidden_states = hidden_states.flatten(2).transpose(1, 2).contiguous()
         hidden_states = self.proj(hidden_states)
         return hidden_states
 
@@ -587,8 +587,7 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
             # unify channel dimension
             height, width = encoder_hidden_state.shape[2], encoder_hidden_state.shape[3]
             encoder_hidden_state = mlp(encoder_hidden_state)
-            encoder_hidden_state = encoder_hidden_state.permute(0, 2, 1)
-            encoder_hidden_state = encoder_hidden_state.reshape(batch_size, -1, height, width)
+            encoder_hidden_state = encoder_hidden_state.permute(0, 2, 1).reshape(batch_size, -1, height, width).contiguous()
             # upsample
             encoder_hidden_state = nn.functional.interpolate(
                 encoder_hidden_state, size=encoder_hidden_states[0].size()[2:], mode="bilinear", align_corners=False
