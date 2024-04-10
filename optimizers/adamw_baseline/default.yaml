@@ -9,3 +9,5 @@ optimizer:
   epsilon: 1.e-8        # AdamW parameter
   eta_min_factor: 0.01  # the minimum learning rate of the cosine annealing given as a factor of the initial learning rate
   lr_interval: step     # epoch is possible but step is preferred
+  lr_scheduler: cosine  # can be either 'cosine' or 'poly'
+  lr_power: 1.0         # only used if lr_scheduler == 'poly'
