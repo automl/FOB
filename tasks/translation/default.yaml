@@ -6,6 +6,10 @@ task:
   batch_size: 128
   target_metric: val_loss
   target_metric_mode: min
+  model:
+    translation_direction: de-en  # can also be en-de for English to German
+    num_beams: 4
+    length_penalty: 1.0
 engine:
   devices: 4
 optimizer:

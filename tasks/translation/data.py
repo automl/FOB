@@ -1,4 +1,6 @@
 import json
+from typing import Callable
+import torch
 from torch.utils.data import DataLoader
 from datasets import DatasetDict
 import datasets
@@ -10,19 +12,40 @@ from engine.configs import TaskConfig
 
 MAX_TOKENS_PER_SENTENCE = 128
 
+def generate_collate_fn_train(tokenizer, src_language: str, tgt_language: str) -> Callable:
+    collator = DataCollatorForSeq2Seq(tokenizer=tokenizer,
+                                      padding=True,
+                                      label_pad_token_id=tokenizer.pad_token_id,
+                                      return_tensors="pt")
+    def collate(batch) -> object:
+        res = []
+        for sample in batch:
+            res += [{"input_ids": sample[src_language],
+                    "attention_mask": [1.0] * len(sample[src_language]),
+                    "labels": sample[tgt_language]}]
+        return collator(res)
+    return collate
 
-def collate_fn_validtest(batch) -> tuple[list[str], list[str]]:
-    de_text = []
-    en_text = []
-    for sample in batch:
-        de_text += [sample["translation"]["de"]]
-        en_text += [sample["translation"]["en"]]
-    return de_text, en_text
+def generate_collate_fn_validtest(src_language: str, tgt_language: str) -> Callable:
+    def collate(batch) -> tuple[list[str], list[str]]:
+        src_text = []
+        tgt_text = []
+        for sample in batch:
+            src_text += [sample["translation"][src_language]]
+            tgt_text += [sample["translation"][tgt_language]]
+        return src_text, tgt_text
+    return collate
 
 
 class WMTDataModule(TaskDataModule):
     def __init__(self, config: TaskConfig):
         super().__init__(config)
+        self.translation_direction: str = config.model.translation_direction.strip()
+        if not (self.translation_direction == "de-en" or self.translation_direction == "en-de"):
+            raise ValueError("translation direction needs to be de-en or en-de!")
+        self.source_language: str = self.translation_direction.split("-")[0]
+        self.target_language: str = self.translation_direction.split("-")[1]
+        self.collate_fn_validtest = generate_collate_fn_validtest(self.source_language, self.target_language)
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
         self.prepare_workers = max(1, min(self.workers, 5))
@@ -53,14 +76,15 @@ class WMTDataModule(TaskDataModule):
         ds = self._get_dataset()
         print("tokenizing data...")
         def transform_text(data):
-            inputs = [example["de"] for example in data["translation"]]
-            targets = [example["en"] for example in data["translation"]]
-            return self.tokenizer(inputs, text_target=targets)
+            de = [example["de"] for example in data["translation"]]
+            en = [example["en"] for example in data["translation"]]
+            return {"de": self.tokenizer(de)["input_ids"],
+                    "en": self.tokenizer(en)["input_ids"]}
         ds = ds.map(transform_text, batched=True)
         ds["train"] = ds["train"].remove_columns("translation")
         print("filtering sentences with too many tokens...")
-        ds = ds.filter(lambda data: len(data["input_ids"]) <= MAX_TOKENS_PER_SENTENCE and
-                                    len(data["labels"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
+        ds = ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE and
+                                    len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
         print("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
         print("saving additional information...")
@@ -76,10 +100,9 @@ class WMTDataModule(TaskDataModule):
         """
         ds = datasets.load_from_disk(str(self.processed_data_dir))
 
-        data_collator = DataCollatorForSeq2Seq(tokenizer=self.tokenizer,
-                                               padding=True,
-                                               label_pad_token_id=self.tokenizer.pad_token_id,
-                                               return_tensors="pt")
+        data_collator = generate_collate_fn_train(self.tokenizer,
+                                                  self.source_language,
+                                                  self.target_language)
 
         self.collate_fn = data_collator
 
@@ -113,7 +136,7 @@ class WMTDataModule(TaskDataModule):
             self.data_val,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=collate_fn_validtest
+            collate_fn=self.collate_fn_validtest
         )
 
     def test_dataloader(self):
@@ -122,7 +145,7 @@ class WMTDataModule(TaskDataModule):
             self.data_test,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=collate_fn_validtest
+            collate_fn=self.collate_fn_validtest
         )
 
     def predict_dataloader(self):
@@ -131,5 +154,5 @@ class WMTDataModule(TaskDataModule):
             self.data_predict,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=collate_fn_validtest
+            collate_fn=self.collate_fn_validtest
         )
