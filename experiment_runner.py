@@ -9,6 +9,7 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     engine = Engine()
     engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args)
     engine.run_experiment()
+    engine.plot_lazy()
 
     if args.send_timeout:
         print("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck\n")

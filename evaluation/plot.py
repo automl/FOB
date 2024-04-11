@@ -230,7 +230,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 def get_all_num_rows_and_their_names(dataframe_list, stats_list, config):
     n_rows: list[int] = []
     row_names: list[list[str]] = []
-    for i in range(len(dataframe_list)):
+    for i, _ in enumerate(dataframe_list):
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[i]
         engine_seed = "engine.seed"
@@ -475,17 +475,11 @@ def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth:
     return df_list, stats_list
 
 
-def get_output_file_path(workloads: list[Path], config: AttributeDict, stats: list[dict]) -> str:
-    some_workload = workloads[0]
+def get_output_file_path(config: AttributeDict, stats: list[dict]) -> str:
     some_stat = stats[0][0]  # TODO: fix for multiple optim on one plot
     # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
     # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-    # optimizer = Path(some_workload).resolve()
-    # optim_name = optimizer.name
-    # task = Path(optimizer).parent
-    # task_name = task.name
-    # print(f"{stats=}")
-    # print(f"{some_stat=}")
+
     task_name = some_stat["task_name"]
     optim_name = some_stat["optimizer_name"]
 
@@ -600,7 +594,7 @@ def main(config: AttributeDict):
     dfs, stats = extract_dataframes(workloads, depth=config.depth, config=config)
     fig, axs = create_figure(dfs, stats, config)
 
-    output_file_path = get_output_file_path(workloads, config, stats)
+    output_file_path = get_output_file_path(config, stats)
 
     Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
 

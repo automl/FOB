@@ -91,3 +91,10 @@ class EngineConfig(BaseConfig):
         self.workers: int = cfg["workers"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg)
+
+
+class EvalConfig(BaseConfig):
+    def __init__(self, config: dict[str, Any], eval_key: str) -> None:
+        cfg = dict(config[eval_key])
+        # TODO: clean config
+        super().__init__(cfg)

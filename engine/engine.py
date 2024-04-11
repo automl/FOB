@@ -9,9 +9,10 @@ from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from evaluation import evaluation_path
+from evaluation.plot import create_figure, dataframe_from_trials, get_output_file_path, save_csv, save_plot, set_plotstyle
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
-from .configs import EngineConfig, OptimizerConfig, TaskConfig
+from .configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from .callbacks import LogParamsAndGrads, PrintEpoch
 from .grid_search import gridsearch
 from .parser import YAMLParser
@@ -51,6 +52,7 @@ class Run():
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.export_config()
         model, data_module = self.get_task()
+        # TODO: test only correctness for last checkpoint
         if self.engine.train:
             trainer = self.get_trainer()
             self.train(trainer, model, data_module)
@@ -235,6 +237,7 @@ class Run():
         self.engine = EngineConfig(self._config, self.task_key, self.engine_key)
         self.optimizer = OptimizerConfig(self._config, self.optimizer_key, self.task_key, self.identifier_key)
         self.task = TaskConfig(self._config, self.task_key, self.engine_key, self.identifier_key)
+        self.evaluation = EvalConfig(self._config, self.eval_key)
 
 
 class Engine():
@@ -305,6 +308,25 @@ class Engine():
                 self.identifier_key
             )
             yield run
+
+    def plot_lazy(self):
+        config = next(self.runs()).evaluation
+        set_plotstyle(config)
+        dataframe, stats = dataframe_from_trials(list(map(lambda x: x.run_dir, self.runs())), config)
+        dfs = [dataframe]
+        stats = [stats]
+        fig, axs = create_figure(dfs, stats, config)  # which type hint is wrong?
+
+        output_file_path = get_output_file_path(config, stats)
+        Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
+
+        for file_type in config.output_types:
+            if file_type == "csv":
+                save_csv(dfs, output_file_path, config.verbose)
+            elif file_type == "png" or file_type == "pdf":
+                save_plot(fig, axs, output_file_path, file_type, config.verbose)
+        print(f"Saved results into <{output_file_path}>")
+
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)
