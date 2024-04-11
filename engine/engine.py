@@ -305,6 +305,9 @@ class Engine():
             )
             yield run
 
+    def plot(self):
+        return self.plot_lazy()
+
     def plot_lazy(self):
         config = next(self.runs()).evaluation
         set_plotstyle(config)
@@ -324,6 +327,9 @@ class Engine():
                 save_plot(fig, axs, output_file_path, file_type, config.verbose)
         print(f"Saved results into <{output_file_path}>")
 
+    def plot_clean(self):
+        # TODO: create dataframes in engine and plot them
+        raise NotImplementedError("The implementation of this is trivial and left as an exercise for the reader.")
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)

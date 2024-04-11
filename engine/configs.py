@@ -125,10 +125,10 @@ class EvalConfig(BaseConfig):
         self.experiment_name: str = cfg["experiment_name"]
         self.verbose: bool = cfg.get("verbose", False)
         self.split_groups: bool = cfg.get("split_groups", False)  # TODO: option to split into multiple plots
-        self.last_instead_of_best: bool = cfg.get("last_instead_of_best", False)  # TODO: give list of ["last", "best"]
+        self.last_instead_of_best: bool = cfg.get("last_instead_of_best", False)  # TODO: give list of ["last", "best"] (easy: for-loop in lazy_plot)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         cfg["ignore_keys"] = self.ignore_keys
         cfg["plot"]["x_axis"] = wrap_list(cfg["plot"]["x_axis"])
         cfg["plot"]["y_axis"] = wrap_list(cfg["plot"]["y_axis"])
-        # TODO: columns for multiple plots
+        # TODO: columns for multiple plots (ugly: group dataframe by user-specified columns before call to `create_figure`)
         super().__init__(cfg)

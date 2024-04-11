@@ -19,7 +19,7 @@ if __name__ == "__main__":
     if args.backend == "engine":
         engine = Engine()
         engine.parse_experiment_from_file(args.settings, extra_args=extra_args)
-        engine.plot_lazy()
+        engine.plot()
     else:
         yaml_parser = YAMLParser()
         config = yaml_parser.parse_yamls_and_extra_args(default_yaml, args.settings, extra_args)
