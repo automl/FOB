@@ -6,6 +6,9 @@ We currently have the following optimizers:
 | adamw_baseline | [AdamW](https://arxiv.org/abs/1711.05101) | [Cosine Annealing](https://arxiv.org/abs/1608.03983) with linear warmup |
 | adamcpr | [AdamCPR](https://arxiv.org/abs/2311.09058v2) | [Cosine Annealing](https://arxiv.org/abs/1608.03983) with linear warmup |
 | sgd_baseline | Stochastic Gradient Descent | [Cosine Annealing](https://arxiv.org/abs/1608.03983) |
+| sgd_stepwise | [Stochastic Gradient Descent](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html#torch.optim.SGD) | [StepLR](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.StepLR.html) |
+| adafactor | [Adafactor](https://arxiv.org/abs/1804.04235) | Constant |
+
 
 ## Creating your own optimizer
 To add your own optimizer, you need to create a subfolder in the `optimizers` directory. The name of that folder will be the name used to invoke the optimizer. Within the folder you need to provide two files: `optimizer.py` and `default.yaml`. There is a `template` optimizer with useful comments, which can be used as a starting point.
