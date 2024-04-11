@@ -19,6 +19,11 @@ def write_results(results, filepath: Path):
     print(f"Saved results into {filepath}.")
 
 
+def wrap_list(x: Any) -> list[Any]:
+    if isinstance(x, list):
+        return x
+    return [x]
+
 def calculate_steps(epochs: int, datapoints: int, devices: int, batch_size: int) -> int:
     return math.ceil(datapoints / batch_size / devices) * epochs
 

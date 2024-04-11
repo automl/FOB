@@ -235,9 +235,10 @@ def get_all_num_rows_and_their_names(dataframe_list, stats_list, config):
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[i]
         engine_seed = "engine.seed"
-        seed = "seed"
+        seed = "seed"  # legacy
         metric = stats_list[i][0]["metric"]
         ignored_cols = [x_axis, y_axis, engine_seed, seed, metric]
+        ignored_cols += config.get("ignore_keys", [])
         current_n_rows, current_names = get_num_rows(dataframe_list[i], stats_list[i], ignored_cols, config)
         n_rows.append(current_n_rows)
         if not current_names:  # will be empty if we have only one row
@@ -419,7 +420,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list
     if model_param == "default":
         current_dataframe = dataframe
     else:
-        param_name, param_value = model_param.split("=")
+        param_name, param_value = model_param.split("=", maxsplit=1)
         if pd.api.types.is_numeric_dtype(dataframe[param_name]):
             param_value = float(param_value)
         try:
@@ -433,7 +434,6 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list
             print(f"WARNING: was not able to groupby '{param_name}'," +
                     "maybe the data was created with different versions of fob; skipping this row")
             return False
-
     current_plot = create_matrix_plot(current_dataframe, config,
                                         cols, idx,
                                         ax=axs[j][i], low_is_better=low_is_better, stat=stat_entry,
@@ -459,7 +459,9 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list
     title = pretty_name(opti_name, config)
     title += " on "
     title += pretty_name(stat_entry["task_name"], config)
-    axs[j][i].set_title(title + f"\n{model_param}")
+    if max_i > 1 or max_j > 1:
+        title += f" \n({model_param})"
+    axs[j][i].set_title(title)
 
 
 def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
@@ -543,9 +545,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         print("WARNING: there is no 'evaluation' in the yaml provided!")
     if "data_dirs" in config.keys():
         value_is_none = not config.data_dirs
-        value_has_wrong_type = not any(
-            isinstance(config.data_dirs, t) for t in (PathLike, str, list)
-        )
+        value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
         if value_is_none or value_has_wrong_type:
             exit(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
 

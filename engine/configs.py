@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Literal, Optional
-from .utils import AttributeDict, convert_type_inside_dict
+from .utils import AttributeDict, convert_type_inside_dict, some, wrap_list
 
 
 class BaseConfig(AttributeDict):
@@ -90,11 +90,45 @@ class EngineConfig(BaseConfig):
         self.train: bool = cfg.get("train", True)
         self.workers: int = cfg["workers"]
         cfg["max_steps"] = self.max_steps
+        cfg["early_stopping"] = self.early_stopping
         super().__init__(cfg)
+
+    def outpath_relevant_engine_keys(self, prefix: str = "") -> list[str]:
+        keys = [
+            "accelerator",
+            "deterministic",
+            "detect_anomaly",
+            "devices",
+            "early_stopping",
+            "gradient_clip_alg",
+            "gradient_clip_val",
+            "optimize_memory",
+            "precision",
+            "seed"
+        ]
+        return [f"{prefix}{k}" for k in keys]
+
+    def outpath_irrelevant_engine_keys(self, prefix: str = "") -> list[str]:
+        return [f"{prefix}{k}" for k in self.keys() if k not in self.outpath_relevant_engine_keys()]
 
 
 class EvalConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], eval_key: str) -> None:
+    def __init__(self, config: dict[str, Any], eval_key: str, ignore_keys = None) -> None:
         cfg = dict(config[eval_key])
-        # TODO: clean config
+        self.experiment_files = AttributeDict(dict(
+            best_model = "results_best_model.json",
+            last_model = "results_final_model.json",
+            config = "config.yaml"
+        ))
+        self.output_types: list[str] = wrap_list(cfg["output_types"])
+        self.output_dir = Path(cfg["output_dir"]).resolve()
+        self.experiment_name: str = cfg["experiment_name"]
+        self.verbose: bool = cfg.get("verbose", False)
+        self.split_groups: bool = cfg.get("split_groups", False)  # TODO: option to split into multiple plots
+        self.last_instead_of_best: bool = cfg.get("last_instead_of_best", False)  # TODO: give list of ["last", "best"]
+        self.ignore_keys: list[str] = some(ignore_keys, default=[])
+        cfg["ignore_keys"] = self.ignore_keys
+        cfg["plot"]["x_axis"] = wrap_list(cfg["plot"]["x_axis"])
+        cfg["plot"]["y_axis"] = wrap_list(cfg["plot"]["y_axis"])
+        # TODO: columns for multiple plots
         super().__init__(cfg)

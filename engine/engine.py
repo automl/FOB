@@ -205,35 +205,19 @@ class Run():
         )
         self._callbacks["print_epoch"] = PrintEpoch(self.engine.silent)
 
-    def outpath_relevant_engine_keys(self) -> list[str]:
-        return [
-            "accelerator",
-            "deterministic",
-            "detect_anomaly",
-            "devices",
-            "early_stopping",
-            "gradient_clip_alg",
-            "gradient_clip_val",
-            "optimize_memory",
-            "precision",
-            "seed"
-        ]
-
     def outpath_exclude_keys(self) -> list[str]:
         return [
             self.eval_key,
-            "output_dir_name",
-            "max_steps"
+            "output_dir_name"
         ]
 
     def _set_outpath(self):
         self._ensure_max_steps()
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = self.outpath_exclude_keys()
-        include_engine = self.outpath_relevant_engine_keys()
-        exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
+        exclude_keys += self.engine.outpath_irrelevant_engine_keys()
         diffs = concatenate_dict_keys(dict_differences(self._config, self._default_config), exclude_keys=exclude_keys)
-        run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
+        run_dir = ",".join(f"{k}={str(v)}" for k, v in sorted(diffs.items())) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
             rank_zero_warn(f"folder name {run_dir} is too long, using {hashdir} instead.")
@@ -245,7 +229,11 @@ class Run():
         self.engine = EngineConfig(self._config, self.task_key, self.engine_key)
         self.optimizer = OptimizerConfig(self._config, self.optimizer_key, self.task_key, self.identifier_key)
         self.task = TaskConfig(self._config, self.task_key, self.engine_key, self.identifier_key)
-        self.evaluation = EvalConfig(self._config, self.eval_key)
+        self.evaluation = EvalConfig(
+            self._config,
+            self.eval_key,
+            ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.")
+        )
 
 
 class Engine():
@@ -324,7 +312,7 @@ class Engine():
         dataframe, stats = dataframe_from_trials(trials, config)
         dfs = [dataframe]
         stats = [stats]
-        fig, axs = create_figure(dfs, stats, config)  # which type hint is wrong?
+        fig, axs = create_figure(dfs, stats, config)  # type: ignore
 
         output_file_path = get_output_file_path(config, stats)
         Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
