@@ -7,6 +7,7 @@ evaluation:
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
   last_instead_of_best: False    # use the last model, if not set the ebst model will be used
   verbose: False                 # debug prints
+  dpi: 300
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:

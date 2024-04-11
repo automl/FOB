@@ -528,11 +528,11 @@ def save_csv(dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
         df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
-def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
+def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool, dpi: int):
     plot_output_filename = f"{output_file_path}-heatmap.{file_type}"
     if verbose:
         print(f"saving figure as {plot_output_filename}")
-    plt.savefig(plot_output_filename)
+    plt.savefig(plot_output_filename, dpi=dpi)
 
 
 def clean_config(config: AttributeDict) -> AttributeDict:
@@ -608,5 +608,5 @@ def main(config: AttributeDict):
         if file_type == "csv":
             save_csv(dfs, output_file_path, config.verbose)
         elif file_type == "png" or file_type == "pdf":
-            save_plot(fig, axs, output_file_path, file_type, config.verbose)
+            save_plot(fig, axs, output_file_path, file_type, config.verbose, config.dpi)
     print(f"Saved results into <{output_file_path}>")
