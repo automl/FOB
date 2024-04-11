@@ -217,7 +217,11 @@ class Run():
         ]
 
     def outpath_exclude_keys(self) -> list[str]:
-        return [self.eval_key, "output_dir_name"]
+        return [
+            self.eval_key,
+            "output_dir_name",
+            "max_steps"
+        ]
 
     def _set_outpath(self, default_config: dict[str, Any]):
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
@@ -312,7 +316,8 @@ class Engine():
     def plot_lazy(self):
         config = next(self.runs()).evaluation
         set_plotstyle(config)
-        dataframe, stats = dataframe_from_trials(list(map(lambda x: x.run_dir, self.runs())), config)
+        trials = list(map(lambda x: Path(x.run_dir), self.runs()))
+        dataframe, stats = dataframe_from_trials(trials, config)
         dfs = [dataframe]
         stats = [stats]
         fig, axs = create_figure(dfs, stats, config)  # which type hint is wrong?

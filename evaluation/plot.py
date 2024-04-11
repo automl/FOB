@@ -67,6 +67,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         ])
         if not all_files_exist:
             print(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting.")
+            print(f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})")
             continue
 
         yaml_parser = YAMLParser()
@@ -256,7 +257,8 @@ def get_num_rows(dataframe: pd.DataFrame, stats_list: list[dict], ignored_cols: 
     columns_with_non_unique_values = []
     # columns_with_non_unique_values = ["seed"]
     for col in dataframe.columns:
-        if col in ignored_cols:
+        is_eval_key = col.startswith("evaluation.")
+        if col in ignored_cols or is_eval_key:
             if config.verbose:
                 print(f"ignoring {col}")
             continue
@@ -383,7 +385,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
 
     if config.plotstyle.tight_layout:
         fig.tight_layout()
-    if len(config.data_dirs) > 1:
+    if config.data_dirs and len(config.data_dirs) > 1:
         # set experiment name as title when multiple matrices in image
         # super title TODO fix when used together with tight layout
         # print(config.experiment_name)
@@ -603,4 +605,5 @@ def main(config: AttributeDict):
             save_csv(dfs, output_file_path, config.verbose)
         elif file_type == "png" or file_type == "pdf":
             save_plot(fig, axs, output_file_path, file_type, config.verbose)
-    print(f"Saved results into <{output_file_path}>")
+    full_path = Path(output_file_path).resolve()
+    print(f"Saved results into <{full_path}>")
