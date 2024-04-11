@@ -65,11 +65,15 @@ class EngineConfig(BaseConfig):
         cfg = dict(config[engine_key])
         self.accelerator = cfg["accelerator"]
         self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
-        self.detect_anomaly: bool = cfg["detect_anomaly"]
-        self.gradient_clip_val: float | None = cfg["gradient_clip_val"]
-        self.gradient_clip_algorithm: str = cfg["gradient_clip_algorithm"]
-        self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
+        self.detect_anomaly: bool = cfg["detect_anomaly"]
+        self.devices: int = cfg.get("devices", 1)
+        if cfg["early_stopping"] is not None:
+            self.early_stopping: int = cfg["early_stopping"]
+        else:
+            self.early_stopping: int = config[task_key]["max_epochs"]
+        self.gradient_clip_alg: str = cfg["gradient_clip_alg"]
+        self.gradient_clip_val: float | None = cfg["gradient_clip_val"]
         self.log_extra: bool = cfg.get("log_extra", False)
         self.max_steps: int = config[task_key].get("max_steps", None)
         self.optimize_memory: bool = cfg.get("optimize_memory", False)
@@ -80,8 +84,10 @@ class EngineConfig(BaseConfig):
         self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
+        self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
         self.silent: bool = cfg.get("silent", False)
-        self.test_only: bool = cfg.get("test_only", False)
+        self.test: bool = cfg.get("test", True)
+        self.train: bool = cfg.get("train", True)
         self.workers: int = cfg["workers"]
         cfg["max_steps"] = self.max_steps
         super().__init__(cfg)

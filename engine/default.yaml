@@ -1,19 +1,25 @@
-engine:
-  accelerator: gpu               # whether to train on cpu or gpu
-  data_dir: ./data               # where you want to store the training data
-  deterministic: warn            # 'warn' tries to use deterministic algorithms if possible, also accepts true or false.
-  detect_anomaly: false          # lightning trainer argument with same name
-  gradient_clip_val: null        # DEFAULT: don't clip gradients, expects value in [0, 1]
-  gradient_clip_algorithm: norm  # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
-  # devices: 1                   # this is set by each task by default, but can be overridden
-  log_extra: false               # activate logging of gradients and more.
-  optimize_memory: false         # use nondeterministic, but memory-efficient algorithms for self-attention
-  output_dir: ./experiments      # where you want to store the results
-  precision: bf16-mixed          # floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
-  resume: true                   # you can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
-  run_scheduler: sequential      # How to schedule the runs of the experiment. Supports 'sequential' and 'single:N' where N is the number of the run starting from 1.
-  seed: 42                       # the seed to use for the experiment
-  seed_mode: fixed               # currently only supports 'fixed'
-  silent: false                  # whether to hide progress bars. Recommended when writing outputs to a log file.
-  test_only: false               # do not train the model before evaluation. Recommended to use with 'resume'.
-  workers: 16                    # the number of processes to use for dataloading
+engine: 
+  accelerator: gpu           # Whether to train on cpu or gpu
+  data_dir: ./data           # Where you want to store the training data
+  deterministic: warn        # 'warn' tries to use deterministic algorithms if possible, also accepts true or false.
+  detect_anomaly: false      # Lightning trainer argument with same name. TODO: handle this
+  devices: null              # This is set by each task by default, but can be overridden
+  early_stopping: null       # The number of epochs to wait before stopping if no improvement is found. Set to null to disable. TODO: implement this
+  gradient_clip_alg: norm    # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
+  gradient_clip_val: null    # DEFAULT: don't clip gradients, expects value in [0, 1]
+  log_extra: false           # Activate logging of gradients and more.
+  optimize_memory: false     # Use nondeterministic, but memory-efficient algorithms for self-attention
+  output_dir: ./experiments  # Where you want to store the results
+  precision: bf16-mixed      # Floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
+  resume: true               # You can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
+  run_scheduler: sequential  # How to schedule the runs of the experiment. Supported values:
+                               # 'sequential': runs are performed sequentially 
+                               # 'single:N' where N is the number of the run starting from 1.
+                               # 'slurm_array': runs are scheduled using SLURM TODO: implement this
+  sbatch_args: {}            # Additional arguments to pass to sbatch. Only used if run_scheduler is 'slurm_array' TODO: implement this
+  seed: 42                   # The seed to use for the experiment
+  seed_mode: fixed           # Currently only supports 'fixed'
+  silent: false              # whether to hide progress bars. Recommended when writing outputs to a log file.
+  test: true                 # Whether to test the model.
+  train: true                # Whether to train the model.
+  workers: 16                # The number of processes to use for dataloading

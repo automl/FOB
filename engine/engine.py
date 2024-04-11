@@ -2,13 +2,13 @@ from typing import Any, Callable, Iterable, Iterator, Optional
 from pathlib import Path
 import hashlib
 import time
-import sys
 import torch
 import yaml
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from evaluation import evaluation_path
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .configs import EngineConfig, OptimizerConfig, TaskConfig
@@ -30,12 +30,14 @@ class Run():
             task_key: str,
             optimizer_key: str,
             engine_key: str,
+            eval_key: str,
             identifier_key: str
             ) -> None:
         self._config = config
         self.task_key = task_key
         self.optimizer_key = optimizer_key
         self.engine_key = engine_key
+        self.eval_key = eval_key
         self.identifier_key = identifier_key
         self._generate_configs()
         self._set_outpath(default_config)
@@ -49,14 +51,15 @@ class Run():
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.export_config()
         model, data_module = self.get_task()
-        if not self.engine.test_only:
+        if self.engine.train:
             trainer = self.get_trainer()
             self.train(trainer, model, data_module)
-        tester = self.get_tester()
-        self.test(tester, model, data_module)
-        best_path = self.get_best_checkpoint()
-        if best_path is not None:
-            self.test(tester, model, data_module, Path(best_path))
+        if self.engine.test:
+            tester = self.get_tester()
+            self.test(tester, model, data_module)
+            best_path = self.get_best_checkpoint()
+            if best_path is not None:
+                self.test(tester, model, data_module, Path(best_path))
 
     def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
         start_time = time.time()
@@ -122,7 +125,7 @@ class Run():
             deterministic=self.engine.deterministic,
             detect_anomaly=self.engine.detect_anomaly,
             gradient_clip_val=self.engine.gradient_clip_val,
-            gradient_clip_algorithm=self.engine.gradient_clip_algorithm,
+            gradient_clip_algorithm=self.engine.gradient_clip_alg,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
             accelerator=self.engine.accelerator
         )
@@ -197,10 +200,27 @@ class Run():
         )
         self._callbacks["print_epoch"] = PrintEpoch(self.engine.silent)
 
+    def outpath_relevant_engine_keys(self) -> list[str]:
+        return [
+            "accelerator",
+            "deterministic",
+            "detect_anomaly",
+            "devices",
+            "early_stopping",
+            "gradient_clip_alg",
+            "gradient_clip_val",
+            "optimize_memory",
+            "precision",
+            "seed"
+        ]
+
+    def outpath_exclude_keys(self) -> list[str]:
+        return [self.eval_key, "output_dir_name"]
+
     def _set_outpath(self, default_config: dict[str, Any]):
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
-        exclude_keys = ["output_dir_name"]
-        include_engine = ["deterministic", "gradient_clip_val", "gradient_clip_algorithm", "optimize_memory", "seed"]
+        exclude_keys = self.outpath_exclude_keys()
+        include_engine = self.outpath_relevant_engine_keys()
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
         diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
         run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
@@ -224,11 +244,13 @@ class Engine():
         self.task_key = "task"
         self.optimizer_key = "optimizer"
         self.engine_key = "engine"
+        self.eval_key = "evaluation"
         self.identifier_key = "name"
         self.default_file_name = "default.yaml"
         self.parser = YAMLParser()
 
     def run_experiment(self):
+        # TODO: early stopping and detect_anomaly
         assert len(self._runs) > 0, "No runs in experiment, make sure to call 'parse_experiment' first."
         scheduler = self._runs[0][self.engine_key]["run_scheduler"]
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
@@ -243,19 +265,31 @@ class Engine():
                 if i == n:
                     rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
                     run.start()
-        # TODO: support differnt ways to schedule runs
+        # TODO: support slurm
+        elif scheduler == "slurm_array":
+            raise NotImplementedError("Slurm scheduler not implemented yet.")
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
-    def parse_experiment(self, file: Path, extra_args: Iterable[str] = tuple()):
-        searchspace = self.parser.parse_yaml(file)
+    def parse_experiment_from_file(self, file: Path, extra_args: Iterable[str] = tuple()):
+        searchspace: dict[str, Any] = self.parser.parse_yaml(file)
+        self.parse_experiment(searchspace, extra_args)
+
+    def parse_experiment(self, searchspace: dict[str, Any], extra_args: Iterable[str] = tuple()):
         self.parser.parse_args_into_searchspace(searchspace, extra_args)
         self._named_dicts_to_list(
             searchspace,
             [self.optimizer_key, self.task_key],
             [optimizer_names(), task_names()]
         )
-        self._runs += gridsearch(searchspace)
+        # exclude plotting from gridsearch
+        if self.eval_key in searchspace:
+            eval_config = searchspace.pop(self.eval_key)
+        else:
+            eval_config = {}
+        self._runs = gridsearch(searchspace)
+        for run in self._runs:
+            run[self.eval_key] = eval_config
         self._fill_runs_from_default(self._runs)
         self._fill_defaults()
 
@@ -267,6 +301,7 @@ class Engine():
                 self.task_key,
                 self.optimizer_key,
                 self.engine_key,
+                self.eval_key,
                 self.identifier_key
             )
             yield run
@@ -292,9 +327,10 @@ class Engine():
     def _fill_runs_from_default(self, runs: list[dict[str, Any]]):
         for i, _ in enumerate(runs):
             # order from higher to lower in hierarchy
-            runs[i] = self._fill_unnamed_from_default(runs[i], engine_path)
             runs[i] = self._fill_named_from_default(runs[i], self.task_key, task_path)
             runs[i] = self._fill_named_from_default(runs[i], self.optimizer_key, optimizer_path)
+            runs[i] = self._fill_unnamed_from_default(runs[i], engine_path)
+            runs[i] = self._fill_unnamed_from_default(runs[i], evaluation_path)
 
     def _fill_unnamed_from_default(self, experiment: dict[str, Any], unnamed_root: Callable) -> dict[str, Any]:
         default_path: Path = unnamed_root() / self.default_file_name
@@ -318,11 +354,3 @@ class Engine():
         assert key in experiment, f"You did not provide any {key}."
         assert isinstance(experiment[key], str) or identifier in experiment[key], \
             f"Unknown {key}, either specify only a string or provide a key '{identifier}'"
-
-    def dump_experiments(self):
-        # TODO: remove this and make proper export function
-        for i, e in enumerate(self._runs):
-            outpath = Path(e["runtime"]["output_dir"]) / f"experiment_{i}.yaml"
-            outpath.parent.mkdir(parents=True, exist_ok=True)
-            with open(outpath, "w", encoding="utf8") as f:
-                yaml.safe_dump(e, f)
