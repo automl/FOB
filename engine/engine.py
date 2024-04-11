@@ -35,13 +35,14 @@ class Run():
             identifier_key: str
             ) -> None:
         self._config = config
+        self._default_config = default_config
         self.task_key = task_key
         self.optimizer_key = optimizer_key
         self.engine_key = engine_key
         self.eval_key = eval_key
         self.identifier_key = identifier_key
         self._generate_configs()
-        self._set_outpath(default_config)
+        self._set_outpath()
         self._callbacks = AttributeDict({})
 
     def start(self):
@@ -175,6 +176,8 @@ class Run():
         if self.task.max_steps is None:
             max_steps = self._calc_max_steps()
             self._config[self.task_key]["max_steps"] = max_steps
+            if self._default_config[self.task_key]["max_steps"] is None:
+                self._default_config[self.task_key]["max_steps"] = max_steps
             self._generate_configs()
             rank_zero_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
             f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
@@ -223,12 +226,13 @@ class Run():
             "max_steps"
         ]
 
-    def _set_outpath(self, default_config: dict[str, Any]):
+    def _set_outpath(self):
+        self._ensure_max_steps()
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = self.outpath_exclude_keys()
         include_engine = self.outpath_relevant_engine_keys()
         exclude_keys += [k for k in self._config[self.engine_key] if not k in include_engine]
-        diffs = concatenate_dict_keys(dict_differences(self._config, default_config), exclude_keys=exclude_keys)
+        diffs = concatenate_dict_keys(dict_differences(self._config, self._default_config), exclude_keys=exclude_keys)
         run_dir = ",".join(f"{k}={str(v)}" for k, v in diffs.items()) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
