@@ -63,7 +63,8 @@ class WMTDataModule(TaskDataModule):
                                    data_dir=str(self.data_dir),
                                    language_pair=("de", "en"),
                                    cache_dir=str(self.cache_dir), trust_remote_code=True,
-                                   num_proc=self.prepare_workers)
+                                   num_proc=self.prepare_workers,
+                                   revision="e126783e58293db0be0c11dca4a4d2e6f4dcf0cd")
         return ds  # type: ignore
 
     def prepare_data(self):
