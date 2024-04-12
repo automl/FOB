@@ -124,13 +124,19 @@ class EvalConfig(BaseConfig):
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.experiment_name: str = cfg["experiment_name"]
         self.verbose: bool = cfg.get("verbose", False)
-        self.split_groups: bool = cfg.get("split_groups", False)  # TODO: option to split into multiple plots
+        split = cfg.get("split_groups", False)
+        self.split_groups: bool | list[str] = split if isinstance(split, bool) else wrap_list(split)
         self.checkpoints: list[Literal["last", "best"]] = cfg["checkpoints"]
         column_split_key = cfg.get("column_split_key", None)
         self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
         self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
+        self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])
         cfg["ignore_keys"] = self.ignore_keys
+        cfg["output_types"] = self.output_types
+        cfg["aggregate_groups"] = self.aggregate_groups
+        cfg["output_types"] = self.output_types
         cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
         cfg["plot"]["y_axis"] = EndlessList(wrap_list(cfg["plot"]["y_axis"]))
+        cfg["split_groups"] = self.split_groups
         super().__init__(cfg)

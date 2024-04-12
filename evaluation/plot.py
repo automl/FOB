@@ -1,16 +1,16 @@
 import json
-from sys import exit
+import sys
 from pathlib import Path
 from os import PathLike
 from typing import List, Literal
+from itertools import repeat
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_warn
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
 from evaluation import evaluation_path
-from itertools import repeat
 
 
 def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
@@ -109,7 +109,6 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     Uses pd.pivot_table() and sns.heatmap().
     """
     df_entry = dataframe.iloc[0]
-    task_name = df_entry["task.name"]
     metric_name = df_entry["evaluation.plot.metric"]
 
     # CLEANING LAZY USER INPUT
@@ -195,15 +194,14 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
     n_rows: list[int] = []
     row_names: list[list[str]] = []
     for i, df in enumerate(dataframe_list):
-        seed = "seed"  # legacy
-        engine_seed = "engine.seed"
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[0]
         if df["evaluation.plot.metric"].nunique() > 1:
             rank_zero_warn("More than one metric found, using the first one.")
         metric = df["evaluation.plot.metric"].unique()[0]
-        ignored_cols = [x_axis, y_axis, engine_seed, seed, metric]
+        ignored_cols = [x_axis, y_axis, metric]
         ignored_cols += config.get("ignore_keys", [])
+        ignored_cols += config.get("aggregate_groups", [])
         current_n_rows, current_names = get_num_rows(df, ignored_cols, config)
         n_rows.append(current_n_rows)
         if not current_names:  # will be empty if we have only one row
@@ -221,21 +219,20 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
     necesarry_rows = 0
 
     # the user might specify a value for the groups that we should split on in <split_groups>
-    whitelisted_cols: list[str] | Literal["all", ""] = "all"  # everything is whitelisted if this value stays N this value if it stays None
-    if isinstance(config.split_groups, str):
-        # user has given one value, we want to process a list
-        whitelisted_cols = [config.split_groups]
-    elif isinstance(config.split_groups, list):
+    whitelisted_cols: list[str] | Literal["all"] = "all"  # everything is whitelisted if this value stays 'all'
+    if isinstance(config.split_groups, list):
         whitelisted_cols = config.split_groups[:]
-    elif config.split_groups == False:
-        whitelisted_cols = ""
+    elif config.split_groups is False:
+        whitelisted_cols = []
 
     columns_with_non_unique_values = []
     for col in dataframe.columns:
         is_eval_key = col.startswith("evaluation.")
         is_ignored = col in ignored_cols
         is_whitelisted = whitelisted_cols == "all" or col in whitelisted_cols
-        if is_ignored or is_eval_key or not is_whitelisted:
+        if any([is_ignored, is_eval_key, not is_whitelisted]):
+            if is_whitelisted:
+                rank_zero_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
             if config.verbose:
                 print(f"ignoring {col}")
             continue
@@ -245,7 +242,7 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
                 print(f"adding {col} since there are {nunique} unique values")
             for unique_hp in dataframe[col].unique():
                 columns_with_non_unique_values.append(f"{col}={unique_hp}")
-            necesarry_rows += (nunique)  # each unique parameter should be an indivudal plot
+            necesarry_rows += (nunique)  # each unique parameter should be an individal plot
 
     rows_number = max(necesarry_rows, 1)
     col_names = columns_with_non_unique_values
@@ -266,7 +263,7 @@ def find_global_vmin_vmax(dataframe_list, config):
         vmin = float('inf')
         vmax = float('-inf')
         if config.verbose:
-            print(f"===== cbar limits =====")
+            print("===== cbar limits =====")
             print()
         for i in range(num_cols):
             dataframe = dataframe_list[i]
@@ -304,7 +301,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # Handling of the number of rows in the plot
     # we could either create a full rectangular grid, or allow each subplot to nest subplots
     # for nesting we would need to create subfigures instead of subplots i think
-    if config.split_groups == False:
+    if config.split_groups is False:
         n_rows_max = 1
         row_names = [["default"] for _ in range(num_cols)]
     else:
@@ -319,19 +316,23 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # EDIT: it was slightly adapted to allow num rows without being completely unreadable
     # margin = (num_subfigures - 1) * 0.3
     # figsize=(5*n_cols + margin, 2.5)
-    figsize = None
+    scale = config.plotstyle.scale
+    if num_cols == 1 and n_rows_max > 1:
+        figsize = (2**3 * scale, 2 * 3 * n_rows_max * scale)
     if num_cols == 2:
         # TODO: after removing cbar from left subifgure, it is squished
         #       there is an argument to share the legend, we should use that
-        figsize = (12 * config.plotstyle.scale, 5.4 * n_rows_max * config.plotstyle.scale)
+        figsize = (12 * scale, 5.4 * n_rows_max * scale)
     elif num_cols > 2:
-        figsize = (12 * (num_cols / 2) * config.plotstyle.scale, 5.4 * n_rows_max * config.plotstyle.scale)
+        figsize = (12 * (num_cols / 2) * scale, 5.4 * n_rows_max * scale)
+    else:
+        figsize = None
 
     fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize)
-    if num_cols == 1:
-        axs = [axs]  # adapt for special case so we have unified types
     if n_rows_max == 1:
         axs = [axs]
+    if num_cols == 1:
+        axs = [[ax] for ax in axs]  # adapt for special case so we have unified types
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
@@ -473,19 +474,21 @@ def set_plotstyle(config: AttributeDict):
     plt.rcParams["font.size"] = config.plotstyle.font.size
 
 
-def pretty_name(name: str, config: AttributeDict, pretty_names: dict | str = {}) -> str:
-    """tries to use a mapping for the name, else will do some general replacement.
-    mapping can be a directory or a filename of a yaml file with 'names' key"""
-    
+def pretty_name(name: str, pretty_names: dict | str = {}) -> str:
+    """
+    Tries to use a mapping for the name, else will do some general replacement.
+    mapping can be a directory or a filename of a yaml file with 'names' key
+    """
+
     # reading from yaml and caching the dictionary
     label_file: Path = evaluation_path() / "labels.yaml"
     if isinstance(pretty_names, str):
         label_file = Path(pretty_names)
-    
+
     if pretty_names == {} or isinstance(pretty_names, str):
         yaml_parser = YAMLParser()
         yaml_content = yaml_parser.parse_yaml(label_file)
-        pretty_names = yaml_content["names"]
+        pretty_names: dict[str, str] = yaml_content["names"]
 
     # applying pretty names
     name_without_yaml_prefix = name.split(".")[-1]
@@ -539,8 +542,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         value_is_none = not config.data_dirs
         value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
         if value_is_none or value_has_wrong_type:
-            exit(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
-
+            sys.exit(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
 
     # print(f"{config=}")
     # allow the user to write a single string instead of a list of strings
@@ -590,4 +592,4 @@ def main(config: AttributeDict):
 
     output_file_path = get_output_file_path(dfs, config)
 
-    
+    save_files(dfs, output_file_path, config)

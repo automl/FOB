@@ -3,6 +3,8 @@ evaluation:
   output_dir: null               # output filename is output_dir / experiment_name
   experiment_name: null
   split_groups: false            # {True, False, [param.a, param.b, ...]} create additional plots where the data is grouped by the given parameter; True to detect all params with multiple unique values
+  aggregate_groups:              # groups over which to aggregate values and compute mean/std. Default: [engine.seed]
+    - engine.seed
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
   checkpoints: ["best", "last"]  # which model checkpoint to use
@@ -18,7 +20,7 @@ evaluation:
       - optimizer.learning_rate
     metric: null                 # is automatically chosen from task name, this will overwrite it
     limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for automatic
-    std: True                    # aggreagte over std
+    std: True                    # show std over aggregated values
     aggfunc: std                 # for example {std, var, sem} which function to use to aggregate over the seeds; will only be used when 'std' is set to true
     # format:
     #  string, how many digits to display, expects two values seperated by a dot (e.g. "2.3")

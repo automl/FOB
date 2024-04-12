@@ -11,7 +11,7 @@ from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from evaluation import evaluation_path
-from evaluation.plot import create_figure, dataframe_from_trials, get_output_file_path, save_files, set_plotstyle
+from evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
@@ -315,6 +315,7 @@ class Engine():
             yield run
 
     def plot(self):
+        # TODO: option to split into multiple files
         config = next(self.runs()).evaluation
         set_plotstyle(config)
         for mode in config.checkpoints:
