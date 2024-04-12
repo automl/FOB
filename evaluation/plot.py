@@ -9,6 +9,7 @@ import pandas as pd
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
+from evaluation import evaluation_path
 from itertools import repeat
 
 
@@ -126,44 +127,25 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
                                  columns=cols, index=idx, values=metric_name,
                                  aggfunc='mean')
 
-    task_format_exists = task_name in config.task_to.format.keys()
-    explicit_format_exists = config.plot.format is not None
-    specified_format = task_format_exists or explicit_format_exists
-
     fmt = None
-    format_string = ""
-    if task_format_exists:
-        format_string = config.task_to.format[task_name]
+    format_string = config.plot.format
 
-    if explicit_format_exists:
-        format_string = config.plot.format
+    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
+    value_exp_factor, decimal_points = format_string.split(".")
+    value_exp_factor = int(value_exp_factor)
+    decimal_points = int(decimal_points)
+    if vmin:
+        vmin *= (10 ** value_exp_factor)
+    if vmax:
+        vmax *= (10 ** value_exp_factor)
+    pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
+    fmt=f".{decimal_points}f"
 
-    if specified_format:
-        # scaline the values given by the user to fit his format needs (-> and adapting the limits)
-        value_exp_factor, decimal_points = format_string.split(".")
-        value_exp_factor = int(value_exp_factor)
-        decimal_points = int(decimal_points)
-        specified_format = True
-        if vmin:
-            vmin *= (10 ** value_exp_factor)
-        if vmax:
-            vmax *= (10 ** value_exp_factor)
-        pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
-        fmt=f".{decimal_points}f"
-
-    # overwriting the RANGE of the values for the colors (legend bar) with default tasks values
-    if task_name in config.task_to.limits.keys() and config.task_to.limits[task_name] is not None:
-        vmin = min(config.task_to.limits[task_name])
-        vmax = max(config.task_to.limits[task_name])
-    # overwriting the RANGE of the values for the colors (legend bar) with explicit values
-    if config.plot.limits:
-        vmin = min(config.plot.limits)  # lower limit (or None if not given)
-        vmax = max(config.plot.limits)  # upper limit (or None if not given)
+    vmin = min(config.plot.limits)
+    vmax = max(config.plot.limits)
 
     if config.verbose:
         print(f"setting cbar limits to {vmin}, {vmax} ")
-
-    if config.verbose:
         print(pivot_table)
 
     colormap_name = config.plotstyle.color_palette
@@ -191,8 +173,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         if float("inf") in pivot_table_std.values.flatten():
             print("WARNING: Not enough data to calculate the std, skipping std in plot")
 
-        if specified_format:
-            pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
+        pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
 
         annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
         for i in pivot_table.index:
@@ -390,11 +371,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     dataframe = dataframe_list[i]
     df_entry = dataframe.iloc[0]  # just get an arbitrary trial for the target metric mode and submission name
     opti_name = df_entry['optimizer.name']
-    task_name = df_entry['task.name']
-    s_target_metric_mode = df_entry['task.target_metric_mode']
-    low_is_better = s_target_metric_mode == "min"
-    if task_name in config.task_to.test_metric_mode.keys():
-        low_is_better = config.task_to.test_metric_mode[task_name] == "min"
+    low_is_better = config.plot.test_metric_mode == "min"
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
@@ -487,13 +464,26 @@ def set_plotstyle(config: AttributeDict):
     plt.rcParams["font.size"] = config.plotstyle.font.size
 
 
-def pretty_name(name: str, config: AttributeDict) -> str:
-    """tries to use a mapping for the name, else will do some general replacement"""
+def pretty_name(name: str, config: AttributeDict, pretty_names: dict | str = {}) -> str:
+    """tries to use a mapping for the name, else will do some general replacement.
+    mapping can be a directory or a filename of a yaml file with 'names' key"""
+    
+    # reading from yaml and caching the dictionary
+    label_file: Path = evaluation_path() / "labels.yaml"
+    if isinstance(pretty_names, str):
+        label_file = Path(pretty_names)
+    
+    if pretty_names == {} or isinstance(pretty_names, str):
+        yaml_parser = YAMLParser()
+        yaml_content = yaml_parser.parse_yaml(label_file)
+        pretty_names = yaml_content["names"]
+
+    # applying pretty names
     name_without_yaml_prefix = name.split(".")[-1]
-    if name in config.names.keys():
-        name = config.names[name]
-    elif name_without_yaml_prefix in config.names.keys():
-        name = config.names[name_without_yaml_prefix]
+    if name in pretty_names.keys():
+        name = pretty_names[name]
+    elif name_without_yaml_prefix in pretty_names.keys():
+        name = pretty_names[name_without_yaml_prefix]
     else:
         name = name.replace('_', ' ').title()
     return name

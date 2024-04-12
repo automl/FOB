@@ -34,3 +34,9 @@ engine:
 optimizer:
   name: adamw_baseline
   weight_decay: 1.0
+evaluation:
+  plot:
+    metric: test_top1_acc
+    test_metric_mode: max
+    format: "2.1"
+    limits: [55, 69]

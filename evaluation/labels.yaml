@@ -1,1 +1,25 @@
-# TODO: move labels from default.yaml to here
+# pretty names for the plot
+names:  
+  # optimizer
+  adamw_baseline: AdamW
+  adamcpr: AdamCPR
+  sgd_baseline: SGD
+  # metric
+  test_acc: Accuracy (Test)
+  test_loss: Test Loss (lower is better)
+  test_mIoU: Intersection over Union
+  test_mAcc: Test mean Accuracy
+  # parameter
+  learning_rate: Learning Rate
+  weight_decay: Weight Decay
+  # tasks
+  classification: classification
+  classification_small: classification_small
+  detection: detection
+  graph: graph
+  graph_tiny: graph_tiny
+  mnist: mnist
+  segmentation: segmentation
+  tabular: tabular
+  template: template
+  translation: translation

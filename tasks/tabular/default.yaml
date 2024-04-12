@@ -18,3 +18,9 @@ engine:
   devices: 1
 optimizer:
   name: adamw_baseline
+evaluation:
+  plot:
+    metric: test_rmse
+    test_metric_mode: min
+    format: "0.3"
+    limits: [0.38, 0.5]

@@ -13,3 +13,9 @@ engine:
   devices: 4
 optimizer:
   name: adamw_baseline
+evaluation:
+  plot:
+    metric: test_mIoU
+    test_metric_mode: max
+    format: "0.3"
+    limits: [30, 40]
