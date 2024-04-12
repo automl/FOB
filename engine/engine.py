@@ -231,7 +231,9 @@ class Run():
         self.task = TaskConfig(self._config, self.task_key, self.engine_key, self.identifier_key)
         self.evaluation = EvalConfig(
             self._config,
-            self.eval_key,
+            eval_key=self.eval_key,
+            optimizer_key=self.optimizer_key,
+            identifier_key=self.identifier_key,
             ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.")
         )
 

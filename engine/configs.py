@@ -113,7 +113,7 @@ class EngineConfig(BaseConfig):
 
 
 class EvalConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], eval_key: str, ignore_keys = None) -> None:
+    def __init__(self, config: dict[str, Any], eval_key: str, optimizer_key: str, identifier_key: str, ignore_keys = None) -> None:
         cfg = dict(config[eval_key])
         self.experiment_files = AttributeDict(dict(
             best_model = "results_best_model.json",
@@ -126,6 +126,8 @@ class EvalConfig(BaseConfig):
         self.verbose: bool = cfg.get("verbose", False)
         self.split_groups: bool = cfg.get("split_groups", False)  # TODO: option to split into multiple plots
         self.last_instead_of_best: bool = cfg.get("last_instead_of_best", False)  # TODO: give list of ["last", "best"] (easy: for-loop in lazy_plot)
+        column_split_key = cfg.get("column_split_key", None)
+        self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         cfg["ignore_keys"] = self.ignore_keys
         cfg["plot"]["x_axis"] = wrap_list(cfg["plot"]["x_axis"])
