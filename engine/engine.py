@@ -315,17 +315,28 @@ class Engine():
         dataframe, stats = dataframe_from_trials(trials, config)
         dfs = [dataframe]
         stats = [stats]
-        fig, axs = create_figure(dfs, stats, config)  # type: ignore
 
-        output_file_path = get_output_file_path(config, stats)
-        Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
+        for _, use_final_results in enumerate([True, False]):  # last, best
+            # CREATE COLUMNS
+            # create columns  (i.e. group dataframe into a list of dataframes)
+            name_from_yaml = config.column_split_key
+            list_of_dataframes = []
+            for unique_hp in dataframe[name_from_yaml].unique():
+                list_of_dataframes.append(dataframe.groupby([name_from_yaml]).get_group(unique_hp))
+            dfs = list_of_dataframes
+            # FINISHED CREATING COLUMNS
 
-        for file_type in config.output_types:
-            if file_type == "csv":
-                save_csv(dfs, output_file_path, config.verbose)
-            elif file_type == "png" or file_type == "pdf":
-                save_plot(fig, axs, output_file_path, file_type, config.verbose)
-        print(f"Saved results into <{output_file_path}>")
+            fig, axs = create_figure(dfs, stats, config)  # type: ignore
+
+            output_file_path = get_output_file_path(config, stats)
+            Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
+
+            for file_type in config.output_types:
+                if file_type == "csv":
+                    save_csv(dfs, output_file_path, config.verbose)
+                elif file_type == "png" or file_type == "pdf":
+                    save_plot(fig, axs, output_file_path, file_type, config.verbose)
+            print(f"Saved results into <{output_file_path}>")
 
     def plot_clean(self):
         # TODO: create dataframes in engine and plot them
