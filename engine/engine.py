@@ -18,7 +18,7 @@ from .configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from .callbacks import LogParamsAndGrads, PrintEpoch
 from .grid_search import gridsearch
 from .parser import YAMLParser
-from .utils import AttributeDict, calculate_steps, findfirst, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, some, trainer_strategy, write_results
+from .utils import AttributeDict, EndlessList, calculate_steps, convert_type_inside_dict, findfirst, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, some, trainer_strategy, write_results
 
 
 def engine_path() -> Path:
@@ -89,7 +89,9 @@ class Run():
 
     def export_config(self):
         with open(self.run_dir / "config.yaml", "w", encoding="utf8") as f:
-            yaml.safe_dump(path_to_str_inside_dict(self._config), f)
+            d = path_to_str_inside_dict(self._config)
+            d = convert_type_inside_dict(d, EndlessList, list)
+            yaml.safe_dump(d, f)
 
     def get_config(self) -> AttributeDict:
         return AttributeDict(self._config)
