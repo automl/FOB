@@ -175,7 +175,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
 
-        annot_matrix = pivot_table.copy().astype("string")  # TODO check if this explicit cast is the best
+        annot_matrix = pivot_table.copy().astype("string")
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
@@ -352,10 +352,10 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
     if config.plotstyle.tight_layout:
         fig.tight_layout()
+    # SUPTITLE (the super title on top of the whole figure in the middle)
     if n_rows_max > 1 or num_cols > 1:
         # set experiment name as title when multiple matrices in image
-        # super title TODO fix when used together with tight layout
-        # print(config.experiment_name)
+        # TODO super title might be squished when used together with tight layout
         if config.experiment_name:
             fig.suptitle(config.experiment_name)
     return fig, axs
@@ -401,29 +401,26 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
                                         ax=axs[j][i], low_is_better=low_is_better,
                                         cbar=include_cbar, vmin=vmin, vmax=vmax)
 
+    # LABELS
     # Pretty name for label "learning_rate" => "Learning Rate"
-    current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
-    current_plot.set_ylabel(pretty_name(current_plot.get_ylabel(), config))
-
+    # remove x_label of all but last row, remove y_label for all but first column    
     if i > 0:
-        # remove y_label of all but first one
-        # axs[i].set_ylabel('', fontsize=8, labelpad=8)
-        axs[j][i].set_ylabel('', labelpad=8)
+        current_plot.set_ylabel('', labelpad=8)
     else:
-        # TODO format parameter just as in submission name
-        # axs[i].set_ylabel
-        pass
+        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel(), config))
     if j < num_nested_subfigures - 1:
-        # remove x_label of all but last one
-        axs[j][i].set_xlabel('', labelpad=8)
+        current_plot.set_xlabel('', labelpad=8)
+    else:
+        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
 
-    # title (heading) of the figure:
+    # TITLE
+    # title (heading) of the heatmap <optimname> on <taskname> (+ additional info)
     title = pretty_name(opti_name, config)
     title += " on "
     title += pretty_name(df_entry["task.name"], config)
     if max_i > 1 or max_j > 1:
         title += "" if model_param == "default" else f"\n{model_param}"
-    axs[j][i].set_title(title)
+    current_plot.set_title(title)
 
 
 def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
