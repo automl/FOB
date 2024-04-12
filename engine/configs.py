@@ -130,6 +130,7 @@ class EvalConfig(BaseConfig):
         self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         cfg["ignore_keys"] = self.ignore_keys
+        # TODO: maybe aggregate axes from configs
         cfg["plot"]["x_axis"] = wrap_list(cfg["plot"]["x_axis"])
         cfg["plot"]["y_axis"] = wrap_list(cfg["plot"]["y_axis"])
         # TODO: columns for multiple plots (ugly: group dataframe by user-specified columns before call to `create_figure`)

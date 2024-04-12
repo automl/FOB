@@ -4,12 +4,13 @@ import hashlib
 import time
 import torch
 import yaml
+from pandas import DataFrame
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from evaluation import evaluation_path
-from evaluation.plot import create_figure, dataframe_from_trials, get_output_file_path, save_csv, save_plot, set_plotstyle
+from evaluation.plot import create_figure, dataframe_from_trials, get_output_file_path, save_files, set_plotstyle
 from optimizers import Optimizer, optimizer_path, optimizer_names
 from tasks import TaskModel, TaskDataModule, import_task, task_path, task_names
 from .configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
@@ -314,31 +315,13 @@ class Engine():
         config = next(self.runs()).evaluation
         set_plotstyle(config)
         trials = list(map(lambda x: Path(x.run_dir), self.runs()))
-        dataframe, stats = dataframe_from_trials(trials, config)
-        dfs = [dataframe]
-        stats = [stats]
+        df = dataframe_from_trials(trials, config)
 
-        for _, use_final_results in enumerate([True, False]):  # last, best
-            # CREATE COLUMNS
-            # create columns  (i.e. group dataframe into a list of dataframes)
-            name_from_yaml = config.column_split_key
-            list_of_dataframes = []
-            for unique_hp in dataframe[name_from_yaml].unique():
-                list_of_dataframes.append(dataframe.groupby([name_from_yaml]).get_group(unique_hp))
-            dfs = list_of_dataframes
-            # FINISHED CREATING COLUMNS
+        dfs: list[DataFrame] = [group for _, group in df.groupby(config.column_split_key)]
+        fig, axs = create_figure(dfs, config)
 
-            fig, axs = create_figure(dfs, stats, config)  # type: ignore
-
-            output_file_path = get_output_file_path(config, stats)
-            Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
-
-            for file_type in config.output_types:
-                if file_type == "csv":
-                    save_csv(dfs, output_file_path, config.verbose)
-                elif file_type == "png" or file_type == "pdf":
-                    save_plot(fig, axs, output_file_path, file_type, config.verbose)
-            print(f"Saved results into <{output_file_path}>")
+        output_file_path = get_output_file_path(dfs, config)
+        save_files(dfs, output_file_path, config)
 
     def plot_clean(self):
         # TODO: create dataframes in engine and plot them

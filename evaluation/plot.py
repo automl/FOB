@@ -6,6 +6,7 @@ from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from engine.parser import YAMLParser
 from engine.utils import AttributeDict, convert_type_inside_dict
 from itertools import repeat
@@ -46,15 +47,12 @@ def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
     return subdirs
 
 
-def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
+def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) -> pd.DataFrame:
     """takes result from get_available_trials and packs them in a dataframe,
     does not filter duplicate hyperparameter settings."""
     dfs: List[pd.DataFrame] = []
-    stats: list[dict] = []
 
     for path in trial_dir_paths:
-        stat = {}
-        hp_dict = {}
 
         config_file = path / config.experiment_files.config
         if config.last_instead_of_best:
@@ -78,56 +76,39 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         if config.verbose:
             print(f"{yaml_content=}\n")
 
-        stat["seed"] = yaml_content.engine.seed
-        stat["task_name"] = yaml_content.task.name
-        stat["optimizer_name"] = yaml_content["optimizer"]["name"]
-        stat["target_metric_mode"] = yaml_content["task"]["target_metric_mode"]
-        stat["target_metric"] = yaml_content["task"]["target_metric"]
-        # TARGET_METRIC_MODE = stat["target_metric_mode"]  # max or min
-
-        # earlier we were only plotting optimizer parameter, now we just take yaml.config names
-        # hp_dict = yaml_content["optimizer"]
-        hp_dict = yaml_content
-
-        # print(f"{type(config.plot.metric)=}")
         # use user given value
         metric_of_value_to_plot = config.plot.metric
 
         # compute it if user has not given a value
         if not metric_of_value_to_plot:
-            task_name = stat["task_name"]
-            metric_of_value_to_plot = config.task_to.metric[task_name]
-            if not metric_of_value_to_plot:
-                metric_of_value_to_plot = stat["target_metric"].replace("val_", "test_")
-                print(f"WARNING: no metric given'... " +
-                      f"Using '{metric_of_value_to_plot}' because '{stat['target_metric']}' was the target metric.")
-        stat['metric'] = metric_of_value_to_plot
+            raise ValueError("evaluation.plot.metric is not set")
 
-        with open(result_file) as f:
+        data = pd.json_normalize(yaml_content)
+
+        with open(result_file, "r", encoding="utf8") as f:
             content = json.load(f)
             if metric_of_value_to_plot in content[0]:
-                stat["score"] = content[0][metric_of_value_to_plot]
+                data.at[0, metric_of_value_to_plot] = content[0][metric_of_value_to_plot]
             else:
-                stat["score"] = f"could not find value for {metric_of_value_to_plot} in json"
+                rank_zero_warn(f"could not find value for {metric_of_value_to_plot} in json")
 
-        data = pd.json_normalize(hp_dict)
-        data.at[0, metric_of_value_to_plot] = stat["score"]  # will trim to 4 digits after comma
-        data.at[0, "seed"] = stat["seed"]  # saved as float
-        dfs.append(data)  # append the data frame to the list
+        dfs.append(data)
 
-        if config.verbose:
-            print(f"{stat=}")
-        stats.append(stat)
-
+    if len(dfs) == 0:
+        raise ValueError("no dataframes found, check your config")
     df = pd.concat(dfs, sort=False)
 
-    return df, stats
+    return df
 
 
-def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False, stat: dict = {},
+def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False,
                        cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
-    """ """
-    task_name = stat["task_name"]
+    """
+    Creates one heatmap and puts it into the grid of subplots.
+    Uses pd.pivot_table() and sns.heatmap().
+    """
+    df_entry = dataframe[0]
+    task_name = df_entry["task.name"]
 
     # CLEANING LAZY USER INPUT
     # cols are x-axis, idx are y-axis
@@ -142,17 +123,17 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
 
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx, values=stat["metric"],
+                                 columns=cols, index=idx, values=df_entry["evaluation.plot.metric"],
                                  aggfunc='mean')
 
-    task_format_exists = stat["task_name"] in config.task_to.format.keys()
+    task_format_exists = df_entry["task.name"] in config.task_to.format.keys()
     explicit_format_exists = config.plot.format is not None
     specified_format = task_format_exists or explicit_format_exists
 
     fmt = None
     format_string = ""
     if task_format_exists:
-        format_string = config.task_to.format[stat["task_name"]]
+        format_string = config.task_to.format[df_entry["task.name"]]
 
     if explicit_format_exists:
         format_string = config.plot.format
@@ -190,7 +171,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
     # metric_legend = stat["metric"] if "metric" in stat.keys() else config.plot.metric
-    metric_legend = stat["metric"]
+    metric_legend = df_entry["evaluation.plot.metric"]
     metric_legend = pretty_name(metric_legend, config)
 
     # FINETUNE POSITION
@@ -206,7 +187,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     else:
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
-                                        columns=cols, index=idx, values=stat["metric"],
+                                        columns=cols, index=idx, values=df_entry["evaluation.plot.metric"],
                                         aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
                                         )
         if float("inf") in pivot_table_std.values.flatten():
@@ -220,8 +201,8 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""
-                annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"
+                std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""  # type: ignore
+                annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"  # type: ignore
 
         fmt = ""  # cannot format like before, as we do not only have a number
 
@@ -231,18 +212,20 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
-def get_all_num_rows_and_their_names(dataframe_list, stats_list, config):
+def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config):
     n_rows: list[int] = []
     row_names: list[list[str]] = []
-    for i, _ in enumerate(dataframe_list):
+    for i, df in enumerate(dataframe_list):
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[i]
         engine_seed = "engine.seed"
         seed = "seed"  # legacy
-        metric = stats_list[i][0]["metric"]
+        if df["evaluation.plot.metric"].nunique() > 1:
+            rank_zero_warn("More than one metric found, using the first one.")
+        metric = df["evaluation.plot.metric"].unique()[0]
         ignored_cols = [x_axis, y_axis, engine_seed, seed, metric]
         ignored_cols += config.get("ignore_keys", [])
-        current_n_rows, current_names = get_num_rows(dataframe_list[i], stats_list[i], ignored_cols, config)
+        current_n_rows, current_names = get_num_rows(df, ignored_cols, config)
         n_rows.append(current_n_rows)
         if not current_names:  # will be empty if we have only one row
             current_names.append("default")
@@ -250,7 +233,7 @@ def get_all_num_rows_and_their_names(dataframe_list, stats_list, config):
 
     return n_rows, row_names
 
-def get_num_rows(dataframe: pd.DataFrame, stats_list: list[dict], ignored_cols: list[str], config: AttributeDict
+def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: AttributeDict
                  ) -> tuple[int, list[str]]:
     """each matrix has 2 params (on for x and y each), one value, and we aggregate over seeds;
     if there are more than than these 4 parameter with different values,
@@ -259,7 +242,6 @@ def get_num_rows(dataframe: pd.DataFrame, stats_list: list[dict], ignored_cols: 
     necesarry_rows = 0
 
     columns_with_non_unique_values = []
-    # columns_with_non_unique_values = ["seed"]
     for col in dataframe.columns:
         is_eval_key = col.startswith("evaluation.")
         if col in ignored_cols or is_eval_key:
@@ -283,7 +265,7 @@ def get_num_rows(dataframe: pd.DataFrame, stats_list: list[dict], ignored_cols: 
     return rows_number, col_names
 
 
-def find_global_vmin_vmax(dataframe_list, stats_list, num_subfigures, config):
+def find_global_vmin_vmax(dataframe_list, num_subfigures, config):
     vmin: int | None = None
     vmax: int | None = None
 
@@ -298,10 +280,11 @@ def find_global_vmin_vmax(dataframe_list, stats_list, num_subfigures, config):
             dataframe = dataframe_list[i]
             cols = config.plot.x_axis[i]
             idx = config.plot.y_axis[i]
-            key = stats_list[i][0]["metric"]
+            key = dataframe_list[i][0]["evaluation.plot.metric"]
 
             pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx, values=stats_list[i][0]["metric"],
+                                 columns=cols, index=idx,
+                                 values=dataframe_list[i][0]["evaluation.plot.metric"],
                                  aggfunc='mean')
 
             min_value_present_in_current_df = pivot_table.min().min()
@@ -317,13 +300,14 @@ def find_global_vmin_vmax(dataframe_list, stats_list, num_subfigures, config):
     return vmin, vmax
 
 
-def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict):
-    """Takes a list of workloads Paths (submission + workload)
-    and plots them together in one figure side by side"""
+def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
+    """
+    Takes a list of dataframes. Each dataframe is processed into a column of heatmaps.
+    """
     num_cols: int = len(dataframe_list)
 
     # calculate the number of rows for each dataframe
-    n_rows, row_names = get_all_num_rows_and_their_names(dataframe_list, stats_list, config)
+    n_rows, row_names = get_all_num_rows_and_their_names(dataframe_list, config)
 
     # Handling of the number of rows in the plot
     # we could either create a full rectangular grid, or allow each subplot to nest subplots
@@ -361,14 +345,13 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
 
     # None -> plt will chose vmin and vmax
-    vmin, vmax = find_global_vmin_vmax(dataframe_list, stats_list, num_cols, config)
+    vmin, vmax = find_global_vmin_vmax(dataframe_list, num_cols, config)
 
     for i in range(num_cols):
         num_nested_subfigures: int = n_rows[i]
-        name_for_additional_subplots: list[str] = row_names[i]
 
         if not config.split_groups:
-            create_one_grid_element(dataframe_list, stats_list, config, axs, i,
+            create_one_grid_element(dataframe_list, config, axs, i,
                                     j=0,
                                     max_i=num_cols,
                                     max_j=0,
@@ -378,7 +361,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
                                     row_names=row_names)
         else:
             for j in range(num_nested_subfigures):
-                create_one_grid_element(dataframe_list, stats_list, config, axs, i,
+                create_one_grid_element(dataframe_list, config, axs, i,
                                         j,
                                         max_i=num_cols,
                                         max_j=num_nested_subfigures,
@@ -398,18 +381,18 @@ def create_figure(dataframe_list: list[pd.DataFrame], stats_list: list[dict], co
     return fig, axs
 
 
-def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list[dict], config: AttributeDict, axs,
+def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: AttributeDict, axs,
                             i: int, j: int, max_i: int, max_j: int, vmin, vmax, n_rows, row_names):
     """does one 'axs' element as it is called in plt"""
     num_nested_subfigures: int = n_rows[i]
     name_for_additional_subplots: list[str] = row_names[i]
     num_subfigures = max_i  # from left to right
     num_nested_subfigures = max_j  # from top to bottom
-    dataframe, stats = dataframe_list[i], stats_list[i]
-    stat_entry = stats[0]  # just get an arbitrary trial for the target metric mode and submission name
-    opti_name = stat_entry['optimizer_name']
-    task_name = stat_entry['task_name']
-    s_target_metric_mode = stat_entry['target_metric_mode']
+    dataframe = dataframe_list[i]
+    df_entry = dataframe[0]  # just get an arbitrary trial for the target metric mode and submission name
+    opti_name = df_entry['optimizer.name']
+    task_name = df_entry['task.name']
+    s_target_metric_mode = df_entry['task.target_metric_mode']
     low_is_better = s_target_metric_mode == "min"
     if task_name in config.task_to.test_metric_mode.keys():
         low_is_better = config.task_to.test_metric_mode[task_name] == "min"
@@ -439,7 +422,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list
             return False
     current_plot = create_matrix_plot(current_dataframe, config,
                                         cols, idx,
-                                        ax=axs[j][i], low_is_better=low_is_better, stat=stat_entry,
+                                        ax=axs[j][i], low_is_better=low_is_better,
                                         cbar=include_cbar, vmin=vmin, vmax=vmax)
 
     # Pretty name for label "learning_rate" => "Learning Rate"
@@ -461,34 +444,30 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], stats_list: list
     # title (heading) of the figure:
     title = pretty_name(opti_name, config)
     title += " on "
-    title += pretty_name(stat_entry["task_name"], config)
+    title += pretty_name(df_entry["task.name"], config)
     if max_i > 1 or max_j > 1:
         title += f" \n({model_param})"
     axs[j][i].set_title(title)
 
 
 def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
-                       ) -> tuple[list[pd.DataFrame], list[dict]]:
+                       ) -> list[pd.DataFrame]:
     df_list: list[pd.DataFrame] = []
-    stats_list: list[dict] = []
     num_dataframes: int = len(workload_paths)
 
     for i in range(num_dataframes):
         available_trials = get_available_trials(workload_paths[i], config, depth)
-        dataframe, stats = dataframe_from_trials(available_trials, config)
+        dataframe = dataframe_from_trials(available_trials, config)
         df_list.append(dataframe)
-        stats_list.append(stats)
 
-    return df_list, stats_list
+    return df_list
 
 
-def get_output_file_path(config: AttributeDict, stats: list[dict]) -> str:
-    some_stat = stats[0][0]  # TODO: fix for multiple optim on one plot
-    # TODO dynamic naming for multiple dirs? maybe take parser arg of "workflow" and only numerate submissions
-    # we could also get this info out of args_file, but i only realized this after coding the directory extracting
-
-    task_name = some_stat["task_name"]
-    optim_name = some_stat["optimizer_name"]
+def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDict) -> Path:
+    task_names = [df[0]["task.name"] for df in dataframe_list]
+    optim_names = [df[0]["optimizer.name"] for df in dataframe_list]
+    task_name = "_".join(task_names)
+    optim_name = "_".join(optim_names)
 
     if config.verbose:
         print(f"{task_name=}")
@@ -521,19 +500,31 @@ def pretty_name(name: str, config: AttributeDict) -> str:
     return name
 
 
-def save_csv(dfs: list[pd.DataFrame], output_filename: str, verbose: bool):
+def save_csv(dfs: list[pd.DataFrame], output_filename: Path, verbose: bool):
     for i, df in enumerate(dfs):
-        csv_output_filename = f"{output_filename}-{i}.csv"
+        csv_output_filename = f"{output_filename.resolve()}-{i}.csv"
         if verbose:
             print(f"saving raw data as {csv_output_filename}")
         df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
-def save_plot(fig, axs, output_file_path: str, file_type: str, verbose: bool):
-    plot_output_filename = f"{output_file_path}-heatmap.{file_type}"
+def save_plot(output_file_path: Path, file_type: str, verbose: bool):
+    plot_output_filename = f"{output_file_path.resolve()}-heatmap.{file_type}"
     if verbose:
         print(f"saving figure as {plot_output_filename}")
     plt.savefig(plot_output_filename)
+
+
+def save_files(dfs: list[pd.DataFrame], output_file_path: Path, config: AttributeDict):
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    for file_type in config.output_types:
+        if file_type == "csv":
+            save_csv(dfs, output_file_path, config.verbose)
+        elif file_type == "png" or file_type == "pdf":
+            save_plot(output_file_path, file_type, config.verbose)
+    full_path = output_file_path.resolve()
+    print(f"Saved results into <{full_path}>")
 
 
 def clean_config(config: AttributeDict) -> AttributeDict:
@@ -596,17 +587,9 @@ def main(config: AttributeDict):
 
     set_plotstyle(config)
 
-    dfs, stats = extract_dataframes(workloads, depth=config.depth, config=config)
-    fig, axs = create_figure(dfs, stats, config)
+    dfs = extract_dataframes(workloads, depth=config.depth, config=config)
+    fig, axs = create_figure(dfs, config)
 
-    output_file_path = get_output_file_path(config, stats)
+    output_file_path = get_output_file_path(dfs, config)
 
-    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
-
-    for file_type in config.output_types:
-        if file_type == "csv":
-            save_csv(dfs, output_file_path, config.verbose)
-        elif file_type == "png" or file_type == "pdf":
-            save_plot(fig, axs, output_file_path, file_type, config.verbose)
-    full_path = Path(output_file_path).resolve()
-    print(f"Saved results into <{full_path}>")
+    
