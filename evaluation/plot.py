@@ -292,6 +292,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # Handling of the number of rows in the plot
     # we could either create a full rectangular grid, or allow each subplot to nest subplots
     # for nesting we would need to create subfigures instead of subplots i think
+    # TODO implement split_groups to accept a list of params
     if config.split_groups:
         n_rows_max = max(n_rows)
     else:

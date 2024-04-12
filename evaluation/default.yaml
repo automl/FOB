@@ -2,7 +2,7 @@ evaluation:
   data_dirs: null                # List of Paths
   output_dir: null               # output filename is output_dir / experiment_name
   experiment_name: null
-  split_groups: false            # if set to true, plot will create a group for each param that differs
+  split_groups: false            # {True, False, [param.a, param.b, ...]} create additional plots where the data is grouped by the given parameter; True to detect all params with multiple unique values
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
   checkpoints: ["best", "last"]  # which model checkpoint to use
