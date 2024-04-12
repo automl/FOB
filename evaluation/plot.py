@@ -2,7 +2,7 @@ import json
 from sys import exit
 from pathlib import Path
 from os import PathLike
-from typing import List
+from typing import List, Literal
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -220,10 +220,22 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
     returning: the number of rows (atleast 1) and the names of the cols"""
     necesarry_rows = 0
 
+    # the user might specify a value for the groups that we should split on in <split_groups>
+    whitelisted_cols: list[str] | Literal["all", ""] = "all"  # everything is whitelisted if this value stays N this value if it stays None
+    if isinstance(config.split_groups, str):
+        # user has given one value, we want to process a list
+        whitelisted_cols = [config.split_groups]
+    elif isinstance(config.split_groups, list):
+        whitelisted_cols = config.split_groups[:]
+    elif config.split_groups == False:
+        whitelisted_cols = ""
+
     columns_with_non_unique_values = []
     for col in dataframe.columns:
         is_eval_key = col.startswith("evaluation.")
-        if col in ignored_cols or is_eval_key:
+        is_ignored = col in ignored_cols
+        is_whitelisted = whitelisted_cols == "all" or col in whitelisted_cols
+        if is_ignored or is_eval_key or not is_whitelisted:
             if config.verbose:
                 print(f"ignoring {col}")
             continue
@@ -292,12 +304,11 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # Handling of the number of rows in the plot
     # we could either create a full rectangular grid, or allow each subplot to nest subplots
     # for nesting we would need to create subfigures instead of subplots i think
-    # TODO implement split_groups to accept a list of params
-    if config.split_groups:
-        n_rows_max = max(n_rows)
-    else:
+    if config.split_groups == False:
         n_rows_max = 1
         row_names = [["default"] for _ in range(num_cols)]
+    else:
+        n_rows_max = max(n_rows)
 
     if config.verbose:
         print(f"{n_rows=}")
