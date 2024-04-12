@@ -123,7 +123,6 @@ class GCN(torch.nn.Module):
                     torch.nn.init.uniform_(param, -stdv.item(), stdv.item())
 
     def forward(self, x, edge_index):
-        # print(edge_index)
         for idx, conv in enumerate(self.convs):
             x = conv(x, edge_index)
 

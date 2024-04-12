@@ -7,6 +7,7 @@ from torchvision.datasets import CocoDetection
 from torchvision.transforms import v2
 from torchvision import datasets, tv_tensors
 from pycocotools.coco import COCO
+from lightning_utilities.core.rank_zero import rank_zero_info
 from tqdm import tqdm
 from tasks import TaskDataModule
 from engine.configs import TaskConfig
@@ -66,9 +67,9 @@ class COCODataModule(TaskDataModule):
         filename = wget.detect_filename(url)
         outfile = dl_dir / filename
         if outfile.exists():
-            print(f"{subject} already downloaded.")
+            rank_zero_info(f"{subject} already downloaded.")
         else:
-            print(f"Downloading {subject}...")
+            rank_zero_info(f"Downloading {subject}...")
             try:
                 wget.download(url, str(outfile))
             except BaseException as e:
@@ -87,7 +88,7 @@ class COCODataModule(TaskDataModule):
         with open(state_file, "r", encoding="utf8") as f:
             extracted_subjects = f.readlines()
             if subject in map(lambda s: s.strip(), extracted_subjects):
-                print(f"{subject} already extracted.")
+                rank_zero_info(f"{subject} already extracted.")
                 return
         with zipfile.ZipFile(file, "r") as f:
             for img in tqdm(f.infolist(), desc=f"Extracting {subject}"):

@@ -1,7 +1,7 @@
 import torch
 import lightning.pytorch as pl
 from lightning import Callback, Trainer, LightningModule
-from lightning_utilities.core.rank_zero import rank_zero_only
+from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, rank_zero_warn
 import deepspeed
 
 
@@ -16,7 +16,7 @@ class PrintEpoch(Callback):
         # TODO: better logging (with time spent on epoch and stuff)
         if self.active:
             max_epochs = pl_module.config.max_epochs
-            print(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
+            rank_zero_info(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
 
 
 class LogParamsAndGrads(Callback):
@@ -40,9 +40,9 @@ class LogParamsAndGrads(Callback):
                         v_detached = v.detach()
 
                         if torch.isnan(v_detached).sum() > 0:
-                            print(f"# NaN in param {k}")
+                            rank_zero_warn(f"# NaN in param {k}")
                         if torch.isinf(v_detached).sum() > 0:
-                            print(f"# Inf in param {k}")
+                            rank_zero_warn(f"# Inf in param {k}")
 
                         stats[f"param/{k}/mean"] = v_detached.mean().item()
                         if v_detached.shape[0] > 1:
@@ -68,9 +68,9 @@ class LogParamsAndGrads(Callback):
 
                     if grad_data is not None and trainer.global_rank == 0:
                         if torch.isnan(grad_data).sum() > 0:
-                            print(f"# NaN in grad {k}")
+                            rank_zero_warn(f"# NaN in grad {k}")
                         if torch.isinf(grad_data).sum() > 0:
-                            print(f"# Inf in grad {k}")
+                            rank_zero_warn(f"# Inf in grad {k}")
 
                         if torch.isnan(grad_data).sum() > 0 or torch.isinf(grad_data).sum() > 0:
                             stats[f"grad/{k}/mean"] = -10
