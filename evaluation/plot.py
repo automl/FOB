@@ -107,8 +107,9 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     Creates one heatmap and puts it into the grid of subplots.
     Uses pd.pivot_table() and sns.heatmap().
     """
-    df_entry = dataframe[0]
+    df_entry = dataframe.iloc[0]
     task_name = df_entry["task.name"]
+    metric_name = df_entry["evaluation.plot.metric"]
 
     # CLEANING LAZY USER INPUT
     # cols are x-axis, idx are y-axis
@@ -120,20 +121,19 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
         print("Warning: y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
               f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
         idx = "optimizer." + idx
-
     # create pivot table and format the score result
     pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx, values=df_entry["evaluation.plot.metric"],
+                                 columns=cols, index=idx, values=metric_name,
                                  aggfunc='mean')
 
-    task_format_exists = df_entry["task.name"] in config.task_to.format.keys()
+    task_format_exists = task_name in config.task_to.format.keys()
     explicit_format_exists = config.plot.format is not None
     specified_format = task_format_exists or explicit_format_exists
 
     fmt = None
     format_string = ""
     if task_format_exists:
-        format_string = config.task_to.format[df_entry["task.name"]]
+        format_string = config.task_to.format[task_name]
 
     if explicit_format_exists:
         format_string = config.plot.format
@@ -170,9 +170,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
-    # metric_legend = stat["metric"] if "metric" in stat.keys() else config.plot.metric
-    metric_legend = df_entry["evaluation.plot.metric"]
-    metric_legend = pretty_name(metric_legend, config)
+    metric_legend = pretty_name(metric_name, config)
 
     # FINETUNE POSITION
     # left bottom width height
@@ -187,7 +185,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     else:
         # BUILD STD TABLE
         pivot_table_std = pd.pivot_table(dataframe,
-                                        columns=cols, index=idx, values=df_entry["evaluation.plot.metric"],
+                                        columns=cols, index=idx, values=metric_name,
                                         aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
                                         )
         if float("inf") in pivot_table_std.values.flatten():
@@ -216,10 +214,10 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
     n_rows: list[int] = []
     row_names: list[list[str]] = []
     for i, df in enumerate(dataframe_list):
-        x_axis = config.plot.x_axis[i]
-        y_axis = config.plot.y_axis[i]
-        engine_seed = "engine.seed"
         seed = "seed"  # legacy
+        engine_seed = "engine.seed"
+        x_axis = config.plot.x_axis[i]
+        y_axis = config.plot.y_axis[0]
         if df["evaluation.plot.metric"].nunique() > 1:
             rank_zero_warn("More than one metric found, using the first one.")
         metric = df["evaluation.plot.metric"].unique()[0]
@@ -265,26 +263,27 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
     return rows_number, col_names
 
 
-def find_global_vmin_vmax(dataframe_list, num_subfigures, config):
+def find_global_vmin_vmax(dataframe_list, config):
     vmin: int | None = None
     vmax: int | None = None
+    num_cols = len(dataframe_list)
 
-    if num_subfigures > 1:
+    if num_cols > 1:
         # all subplots should have same colors -> we need to find the limits
         vmin = float('inf')
         vmax = float('-inf')
         if config.verbose:
             print(f"===== cbar limits =====")
             print()
-        for i in range(num_subfigures):
+        for i in range(num_cols):
             dataframe = dataframe_list[i]
             cols = config.plot.x_axis[i]
-            idx = config.plot.y_axis[i]
-            key = dataframe_list[i][0]["evaluation.plot.metric"]
+            idx = config.plot.y_axis[0]
+            key = config.plot.metric
 
             pivot_table = pd.pivot_table(dataframe,
                                  columns=cols, index=idx,
-                                 values=dataframe_list[i][0]["evaluation.plot.metric"],
+                                 values=key,
                                  aggfunc='mean')
 
             min_value_present_in_current_df = pivot_table.min().min()
@@ -345,7 +344,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
 
     # None -> plt will chose vmin and vmax
-    vmin, vmax = find_global_vmin_vmax(dataframe_list, num_cols, config)
+    vmin, vmax = find_global_vmin_vmax(dataframe_list, config)
 
     for i in range(num_cols):
         num_nested_subfigures: int = n_rows[i]
@@ -372,12 +371,12 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
     if config.plotstyle.tight_layout:
         fig.tight_layout()
-    if config.data_dirs and len(config.data_dirs) > 1:
+    if n_rows_max > 1 or num_cols > 1:
         # set experiment name as title when multiple matrices in image
         # super title TODO fix when used together with tight layout
         # print(config.experiment_name)
-        if name := config.experiment_name:
-            fig.suptitle(name)
+        if config.experiment_name:
+            fig.suptitle(config.experiment_name)
     return fig, axs
 
 
@@ -389,7 +388,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     num_subfigures = max_i  # from left to right
     num_nested_subfigures = max_j  # from top to bottom
     dataframe = dataframe_list[i]
-    df_entry = dataframe[0]  # just get an arbitrary trial for the target metric mode and submission name
+    df_entry = dataframe.iloc[0]  # just get an arbitrary trial for the target metric mode and submission name
     opti_name = df_entry['optimizer.name']
     task_name = df_entry['task.name']
     s_target_metric_mode = df_entry['task.target_metric_mode']
@@ -398,13 +397,13 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
         low_is_better = config.task_to.test_metric_mode[task_name] == "min"
 
     cols = config.plot.x_axis[i]
-    idx = config.plot.y_axis[i]
+    idx = config.plot.y_axis[0]
     # only include colorbar once
     include_cbar: bool = i == num_subfigures - 1
 
     model_param = name_for_additional_subplots[j]
     if model_param == "default":
-        current_dataframe = dataframe
+        current_dataframe = dataframe  # we do not need to do further grouping
     else:
         param_name, param_value = model_param.split("=", maxsplit=1)
         if pd.api.types.is_numeric_dtype(dataframe[param_name]):
@@ -446,7 +445,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     title += " on "
     title += pretty_name(df_entry["task.name"], config)
     if max_i > 1 or max_j > 1:
-        title += f" \n({model_param})"
+        title += "" if model_param == "default" else f"\n{model_param}"
     axs[j][i].set_title(title)
 
 
@@ -463,9 +462,9 @@ def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth:
     return df_list
 
 
-def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDict) -> Path:
-    task_names = [df[0]["task.name"] for df in dataframe_list]
-    optim_names = [df[0]["optimizer.name"] for df in dataframe_list]
+def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDict, suffix: str = "") -> Path:
+    task_names = [df.iloc[0]["task.name"] for df in dataframe_list]
+    optim_names = [df.iloc[0]["optimizer.name"] for df in dataframe_list]
     task_name = "_".join(task_names)
     optim_name = "_".join(optim_names)
 
@@ -479,7 +478,7 @@ def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDi
     experiment_name = Path(config.experiment_name) if config.experiment_name else f"{optim_name}-{task_name}"
     output_file_path = output_dir / experiment_name
 
-    return output_file_path
+    return Path(f"{output_file_path}-{suffix}" if suffix else output_file_path)
 
 
 def set_plotstyle(config: AttributeDict):

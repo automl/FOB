@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 import sys
 from typing import Any, Callable, Iterable, Type
@@ -154,6 +155,16 @@ def concatenate_dict_keys(
         else:
             result[new_key] = v
     return result
+
+
+class EndlessList(list):
+    """
+    Returns first element if out of bounds. Otherwise same as list.
+    """
+    def __getitem__(self, index):
+        if index >= len(self) and len(self) > 0:
+            return self[0]
+        return super().__getitem__(index)
 
 
 class AttributeDict(dict):

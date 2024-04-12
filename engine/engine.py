@@ -1,10 +1,11 @@
-from typing import Any, Callable, Iterable, Iterator, Optional
+import json
+from typing import Any, Callable, Iterable, Iterator, Literal, Optional
 from pathlib import Path
 import hashlib
 import time
 import torch
 import yaml
-from pandas import DataFrame
+from pandas import DataFrame, concat, json_normalize
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
@@ -17,7 +18,7 @@ from .configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from .callbacks import LogParamsAndGrads, PrintEpoch
 from .grid_search import gridsearch
 from .parser import YAMLParser
-from .utils import AttributeDict, calculate_steps, findfirst, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
+from .utils import AttributeDict, calculate_steps, findfirst, path_to_str_inside_dict, dict_differences, concatenate_dict_keys, precision_with_fallback, seconds_to_str, some, trainer_strategy, write_results
 
 
 def engine_path() -> Path:
@@ -89,6 +90,9 @@ class Run():
     def export_config(self):
         with open(self.run_dir / "config.yaml", "w", encoding="utf8") as f:
             yaml.safe_dump(path_to_str_inside_dict(self._config), f)
+
+    def get_config(self) -> AttributeDict:
+        return AttributeDict(self._config)
 
     def get_optimizer(self) -> Optimizer:
         return Optimizer(self.optimizer)
@@ -235,7 +239,7 @@ class Run():
             eval_key=self.eval_key,
             optimizer_key=self.optimizer_key,
             identifier_key=self.identifier_key,
-            ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.")
+            ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.") + [f"{self.optimizer_key}.output_dir_name", f"{self.task_key}.output_dir_name"]
         )
 
 
@@ -309,23 +313,43 @@ class Engine():
             yield run
 
     def plot(self):
-        return self.plot_lazy()
-
-    def plot_lazy(self):
         config = next(self.runs()).evaluation
         set_plotstyle(config)
-        trials = list(map(lambda x: Path(x.run_dir), self.runs()))
-        df = dataframe_from_trials(trials, config)
+        for mode in config.checkpoints:
+            df = self.dataframe_from_runs(mode)
+            groups = df.groupby(config.column_split_key)
+            order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
+            dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
+            fig, axs = create_figure(dfs, config)
 
-        dfs: list[DataFrame] = [group for _, group in df.groupby(config.column_split_key)]
-        fig, axs = create_figure(dfs, config)
+            output_file_path = get_output_file_path(dfs, config, suffix=mode)
+            save_files(dfs, output_file_path, config)
 
-        output_file_path = get_output_file_path(dfs, config)
-        save_files(dfs, output_file_path, config)
-
-    def plot_clean(self):
-        # TODO: create dataframes in engine and plot them
-        raise NotImplementedError("The implementation of this is trivial and left as an exercise for the reader.")
+    def dataframe_from_runs(self, mode: Literal["last", "best"]) -> DataFrame:
+        dfs: list[DataFrame] = []
+        for run in self.runs():
+            df = json_normalize(run.get_config())
+            if mode == "last":
+                result_file = run.run_dir / run.evaluation.experiment_files.last_model
+            elif mode == "best":
+                result_file = run.run_dir / run.evaluation.experiment_files.best_model
+            else:
+                raise ValueError(f"mode {mode} not supported")
+            if not result_file.is_file():
+                rank_zero_warn(f"result file {result_file} not found, skipping this hyperparameter setting")
+                continue
+            metric = run.evaluation.plot.metric
+            with open(result_file, "r", encoding="utf8") as f:
+                content = json.load(f)
+                if metric in content[0]:
+                    df.at[0, metric] = content[0][metric]
+                else:
+                    rank_zero_warn(f"could not find value for {metric} in json, skipping this hyperparameter setting")
+                    continue
+            dfs.append(df)
+        if len(dfs) == 0:
+            raise ValueError("no dataframes found, check your config")
+        return concat(dfs, sort=False)
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)

@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Literal, Optional
-from .utils import AttributeDict, convert_type_inside_dict, some, wrap_list
+from .utils import AttributeDict, EndlessList, convert_type_inside_dict, some, wrap_list
 
 
 class BaseConfig(AttributeDict):
@@ -125,13 +125,12 @@ class EvalConfig(BaseConfig):
         self.experiment_name: str = cfg["experiment_name"]
         self.verbose: bool = cfg.get("verbose", False)
         self.split_groups: bool = cfg.get("split_groups", False)  # TODO: option to split into multiple plots
-        self.last_instead_of_best: bool = cfg.get("last_instead_of_best", False)  # TODO: give list of ["last", "best"] (easy: for-loop in lazy_plot)
+        self.checkpoints: list[Literal["last", "best"]] = cfg["checkpoints"]
         column_split_key = cfg.get("column_split_key", None)
         self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
+        self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         cfg["ignore_keys"] = self.ignore_keys
-        # TODO: maybe aggregate axes from configs
-        cfg["plot"]["x_axis"] = wrap_list(cfg["plot"]["x_axis"])
-        cfg["plot"]["y_axis"] = wrap_list(cfg["plot"]["y_axis"])
-        # TODO: columns for multiple plots (ugly: group dataframe by user-specified columns before call to `create_figure`)
+        cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
+        cfg["plot"]["y_axis"] = EndlessList(wrap_list(cfg["plot"]["y_axis"]))
         super().__init__(cfg)

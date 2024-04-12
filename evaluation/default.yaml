@@ -5,9 +5,10 @@ evaluation:
   split_groups: false            # if set to true, plot will create a group for each param that differs
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
-  last_instead_of_best: False    # use the last model, if not set the ebst model will be used
+  checkpoints: ["best", "last"]  # which model checkpoint to use
   verbose: False                 # debug prints
   column_split_key: null         # if set, will split the dataframe and plot it in columns. Default: optimizer.name
+  column_split_order: null        # sets the order in which the columns are plotted.
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:
@@ -16,7 +17,7 @@ evaluation:
     y_axis:                      # indices on y axis (same order as order of subigures given in data_dirs)
       - optimizer.learning_rate
     metric: null                 # is automatically chosen from task name, this will overwrite it
-    limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
+    limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for automatic
     std: True                    # aggreagte over std
     aggfunc: std                 # for example {std, var, sem} which function to use to aggregate over the seeds; will only be used when 'std' is set to true
     # format:
