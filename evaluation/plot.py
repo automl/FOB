@@ -90,7 +90,10 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict):
         hp_dict = yaml_content
 
         # print(f"{type(config.plot.metric)=}")
+        # use user given value
         metric_of_value_to_plot = config.plot.metric
+
+        # compute it if user has not given a value
         if not metric_of_value_to_plot:
             task_name = stat["task_name"]
             metric_of_value_to_plot = config.task_to.metric[task_name]
