@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+from lightning_utilities.core.rank_zero import rank_zero_info
 
 from engine.engine import Engine
 from engine.utils import begin_timeout
@@ -12,7 +13,7 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     engine.plot()
 
     if args.send_timeout:
-        print("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck\n")
+        rank_zero_info("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck\n")
         begin_timeout()
 
 

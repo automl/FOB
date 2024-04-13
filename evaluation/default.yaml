@@ -11,6 +11,7 @@ evaluation:
   verbose: False                 # debug prints
   column_split_key: null         # if set, will split the dataframe and plot it in columns. Default: optimizer.name
   column_split_order: null        # sets the order in which the columns are plotted.
+  dpi: 300
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:

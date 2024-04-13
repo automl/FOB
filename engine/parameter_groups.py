@@ -4,6 +4,7 @@ from typing import Any, Callable, Iterable, Optional
 from torch import nn
 from torch.nn import Module
 from torch.nn.parameter import Parameter
+from lightning_utilities.core.rank_zero import rank_zero_warn
 from .utils import some
 
 
@@ -139,7 +140,7 @@ def group_named_parameters(
             elif any(c(m, p, fpn) for c in g2_conds):
                 s2.add(fpn)
             elif debug:
-                print("group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
+                rank_zero_warn("group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
 
     s1 |= (param_dict.keys() - s2 - special)
 

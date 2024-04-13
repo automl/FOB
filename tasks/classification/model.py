@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
+from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from tasks import TaskModel
 from engine.configs import TaskConfig
 from optimizers import Optimizer
@@ -22,7 +23,7 @@ class ImagenetModel(TaskModel):
             model = create_model(model_name)
         except RuntimeError as e:
             available_models = list_models()
-            print(f"Available Models are {available_models}")
+            rank_zero_info(f"Available Models are {available_models}")
             raise Exception("Unsupported model given.") from e
 
         # taking care of model specific changes
@@ -56,10 +57,10 @@ class ImagenetModel(TaskModel):
                     LayerNorm2d((96,))
                 )
             else:
-                print(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
+                rank_zero_warn(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
         else:
             # not throwing an error, its valid for the user to use an given default model
-            print("WARNING: the model you have specified has no modification.")
+            rank_zero_warn("WARNING: the model you have specified has no modification.")
 
         return model
 
