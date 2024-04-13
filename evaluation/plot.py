@@ -102,7 +102,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
-def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None, low_is_better: bool = False,
+def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax=None,
                        cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
     """
     Creates one heatmap and puts it into the grid of subplots.
@@ -127,7 +127,7 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
                                  aggfunc='mean')
 
     fmt = None
-    format_string = config.plot.format
+    format_string = dataframe["evaluation.plot.format"].iloc[0]
 
     # scaline the values given by the user to fit his format needs (-> and adapting the limits)
     value_exp_factor, decimal_points = format_string.split(".")
@@ -140,18 +140,20 @@ def create_matrix_plot(dataframe, config: AttributeDict, cols: str, idx: str, ax
     pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
     fmt=f".{decimal_points}f"
 
-    vmin = min(config.plot.limits)
-    vmax = max(config.plot.limits)
+    limits = dataframe["evaluation.plot.limits"].iloc[0]
+    vmin = min(limits)
+    vmax = max(limits)
 
     if config.verbose:
         print(f"setting cbar limits to {vmin}, {vmax} ")
         print(pivot_table)
 
     colormap_name = config.plotstyle.color_palette
+    low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
-    metric_legend = pretty_name(metric_name, config)
+    metric_legend = pretty_name(metric_name)
 
     # FINETUNE POSITION
     # left bottom width height
@@ -328,6 +330,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     else:
         figsize = None
 
+    # TODO: use seaborn FacetGrid
     fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize)
     if n_rows_max == 1:
         axs = [axs]
@@ -366,11 +369,11 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     if config.plotstyle.tight_layout:
         fig.tight_layout()
     # SUPTITLE (the super title on top of the whole figure in the middle)
-    if n_rows_max > 1 or num_cols > 1:
-        # set experiment name as title when multiple matrices in image
-        # TODO super title might be squished when used together with tight layout
-        if config.experiment_name:
-            fig.suptitle(config.experiment_name)
+    # # TODO super title might be squished when used together with tight layout (removing for now)
+    # if n_rows_max > 1 or num_cols > 1:
+    #     # set experiment name as title when multiple matrices in image
+    #     if config.experiment_name:
+    #         fig.suptitle(config.experiment_name)
     return fig, axs
 
 
@@ -384,7 +387,6 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     dataframe = dataframe_list[i]
     df_entry = dataframe.iloc[0]  # just get an arbitrary trial for the target metric mode and submission name
     opti_name = df_entry['optimizer.name']
-    low_is_better = config.plot.test_metric_mode == "min"
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
@@ -411,7 +413,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
             return False
     current_plot = create_matrix_plot(current_dataframe, config,
                                         cols, idx,
-                                        ax=axs[j][i], low_is_better=low_is_better,
+                                        ax=axs[j][i],
                                         cbar=include_cbar, vmin=vmin, vmax=vmax)
 
     # LABELS
@@ -420,17 +422,17 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     if i > 0:
         current_plot.set_ylabel('', labelpad=8)
     else:
-        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel(), config))
+        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel()))
     if j < num_nested_subfigures - 1:
         current_plot.set_xlabel('', labelpad=8)
     else:
-        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel(), config))
+        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
 
     # TITLE
     # title (heading) of the heatmap <optimname> on <taskname> (+ additional info)
-    title = pretty_name(opti_name, config)
+    title = pretty_name(opti_name)
     title += " on "
-    title += pretty_name(df_entry["task.name"], config)
+    title += pretty_name(df_entry["task.name"])
     if max_i > 1 or max_j > 1:
         title += "" if model_param == "default" else f"\n{model_param}"
     current_plot.set_title(title)
@@ -509,21 +511,21 @@ def save_csv(dfs: list[pd.DataFrame], output_filename: Path, verbose: bool):
         df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
-def save_plot(output_file_path: Path, file_type: str, verbose: bool, dpi: int):
+def save_plot(fig, output_file_path: Path, file_type: str, verbose: bool, dpi: int):
     plot_output_filename = f"{output_file_path.resolve()}-heatmap.{file_type}"
     if verbose:
         print(f"saving figure as {plot_output_filename}")
-    plt.savefig(plot_output_filename, dpi=dpi)
+    fig.savefig(plot_output_filename, dpi=dpi)
 
 
-def save_files(dfs: list[pd.DataFrame], output_file_path: Path, config: AttributeDict):
+def save_files(fig, dfs: list[pd.DataFrame], output_file_path: Path, config: AttributeDict):
     output_file_path.parent.mkdir(parents=True, exist_ok=True)
 
     for file_type in config.output_types:
         if file_type == "csv":
             save_csv(dfs, output_file_path, config.verbose)
         elif file_type == "png" or file_type == "pdf":
-            save_plot(output_file_path, file_type, config.verbose, config.dpi)
+            save_plot(fig, output_file_path, file_type, config.verbose, config.plotstyle.dpi)
     full_path = output_file_path.resolve()
     print(f"Saved results into <{full_path}>")
 
@@ -588,8 +590,8 @@ def main(config: AttributeDict):
     set_plotstyle(config)
 
     dfs = extract_dataframes(workloads, depth=config.depth, config=config)
-    fig, axs = create_figure(dfs, config)
+    fig, _ = create_figure(dfs, config)
 
     output_file_path = get_output_file_path(dfs, config)
 
-    save_files(dfs, output_file_path, config)
+    save_files(fig, dfs, output_file_path, config)

@@ -3,6 +3,7 @@ from typing import Any, Callable, Iterable, Iterator, Literal
 from pathlib import Path
 from pandas import DataFrame, concat, json_normalize
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from engine.configs import EvalConfig
 from evaluation import evaluation_path
 from evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from optimizers import optimizer_path, optimizer_names
@@ -87,18 +88,24 @@ class Engine():
             yield run
 
     def plot(self):
-        # TODO: option to split into multiple files
         config = next(self.runs()).evaluation
         set_plotstyle(config)
         for mode in config.checkpoints:
             df = self.dataframe_from_runs(mode)
-            groups = df.groupby(config.column_split_key)
-            order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
-            dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
-            fig, axs = create_figure(dfs, config)
+            if config.plot.single_file:
+                self.plot_one_file(df, config, mode)
+            else:
+                # TODO: option to split into multiple files
+                raise NotImplementedError("Not implemented yet.")
 
-            output_file_path = get_output_file_path(dfs, config, suffix=mode)
-            save_files(dfs, output_file_path, config)
+    def plot_one_file(self, df: DataFrame, config: EvalConfig, mode: Literal["last", "best"]):
+        groups = df.groupby(config.column_split_key)
+        order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
+        dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
+        fig, _ = create_figure(dfs, config)
+
+        output_file_path = get_output_file_path(dfs, config, suffix=mode)
+        save_files(fig, dfs, output_file_path, config)
 
     def dataframe_from_runs(self, mode: Literal["last", "best"]) -> DataFrame:
         dfs: list[DataFrame] = []
