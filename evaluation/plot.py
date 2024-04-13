@@ -321,7 +321,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     scale = config.plotstyle.scale
     if num_cols == 1 and n_rows_max > 1:
         figsize = (2**3 * scale, 2 * 3 * n_rows_max * scale)
-    if num_cols == 2:
+    elif num_cols == 2:
         # TODO: after removing cbar from left subifgure, it is squished
         #       there is an argument to share the legend, we should use that
         figsize = (12 * scale, 5.4 * n_rows_max * scale)
