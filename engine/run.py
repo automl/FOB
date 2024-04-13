@@ -1,12 +1,10 @@
-
-
 import hashlib
 from pathlib import Path
 import time
 from typing import Any, Optional
 
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
-from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 import torch
@@ -194,6 +192,13 @@ class Run():
             monitor=self.task.target_metric,
             mode=self.task.target_metric_mode,
             save_last=True
+        )
+        self._callbacks["early_stopping"] = EarlyStopping(
+            monitor=self.task.target_metric,
+            mode=self.task.target_metric_mode,
+            patience=self.engine.early_stopping,
+            check_finite=self.engine.check_finite,
+            log_rank_zero_only=True
         )
         self._callbacks["lr_monitor"] = LearningRateMonitor(logging_interval=self.optimizer.lr_interval)
         self._callbacks["extra"] = LogParamsAndGrads(

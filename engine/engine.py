@@ -35,7 +35,6 @@ class Engine():
         self.parser = YAMLParser()
 
     def run_experiment(self):
-        # TODO: early stopping and detect_anomaly
         assert len(self._runs) > 0, "No runs in experiment, make sure to call 'parse_experiment' first."
         scheduler = self._runs[0][self.engine_key]["run_scheduler"]
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
@@ -43,14 +42,16 @@ class Engine():
         if scheduler == "sequential":
             for i, run in enumerate(self.runs(), start=1):
                 rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
-                run.start()
+                try:
+                    run.start()
+                except RuntimeError as e:  # detect_anomaly raises RuntimeError
+                    rank_zero_info(f"Run {i}/{len(self._runs)} failed with {e}.")
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
             for i, run in enumerate(self.runs(), start=1):
                 if i == n:
                     rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
                     run.start()
-        # TODO : default values for sbatch_args.time in tasks
         elif scheduler == "slurm_array":
             if self._experiment_file is None:
                 raise ValueError("Must specify 'experiment_file' when using 'engine.run_scheduler=slurm_array'")

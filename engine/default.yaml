@@ -1,10 +1,11 @@
 engine: 
   accelerator: gpu           # Whether to train on cpu or gpu
+  check_finite: true         # Check if target metric is finite during training.Aborts training if not.
   data_dir: ./data           # Where you want to store the training data
   deterministic: warn        # 'warn' tries to use deterministic algorithms if possible, also accepts true or false.
-  detect_anomaly: false      # Lightning trainer argument with same name. TODO: handle this
+  detect_anomaly: false      # Lightning trainer argument with same name.
   devices: null              # This is set by each task by default, but can be overridden
-  early_stopping: null       # The number of epochs to wait before stopping if no improvement is found. Set to null to disable. TODO: implement this
+  early_stopping: null       # The number of epochs to wait before stopping if no improvement is found. Set to null to disable.
   gradient_clip_alg: norm    # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
   gradient_clip_val: null    # DEFAULT: don't clip gradients, expects value in [0, 1]
   log_extra: false           # Activate logging of gradients and more.
