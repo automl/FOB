@@ -4,7 +4,9 @@ from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from engine import repository_root
 from engine.configs import EvalConfig
+from engine.slurm import slurm_array, slurm_jobs
 from evaluation import evaluation_path
 from evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from optimizers import optimizer_path, optimizer_names
@@ -23,6 +25,7 @@ class Engine():
     def __init__(self) -> None:
         self._runs = []
         self._defaults = []
+        self._experiment_file = None
         self.task_key = "task"
         self.optimizer_key = "optimizer"
         self.engine_key = "engine"
@@ -47,14 +50,21 @@ class Engine():
                 if i == n:
                     rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
                     run.start()
-        # TODO: support slurm
+        # TODO : default values for sbatch_args.time in tasks
         elif scheduler == "slurm_array":
-            raise NotImplementedError("Slurm scheduler not implemented yet.")
+            if self._experiment_file is None:
+                raise ValueError("Must specify 'experiment_file' when using 'engine.run_scheduler=slurm_array'")
+            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment_file)
+        elif scheduler == "slurm_jobs":
+            if self._experiment_file is None:
+                raise ValueError("Must specify 'experiment_file' when using 'engine.run_scheduler=slurm_jobs'")
+            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment_file)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
     def parse_experiment_from_file(self, file: Path, extra_args: Iterable[str] = tuple()):
-        searchspace: dict[str, Any] = self.parser.parse_yaml(file)
+        self._experiment_file = file.resolve()
+        searchspace: dict[str, Any] = self.parser.parse_yaml(self._experiment_file)
         self.parse_experiment(searchspace, extra_args)
 
     def parse_experiment(self, searchspace: dict[str, Any], extra_args: Iterable[str] = tuple()):

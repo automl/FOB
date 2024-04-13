@@ -27,3 +27,4 @@ opencv-python==4.9.0.80
 pytorch-cpr==0.2.0
 mmsegmentation==1.2.2
 mmcv==2.1.0
+slurmpy==0.0.8

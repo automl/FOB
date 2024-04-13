@@ -15,8 +15,15 @@ engine:
   run_scheduler: sequential  # How to schedule the runs of the experiment. Supported values:
                                # 'sequential': runs are performed sequentially 
                                # 'single:N' where N is the number of the run starting from 1.
-                               # 'slurm_array': runs are scheduled using SLURM TODO: implement this
-  sbatch_args: {}            # Additional arguments to pass to sbatch. Only used if run_scheduler is 'slurm_array' TODO: implement this
+                               # 'slurm_array': runs are scheduled using a SLURM array job.
+                               # 'slurm_jobs': runs are scheduled using independent SLURM jobs
+  sbatch_args:               # Additional arguments to pass to sbatch. Only used if run_scheduler is 'slurm_array'.
+    # ntasks-per-node and gres are set to 'devices' by default
+    # cpus-per-task is set to 'workers' by default
+    nodes: 1
+    mem-per-cpu: 2gb
+    time: 00:30:00           # each task has their own default time (assumes A100 or similar gpu)
+  slurm_log_dir: null        # Default: 'output_dir/slurm_logs' for run_scheduler 'slurm_array' and 'run_dir/slurm_logs' for run_scheduler 'slurm_jobs'
   seed: 42                   # The seed to use for the experiment
   seed_mode: fixed           # Currently only supports 'fixed'
   silent: false              # whether to hide progress bars. Recommended when writing outputs to a log file.

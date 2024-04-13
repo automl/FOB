@@ -85,6 +85,7 @@ class EngineConfig(BaseConfig):
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
         self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
+        self.slurm_log_dir: Path | None = cfg.get("slurm_log_dir", None)
         self.silent: bool = cfg.get("silent", False)
         self.test: bool = cfg.get("test", True)
         self.train: bool = cfg.get("train", True)

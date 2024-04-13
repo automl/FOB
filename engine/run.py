@@ -75,7 +75,7 @@ class Run():
 
     def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
         ckpt_path = self.engine.resume if ckpt is None else ckpt
-        mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"
+        mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"  # type: ignore
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)  # type: ignore
         write_results(score, self.run_dir / f"results_{mode}_model.json")
 
