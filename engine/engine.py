@@ -1,6 +1,7 @@
 import json
 from typing import Any, Callable, Iterable, Iterator, Literal
 from pathlib import Path
+from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
 from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from engine.configs import EvalConfig
@@ -87,23 +88,30 @@ class Engine():
             )
             yield run
 
-    def plot(self):
+    def plot(self, save: bool = True) -> list[Figure]:
         config = next(self.runs()).evaluation
         set_plotstyle(config)
+        figs = []
         for mode in config.checkpoints:
             df = self.dataframe_from_runs(mode)
             if config.plot.single_file:
-                self.plot_one_file(df, config, mode)
+                fig, dfs = self.plot_one_fig(df, config)
+                if save:
+                    self.save_one_plot(fig, dfs, config, mode)
+                figs.append(fig)
             else:
                 # TODO: option to split into multiple files
                 raise NotImplementedError("Not implemented yet.")
+        return figs
 
-    def plot_one_file(self, df: DataFrame, config: EvalConfig, mode: Literal["last", "best"]):
+    def plot_one_fig(self, df: DataFrame, config: EvalConfig):
         groups = df.groupby(config.column_split_key)
         order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
         dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
         fig, _ = create_figure(dfs, config)
+        return fig, dfs
 
+    def save_one_plot(self, fig, dfs: list[DataFrame], config: EvalConfig, mode: Literal["last", "best"]):
         output_file_path = get_output_file_path(dfs, config, suffix=mode)
         save_files(fig, dfs, output_file_path, config)
 
