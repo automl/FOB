@@ -100,6 +100,7 @@ class Engine():
             yield run
 
     def plot(self, save: bool = True) -> list[Figure]:
+        # TODO: plot flag in engine config
         config = next(self.runs()).evaluation
         set_plotstyle(config)
         figs = []

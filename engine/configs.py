@@ -131,7 +131,7 @@ class EvalConfig(BaseConfig):
             config = "config.yaml"
         ))
         self.output_types: list[str] = wrap_list(cfg["output_types"])
-        self.output_dir: Optional[Path] = maybe_abspath(cfg["output_dir"])
+        self.output_dir: Optional[Path] = maybe_abspath(cfg["output_dir"])  # TODO: check correct behavior if none
         self.experiment_name: str = cfg["experiment_name"]
         self.verbose: bool = cfg.get("verbose", False)
         split = cfg.get("split_groups", False)
