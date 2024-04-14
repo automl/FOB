@@ -248,8 +248,8 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
 
 
 def find_global_vmin_vmax(dataframe_list, config):
-    vmin: int | None = None
-    vmax: int | None = None
+    vmin: int | float | None = None
+    vmax: int | float | None = None
     num_cols = len(dataframe_list)
 
     if num_cols > 1:
@@ -455,8 +455,7 @@ def set_plotstyle(config: AttributeDict):
     plt.rcParams["font.family"] = config.plotstyle.font.family
     plt.rcParams["font.size"] = config.plotstyle.font.size
 
-
-def pretty_name(name: str, pretty_names: dict | str = {}) -> str:
+def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignore pylint: disable=dangerous-default-value
     """
     Tries to use a mapping for the name, else will do some general replacement.
     mapping can be a directory or a filename of a yaml file with 'names' key
