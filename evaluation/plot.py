@@ -272,11 +272,10 @@ def find_global_vmin_vmax(dataframe_list, config):
             min_value_present_in_current_df = pivot_table.min().min()
             max_value_present_in_current_df = pivot_table.max().max()
 
-            if config.verbose:
-                rank_zero_debug("colorbar_limits:\n" +
-                                f"  subfigure number {i+1}, checking for metric {key}: \n" +
-                                f"  min value is {min_value_present_in_current_df},\n" +
-                                f"  max value is {max_value_present_in_current_df}")
+            rank_zero_debug("colorbar_limits:\n" +
+                            f"  subfigure number {i+1}, checking for metric {key}: \n" +
+                            f"  min value is {min_value_present_in_current_df},\n" +
+                            f"  max value is {max_value_present_in_current_df}")
             vmin = min(vmin, min_value_present_in_current_df)
             vmax = max(vmax, max_value_present_in_current_df)
 
