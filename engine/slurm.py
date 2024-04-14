@@ -1,4 +1,5 @@
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, Optional
 from slurmpy import Slurm
 
@@ -7,7 +8,7 @@ from engine.utils import some
 
 
 # TODO: default values for sbatch_args.time in tasks
-# TODO: option to save or discard sbatch scripts
+
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
     first = runs[0]
@@ -37,21 +38,43 @@ def wrap_template(template_path: Optional[Path], command: str, placeholder: str 
     return command
 
 
+def get_command(run_script: Path, experiment_file: Path, index: str) -> str:
+    return f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:{index}" """
+
+
+def get_slurm(run: Run, args: dict[str, str], log_dir: Path, scripts_dir: Optional[Path] = None) -> Slurm:
+    return Slurm(
+        f"FOB-{run.task.name}-{run.optimizer.name}",
+        args,
+        log_dir=str(log_dir.resolve()),
+        scripts_dir=str(some(scripts_dir, run.engine.save_sbatch_scripts, default="fob-slurm-scripts"))
+    )
+
+
+def run_slurm(command: str, run: Run, args: dict[str, str], log_dir: Path):
+    if run.engine.save_sbatch_scripts is None:
+        with TemporaryDirectory() as tmpdir:
+            s = get_slurm(run, args, log_dir, Path(tmpdir).resolve())
+            s.run(command)
+    else:
+        s = get_slurm(run, args, log_dir)
+        s.run(command, _cmd = "cat") # TODO: revert
+
+
 def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> None:
     equal_req = ["devices", "workers", "sbatch_args", "slurm_log_dir", "sbatch_script_template", "run_scheduler"]
     ok = argcheck_allequal_engine(runs, equal_req)
     if not ok:
         raise ValueError(f"All runs must have the same values for {', '.join(map(lambda s: 'engine.' + s, equal_req))} when using 'engine.run_scheduler=slurm_array'")
-    n_runs = len(runs)
-    run = runs[0]
+    run = runs[0]  # all runs have the same args
     args = run.engine.sbatch_args
     log_dir = some(run.engine.slurm_log_dir, default=run.engine.output_dir / "slurm_logs")
     if not "array" in args:
-        args["array"] = f"1-{n_runs}"
+        args["array"] = f"1-{len(runs)}"
     ensure_args(args, run)
-    s = Slurm(f"FOB-{run.task.name}-{run.optimizer.name}", args, log_dir=str(log_dir.resolve()))
-    command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:$SLURM_ARRAY_TASK_ID" """
-    s.run(wrap_template(run.engine.sbatch_script_template, command))
+    command = get_command(run_script, experiment_file, "$SLURM_ARRAY_TASK_ID")
+    command = wrap_template(run.engine.sbatch_script_template, command)
+    run_slurm(command, run, args, log_dir)
 
 
 def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment_file: Path) -> None:
@@ -60,6 +83,6 @@ def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment_file: Path) -> 
         args = run.engine.sbatch_args
         ensure_args(args, run)
         log_dir = some(run.engine.slurm_log_dir, default=run.run_dir / "slurm_logs")
-        s = Slurm(f"FOB-{run.task.name}-{run.optimizer.name}", args, log_dir=str(log_dir.resolve()))
-        command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:{i}" """
-        s.run(wrap_template(run.engine.sbatch_script_template, command), _cmd = "ls")
+        command = get_command(run_script, experiment_file, str(i))
+        command = wrap_template(run.engine.sbatch_script_template, command)
+        run_slurm(command, run, args, log_dir)

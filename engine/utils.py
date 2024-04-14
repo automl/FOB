@@ -1,6 +1,6 @@
 from pathlib import Path
 import sys
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Callable, Iterable, Optional, Type
 import json
 import math
 import signal
@@ -47,6 +47,12 @@ def some(*args, default):
     if first is not None:
         return first
     return some(*rest, default=default)
+
+
+def maybe_abspath(path: Optional[str | Path]) -> Optional[Path]:
+    if path is None:
+        return None
+    return Path(path).resolve()
 
 
 def findfirst(f: Callable, xs: Iterable):

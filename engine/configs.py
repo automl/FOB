@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Literal, Optional
-from .utils import AttributeDict, EndlessList, convert_type_inside_dict, some, wrap_list
+from .utils import AttributeDict, EndlessList, convert_type_inside_dict, maybe_abspath, some, wrap_list
 
 
 class BaseConfig(AttributeDict):
@@ -79,16 +79,15 @@ class EngineConfig(BaseConfig):
         self.optimize_memory: bool = cfg["optimize_memory"]
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.precision: str = cfg["precision"]
-        resume = cfg.get("resume", False)
-        self.resume: Optional[Path] | bool = Path(resume).resolve() if isinstance(resume, str) else resume
+        _resume = cfg.get("resume", False)
+        self.resume: Optional[Path] | bool = Path(_resume).resolve() if isinstance(_resume, str) else _resume
         self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
+        self.save_sbatch_scripts: Optional[Path] = maybe_abspath(cfg["save_sbatch_scripts"])
         self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
-        template = cfg.get("sbatch_script_template", None)
-        self.sbatch_script_template: Optional[Path] = Path(template).resolve() if isinstance(template, str) else template
-        log_dir = cfg["slurm_log_dir"]
-        self.slurm_log_dir: Optional[Path] = Path(log_dir).resolve() if isinstance(log_dir, str) else log_dir
+        self.sbatch_script_template: Optional[Path] = maybe_abspath(cfg["sbatch_script_template"])
+        self.slurm_log_dir: Optional[Path] = maybe_abspath(cfg["slurm_log_dir"])
         self.silent: bool = cfg.get("silent", False)
         self.test: bool = cfg.get("test", True)
         self.train: bool = cfg.get("train", True)
@@ -100,6 +99,7 @@ class EngineConfig(BaseConfig):
         cfg["output_dir"] = self.output_dir
         cfg["resume"] = self.resume
         cfg["slurm_log_dir"] = self.slurm_log_dir
+        cfg["save_sbatch_scripts"] = self.save_sbatch_scripts
         cfg["sbatch_script_template"] = self.sbatch_script_template
         super().__init__(cfg)
 
