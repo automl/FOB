@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_info
 from engine.engine import Engine, Run
 
 

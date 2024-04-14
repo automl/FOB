@@ -7,9 +7,8 @@ from itertools import repeat
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from lightning_utilities.core.rank_zero import rank_zero_warn, rank_zero_info, rank_zero_debug
 from engine.parser import YAMLParser
-from engine.utils import AttributeDict, convert_type_inside_dict
+from engine.utils import AttributeDict, convert_type_inside_dict, log_warn
 from evaluation import evaluation_path
 
 
@@ -86,7 +85,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
             if metric_of_value_to_plot in content[0]:
                 data.at[0, metric_of_value_to_plot] = content[0][metric_of_value_to_plot]
             else:
-                rank_zero_warn(f"could not find value for {metric_of_value_to_plot} in json")
+                log_warn(f"could not find value for {metric_of_value_to_plot} in json")
 
         dfs.append(data)
 
@@ -195,7 +194,7 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[0]
         if df["evaluation.plot.metric"].nunique() > 1:
-            rank_zero_warn("More than one metric found, using the first one.")
+            log_warn("More than one metric found, using the first one.")
         metric = df["evaluation.plot.metric"].unique()[0]
         ignored_cols = [x_axis, y_axis, metric]
         ignored_cols += config.get("ignore_keys", [])
@@ -230,7 +229,7 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
         is_whitelisted = whitelisted_cols == "all" or col in whitelisted_cols
         if any([is_ignored, is_eval_key, not is_whitelisted]):
             if is_whitelisted:
-                rank_zero_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
+                log_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
             rank_zero_debug(f"ignoring {col}")
             continue
         nunique = dataframe[col].nunique(dropna=False)
@@ -519,7 +518,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         value_is_none = not config.data_dirs
         value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
         if value_is_none or value_has_wrong_type:
-            rank_zero_warn(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
+            raise ValueError(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
 
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):

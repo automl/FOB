@@ -3,8 +3,9 @@ from typing import Any, Callable, Iterable, Iterator, Literal
 from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_info
 from engine import repository_root
+from engine.utils import log_warn
 from engine.configs import EvalConfig
 from engine.slurm import slurm_array, slurm_jobs
 from evaluation import evaluation_path
@@ -137,7 +138,7 @@ class Engine():
             else:
                 raise ValueError(f"mode {mode} not supported")
             if not result_file.is_file():
-                rank_zero_warn(f"result file {result_file} not found, skipping this hyperparameter setting")
+                log_warn(f"result file {result_file} not found, skipping this hyperparameter setting")
                 continue
             metric = run.evaluation.plot.metric
             with open(result_file, "r", encoding="utf8") as f:
@@ -145,7 +146,7 @@ class Engine():
                 if metric in content[0]:
                     df.at[0, metric] = content[0][metric]
                 else:
-                    rank_zero_warn(f"could not find value for {metric} in json, skipping this hyperparameter setting")
+                    log_warn(f"could not find value for {metric} in json, skipping this hyperparameter setting")
                     continue
             dfs.append(df)
         if len(dfs) == 0:

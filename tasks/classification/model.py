@@ -4,9 +4,10 @@ from torch import nn
 import torch.nn.functional as F
 from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_info
 from tasks import TaskModel
 from engine.configs import TaskConfig
+from engine.utils import log_warn
 from optimizers import Optimizer
 from tasks.classification.wrn import wrn50_2
 
@@ -67,10 +68,10 @@ class ImagenetModel(TaskModel):
                     LayerNorm2d((96,))
                 )
             else:
-                rank_zero_warn(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
+                log_warn(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
         else:
             # not throwing an error, its valid for the user to use an given default model
-            rank_zero_warn("WARNING: the model you have specified has no modification.")
+            log_warn("WARNING: the model you have specified has no modification.")
 
         return model
 

@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 from pathlib import Path
 import sys
 from typing import Any, Callable, Iterable, Type
@@ -6,13 +5,16 @@ import json
 import math
 import signal
 import torch
-from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_only, log
 
 
 @rank_zero_only
 def rank_zero_print(*args: Any, **kwargs: Any):
     return print(*args, **kwargs)
 
+@rank_zero_only
+def log_warn(msg: str, *args: Any, **kwargs: Any):
+    return log.warning(msg, *args, **kwargs)
 
 def write_results(results, filepath: Path):
     with open(filepath, "w", encoding="utf8") as f:
@@ -66,10 +68,10 @@ def precision_with_fallback(precision: str) -> str:
     Check if cuda supports bf16, if not using cuda or if not available return 16 instead of bf16
     """
     if not torch.cuda.is_available():
-        rank_zero_warn("Warning: No CUDA available. Results can be different!", file=sys.stderr)
+        log_warn("Warning: No CUDA available. Results can be different!", file=sys.stderr)
         return precision[2:]
     if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
-        rank_zero_warn("Warning: GPU does not support bfloat16. Results can be different!", file=sys.stderr)
+        log_warn("Warning: GPU does not support bfloat16. Results can be different!", file=sys.stderr)
         return precision[2:]
     return precision
 

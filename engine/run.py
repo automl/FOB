@@ -6,12 +6,12 @@ from typing import Any, Optional
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_info
 import torch
 import yaml
 from engine.callbacks import LogParamsAndGrads, PrintEpoch
 from engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
-from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results
+from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn
 from optimizers.optimizers import Optimizer
 from tasks.tasks import TaskDataModule, TaskModel, import_task
 
@@ -161,7 +161,7 @@ class Run():
             if self.engine.resume:
                 available_checkpoints = self.get_available_checkpoints()
                 if len(available_checkpoints) < 1:
-                    rank_zero_warn("engine.resume=True but no checkpoint was found. Starting run from scratch.")
+                    log_warn("engine.resume=True but no checkpoint was found. Starting run from scratch.")
                 else:
                     resume_path = findfirst(lambda x: x.stem == "last", available_checkpoints)
             self._config[self.engine_key]["resume"] = resume_path
@@ -224,7 +224,7 @@ class Run():
         run_dir = ",".join(f"{k}={str(v)}" for k, v in sorted(diffs.items())) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            rank_zero_warn(f"folder name {run_dir} is too long, using {hashdir} instead.")
+            log_warn(f"folder name {run_dir} is too long, using {hashdir} instead.")
             run_dir = hashdir
         self.run_dir = base / run_dir
         self.checkpoint_dir = self.run_dir / "checkpoints"
