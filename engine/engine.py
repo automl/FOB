@@ -8,7 +8,7 @@ from engine.configs import EvalConfig
 from engine.grid_search import gridsearch
 from engine.parser import YAMLParser
 from engine.run import Run
-from engine.slurm import slurm_array, slurm_jobs
+from engine.run_schedulers import sequential, slurm_array, slurm_jobs
 from engine.utils import log_debug, log_info, log_warn, some
 from evaluation import evaluation_path
 from evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
@@ -40,12 +40,7 @@ class Engine():
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
-            for i, run in enumerate(self.runs(), start=1):
-                log_info(f"Starting run {i}/{len(self._runs)}.")
-                try:
-                    run.start()
-                except RuntimeError as e:  # detect_anomaly raises RuntimeError
-                    log_info(f"Run {i}/{len(self._runs)} failed with {e}.")
+            sequential(self.runs(), len(self._runs), self._experiment)
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
             log_info(f"Starting run {n}/{len(self._runs)}.")

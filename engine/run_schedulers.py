@@ -5,12 +5,10 @@ from slurmpy import Slurm
 import yaml
 
 from engine.run import Run
-from engine.utils import seconds_to_str, some, str_to_seconds
+from engine.utils import log_info, seconds_to_str, some, str_to_seconds
 
 
-# TODO: plot only after all runs are finished
-
-
+# TODO: SLURM: plot only after all runs are finished
 
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
@@ -72,7 +70,7 @@ def run_slurm(command: str, run: Run, args: dict[str, str], log_dir: Path):
             s.run(command)
     else:
         s = get_slurm(run, args, log_dir)
-        s.run(command, _cmd = "cat")
+        s.run(command)
 
 
 def slurm_array(runs: list[Run], run_script: Path, experiment: dict[str, Any]) -> None:
@@ -101,3 +99,13 @@ def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment: dict[str, Any]
         command = get_command(run_script, experiment_file, str(i))
         command = wrap_template(run.engine.sbatch_script_template, command)
         run_slurm(command, run, args, log_dir)
+
+
+def sequential(runs: Iterable[Run], n_runs: int, experiment: dict[str, Any]):
+    for i, run in enumerate(runs, start=1):
+        log_info(f"Starting run {i}/{n_runs}.")
+        export_experiment(run, experiment)
+        try:
+            run.start()
+        except RuntimeError as e:  # detect_anomaly raises RuntimeError
+            log_info(f"Run {i}/{n_runs} failed with {e}.")
