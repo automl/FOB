@@ -1,6 +1,5 @@
 import json
 from typing import Callable
-from lightning_utilities.core.rank_zero import rank_zero_info
 from torch.utils.data import DataLoader
 from datasets import DatasetDict
 import datasets
@@ -9,6 +8,7 @@ from transformers import DataCollatorForSeq2Seq
 
 from tasks import TaskDataModule
 from engine.configs import TaskConfig
+from engine.utils import log_info
 
 MAX_TOKENS_PER_SENTENCE = 128
 
@@ -72,10 +72,10 @@ class WMTDataModule(TaskDataModule):
         # only called on 1 GPU/TPU in distributed
         self.data_dir.mkdir(exist_ok=True)
         if self.info_file.exists():
-            rank_zero_info("wmt already preprocessed")
+            log_info("wmt already preprocessed")
             return
         ds = self._get_dataset()
-        rank_zero_info("tokenizing data...")
+        log_info("tokenizing data...")
         def transform_text(data):
             de = [example["de"] for example in data["translation"]]
             en = [example["en"] for example in data["translation"]]
@@ -83,18 +83,18 @@ class WMTDataModule(TaskDataModule):
                     "en": self.tokenizer(en)["input_ids"]}
         ds = ds.map(transform_text, batched=True)
         ds["train"] = ds["train"].remove_columns("translation")
-        rank_zero_info("filtering sentences with too many tokens...")
+        log_info("filtering sentences with too many tokens...")
         ds = ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE and
                                     len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
-        rank_zero_info("saving dataset...")
+        log_info("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
-        rank_zero_info("saving additional information...")
+        log_info("saving additional information...")
         with open(self.processed_data_dir / "info.json", "w", encoding="utf8") as f:
             json.dump({"max_tokens": MAX_TOKENS_PER_SENTENCE,
                        "train_data_len": len(ds["train"]),
                        "val_data_len": len(ds["validation"]),
                        "test_data_len": len(ds["test"])}, f, indent=4)
-        rank_zero_info("wmt preprocessed")
+        log_info("wmt preprocessed")
 
     def setup(self, stage):
         """setup is called from every process across all the nodes. Setting state here is recommended.

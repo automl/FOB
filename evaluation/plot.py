@@ -1,14 +1,14 @@
 import json
-import sys
 from pathlib import Path
 from os import PathLike
 from typing import List, Literal
 from itertools import repeat
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import seaborn as sns
 import pandas as pd
 from engine.parser import YAMLParser
-from engine.utils import AttributeDict, convert_type_inside_dict, log_warn
+from engine.utils import AttributeDict, convert_type_inside_dict, log_warn, log_info, log_debug
 from evaluation import evaluation_path
 
 
@@ -28,7 +28,7 @@ def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
             for subdir in subdirs:
                 subdirs += [x for x in subdir.iterdir() if x.is_dir()]
     format_str = "\n  "  # f-string expression part cannot include a backslash
-    rank_zero_debug(f"found the following directories:{format_str}{format_str.join(str(i) for i in subdirs)}.")
+    log_debug(f"found the following directories:{format_str}{format_str.join(str(i) for i in subdirs)}.")
 
     def is_trial(path: Path):
         # here we could do additional checks to filter the subdirectories
@@ -40,7 +40,7 @@ def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
         return False
 
     subdirs = list(filter(is_trial, subdirs[::-1]))
-    rank_zero_debug(f"We assume the following to be trials:{format_str}{format_str.join(str(i) for i in subdirs)}.")
+    log_debug(f"We assume the following to be trials:{format_str}{format_str.join(str(i) for i in subdirs)}.")
     return subdirs
 
 
@@ -61,7 +61,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
             result_file.is_file()
         ])
         if not all_files_exist:
-            rank_zero_warn(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting." +
+            log_warn(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting." +
                            f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})")
             continue
 
@@ -108,11 +108,11 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
     # CLEANING LAZY USER INPUT
     # cols are x-axis, idx are y-axis
     if cols not in dataframe.columns:
-        rank_zero_warn("x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
+        log_warn("x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
                        f"  using '{'optimizer.' + cols}' as 'x-axis' instead.")
         cols = "optimizer." + cols
     if idx not in dataframe.columns:
-        rank_zero_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
+        log_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
                        f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
         idx = "optimizer." + idx
     # create pivot table and format the score result
@@ -141,7 +141,7 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
         if limits:
             vmin = min(limits)
             vmax = max(limits)
-            rank_zero_debug(f"setting cbar limits to {vmin}, {vmax} ")
+            log_debug(f"setting cbar limits to {vmin}, {vmax} ")
 
     colormap_name = config.plotstyle.color_palette
     low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
@@ -167,7 +167,7 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
                                         aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
                                         )
         if float("inf") in pivot_table_std.values.flatten():
-            rank_zero_warn("WARNING: Not enough data to calculate the std, skipping std in plot")
+            log_warn("WARNING: Not enough data to calculate the std, skipping std in plot")
 
         pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
 
@@ -230,19 +230,19 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
         if any([is_ignored, is_eval_key, not is_whitelisted]):
             if is_whitelisted:
                 log_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
-            rank_zero_debug(f"ignoring {col}")
+            log_debug(f"ignoring {col}")
             continue
         nunique = dataframe[col].nunique(dropna=False)
         if nunique > 1:
-            rank_zero_debug(f"adding {col} since there are {nunique} unique values")
+            log_debug(f"adding {col} since there are {nunique} unique values")
             for unique_hp in dataframe[col].unique():
                 columns_with_non_unique_values.append(f"{col}={unique_hp}")
             necesarry_rows += (nunique)  # each unique parameter should be an individal plot
 
     rows_number = max(necesarry_rows, 1)
     col_names = columns_with_non_unique_values
-    rank_zero_debug(f"{rows_number=}")
-    rank_zero_debug(f"{col_names=}")
+    log_debug(f"{rows_number=}")
+    log_debug(f"{col_names=}")
 
     return rows_number, col_names
 
@@ -271,7 +271,7 @@ def find_global_vmin_vmax(dataframe_list, config):
             min_value_present_in_current_df = pivot_table.min().min()
             max_value_present_in_current_df = pivot_table.max().max()
 
-            rank_zero_debug("colorbar_limits:\n" +
+            log_debug("colorbar_limits:\n" +
                             f"  subfigure number {i+1}, checking for metric {key}: \n" +
                             f"  min value is {min_value_present_in_current_df},\n" +
                             f"  max value is {max_value_present_in_current_df}")
@@ -299,7 +299,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     else:
         n_rows_max = max(n_rows)
 
-    rank_zero_debug(f"{n_rows=} and {num_cols=}")
+    log_debug(f"{n_rows=} and {num_cols=}")
 
     # TODO, figsize was just hardcoded for (1, 2) grid and left to default for (1, 1) grid
     #       probably not worth the hazzle to create something dynamic (atleast not now)
@@ -391,9 +391,9 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
         try:
             current_dataframe = dataframe.groupby([param_name]).get_group(param_value)
         except KeyError:
-            rank_zero_warn(f"WARNING: was not able to groupby '{param_name}'," +
+            log_warn(f"WARNING: was not able to groupby '{param_name}'," +
                            "maybe the data was created with different versions of fob; skipping this row")
-            rank_zero_debug(f"{param_name=}{param_value=}{dataframe.columns=}{dataframe[param_name]=}")
+            log_debug(f"{param_name=}{param_value=}{dataframe.columns=}{dataframe[param_name]=}")
             return False
     current_plot = create_matrix_plot(current_dataframe, config,
                                         cols, idx,
@@ -486,13 +486,13 @@ def pretty_name(name: str, pretty_names: dict | str = {}) -> str:
 def save_csv(dfs: list[pd.DataFrame], output_filename: Path):
     for i, df in enumerate(dfs):
         csv_output_filename = f"{output_filename.resolve()}-{i}.csv"
-        rank_zero_info(f"saving raw data as {csv_output_filename}")
+        log_info(f"saving raw data as {csv_output_filename}")
         df.to_csv(path_or_buf=csv_output_filename, index=False)
 
 
-def save_plot(fig: plt.Figure, output_file_path: Path, file_type: str, dpi: int):
+def save_plot(fig: Figure, output_file_path: Path, file_type: str, dpi: int):
     plot_output_filename = f"{output_file_path.resolve()}-heatmap.{file_type}"
-    rank_zero_info(f"saving figure as <{plot_output_filename}>")
+    log_info(f"saving figure as <{plot_output_filename}>")
     fig.savefig(plot_output_filename, dpi=dpi)
 
 
@@ -513,7 +513,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         evaluation_config["all_values"] = config
         config = evaluation_config
     else:
-        rank_zero_warn("there is no 'evaluation' in the yaml provided!")
+        log_warn("there is no 'evaluation' in the yaml provided!")
     if "data_dirs" in config.keys():
         value_is_none = not config.data_dirs
         value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
@@ -523,16 +523,16 @@ def clean_config(config: AttributeDict) -> AttributeDict:
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):
         config["output_types"] = [config.output_types]
-        rank_zero_info("fixing value for key <config.output_types> to be a list[str]")
+        log_info("fixing value for key <config.output_types> to be a list[str]")
 
     if not isinstance(config.data_dirs, list):
         config["data_dirs"] = [Path(config.data_dirs)]
-        rank_zero_info("fixing value for key <config.data_dirs> to be a list[Path]")
+        log_info("fixing value for key <config.data_dirs> to be a list[Path]")
 
     # x_axis
     if not isinstance(config.plot.x_axis, list):
         config["plot"]["x_axis"] = [config.plot.x_axis]
-        rank_zero_info("fixing value for key <config.plot.x_axis> to be a list[str]")
+        log_info("fixing value for key <config.plot.x_axis> to be a list[str]")
     if len(config.plot.x_axis) < len(config.data_dirs):
         # use same x axis for all if only one given
         missing_elements = len(config.data_dirs) - len(config.plot.x_axis)
@@ -541,7 +541,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
     # y_axis
     if not isinstance(config.plot.y_axis, list):
         config["plot"]["y_axis"] = [config.plot.y_axis]
-        rank_zero_info("fixing value for key <config.plot.y_axis> to be a list[str]")
+        log_info("fixing value for key <config.plot.y_axis> to be a list[str]")
     if len(config.plot.y_axis) < len(config.data_dirs):
         # use same x axis for all if only one given
         missing_elements = len(config.data_dirs) - len(config.plot.y_axis)
@@ -553,7 +553,7 @@ def clean_config(config: AttributeDict) -> AttributeDict:
 def main(config: AttributeDict):
     config = clean_config(config)  # sets config to config.evaluation, cleans some data
     workloads: List[Path] = [Path(name) for name in config.data_dirs]
-    rank_zero_debug(f"{workloads}=")
+    log_debug(f"{workloads}=")
 
     set_plotstyle(config)
 

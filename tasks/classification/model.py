@@ -4,10 +4,9 @@ from torch import nn
 import torch.nn.functional as F
 from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
-from lightning_utilities.core.rank_zero import rank_zero_info
 from tasks import TaskModel
 from engine.configs import TaskConfig
-from engine.utils import log_warn
+from engine.utils import log_warn, log_info
 from optimizers import Optimizer
 from tasks.classification.wrn import wrn50_2
 
@@ -30,7 +29,7 @@ class ImagenetModel(TaskModel):
                 model = create_model(model_name)
             except RuntimeError as e:
                 available_models = list_models()
-                rank_zero_info(f"Available Models are {available_models}")
+                log_info(f"Available Models are {available_models}")
                 raise Exception("Unsupported model given.") from e
 
         # taking care of model specific changes

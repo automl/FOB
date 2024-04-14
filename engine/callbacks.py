@@ -1,8 +1,8 @@
 import torch
 import lightning.pytorch as pl
 from lightning import Callback, Trainer, LightningModule
-from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info
-from engine.utils import log_warn
+from lightning_utilities.core.rank_zero import rank_zero_only
+from engine.utils import log_warn, log_info
 import deepspeed
 
 
@@ -17,7 +17,7 @@ class PrintEpoch(Callback):
         # TODO: better logging (with time spent on epoch and stuff)
         if self.active:
             max_epochs = pl_module.config.max_epochs
-            rank_zero_info(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
+            log_info(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
 
 
 class LogParamsAndGrads(Callback):

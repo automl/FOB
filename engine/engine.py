@@ -3,9 +3,8 @@ from typing import Any, Callable, Iterable, Iterator, Literal
 from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
-from lightning_utilities.core.rank_zero import rank_zero_info
 from engine import repository_root
-from engine.utils import log_warn
+from engine.utils import log_warn, log_info
 from engine.configs import EvalConfig
 from engine.slurm import slurm_array, slurm_jobs
 from evaluation import evaluation_path
@@ -42,16 +41,16 @@ class Engine():
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
             for i, run in enumerate(self.runs(), start=1):
-                rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
+                log_info(f"Starting run {i}/{len(self._runs)}.")
                 try:
                     run.start()
                 except RuntimeError as e:  # detect_anomaly raises RuntimeError
-                    rank_zero_info(f"Run {i}/{len(self._runs)} failed with {e}.")
+                    log_info(f"Run {i}/{len(self._runs)} failed with {e}.")
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
             for i, run in enumerate(self.runs(), start=1):
                 if i == n:
-                    rank_zero_info(f"Starting run {i}/{len(self._runs)}.")
+                    log_info(f"Starting run {i}/{len(self._runs)}.")
                     run.start()
         elif scheduler == "slurm_array":
             if self._experiment_file is None:

@@ -4,7 +4,7 @@ from tasks import TaskDataModule
 from engine.configs import TaskConfig
 from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader.dataloader import DataLoader as GeomDataLoader
-from lightning_utilities.core.rank_zero import rank_zero_debug
+from lightning_utilities.core.rank_zero import log_debug
 
 
 class OGBGDataModule(TaskDataModule):
@@ -20,17 +20,17 @@ class OGBGDataModule(TaskDataModule):
         # self.dataset_name = "ogbg-molpcba"
 
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
-        rank_zero_debug(f"{dataset.num_node_features=}")
-        rank_zero_debug(f"{dataset.num_classes=}")
-        rank_zero_debug(f"{dataset.num_features=}")
+        log_debug(f"{dataset.num_node_features=}")
+        log_debug(f"{dataset.num_classes=}")
+        log_debug(f"{dataset.num_features=}")
         self.feature_dim: int = dataset.num_features
         self.num_classes: int = dataset.num_classes
 
     def prepare_data(self):
         dataset = PygGraphPropPredDataset(root=self.data_dir, name=self.dataset_name)
-        rank_zero_debug(f"{dataset.num_node_features=}")
-        rank_zero_debug(f"{dataset.num_classes=}")
-        rank_zero_debug(f"{dataset.num_features=}")
+        log_debug(f"{dataset.num_node_features=}")
+        log_debug(f"{dataset.num_classes=}")
+        log_debug(f"{dataset.num_features=}")
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)

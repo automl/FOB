@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
-from lightning_utilities.core.rank_zero import rank_zero_info
 from engine.engine import Engine, Run
+from engine.utils import log_info
 
 
 def download_single_data(run: Run):
@@ -23,7 +23,7 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     for run in engine.runs():
         if run.task.name in done:
             continue
-        rank_zero_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
+        log_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
         download_single_data(run)
         done.add(run.task.name)
 

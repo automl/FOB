@@ -7,8 +7,8 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from lightning_utilities.core.rank_zero import rank_zero_info
 from engine.configs import OptimizerConfig
+from engine.utils import log_info
 from engine.parameter_groups import GroupedModel
 from optimizers.adamcpr_fast.adam_cpr_fast import AdamCPRfast
 
@@ -26,7 +26,7 @@ def cosine_warmup(
         optimizer
         ) -> SequentialLR | CosineAnnealingLR:
     if warmup_steps == 0:
-        rank_zero_info("warmup = 0: using CosineAnnealingLR only")
+        log_info("warmup = 0: using CosineAnnealingLR only")
         return CosineAnnealingLR(optimizer, T_max=total_steps)
     warmup = LinearLR(
         optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)

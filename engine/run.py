@@ -6,12 +6,11 @@ from typing import Any, Optional
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
-from lightning_utilities.core.rank_zero import rank_zero_info
 import torch
 import yaml
 from engine.callbacks import LogParamsAndGrads, PrintEpoch
 from engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
-from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn
+from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
 from optimizers.optimizers import Optimizer
 from tasks.tasks import TaskDataModule, TaskModel, import_task
 
@@ -69,7 +68,7 @@ class Run():
             trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
         end_time = time.time()
         train_time = int(end_time - start_time)
-        rank_zero_info(f"Finished training in {seconds_to_str(train_time)}.")
+        log_info(f"Finished training in {seconds_to_str(train_time)}.")
 
     def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
         ckpt_path = self.engine.resume if ckpt is None else ckpt
@@ -176,7 +175,7 @@ class Run():
             if self._default_config[self.task_key]["max_steps"] is None:
                 self._default_config[self.task_key]["max_steps"] = max_steps
             self._generate_configs()
-            rank_zero_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
+            log_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
             f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
 
     def _calc_max_steps(self) -> int:
