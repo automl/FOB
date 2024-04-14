@@ -80,10 +80,10 @@ def precision_with_fallback(precision: str) -> str:
     Check if cuda supports bf16, if not using cuda or if not available return 16 instead of bf16
     """
     if not torch.cuda.is_available():
-        log_warn("Warning: No CUDA available. Results can be different!", file=sys.stderr)
+        log_warn("Warning: No CUDA available. Results can be different!")
         return precision[2:]
     if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
-        log_warn("Warning: GPU does not support bfloat16. Results can be different!", file=sys.stderr)
+        log_warn("Warning: GPU does not support bfloat16. Results can be different!")
         return precision[2:]
     return precision
 
