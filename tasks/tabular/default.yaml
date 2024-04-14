@@ -16,6 +16,8 @@ task:
     noise: 1.e-3
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:05:00
 optimizer:
   name: adamw_baseline
 evaluation:

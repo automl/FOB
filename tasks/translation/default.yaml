@@ -12,6 +12,8 @@ task:
     length_penalty: 1.0
 engine:
   devices: 4
+  sbatch_args:
+    time: 07:00:00
 optimizer:
   name: adamw_baseline
   learning_rate: 3.16e-4

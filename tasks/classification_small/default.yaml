@@ -26,6 +26,8 @@ task:
   target_metric_mode: max
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:15:00
 optimizer:
   name: adamw_baseline
   learning_rate: 1.0e-2

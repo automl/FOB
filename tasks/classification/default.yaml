@@ -31,6 +31,8 @@ task:
       use: True
 engine:
   devices: 4
+  sbatch_args:
+    time: 05:00:00
 optimizer:
   name: adamw_baseline
   weight_decay: 1.0

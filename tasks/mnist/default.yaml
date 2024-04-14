@@ -11,6 +11,8 @@ task:
     activation: Sigmoid
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:05:00
 optimizer:
   name: adamw_baseline
   learning_rate: 1.0e-2

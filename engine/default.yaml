@@ -19,6 +19,7 @@ engine:
                                # 'slurm_array': runs are scheduled using a SLURM array job.
                                # 'slurm_jobs': runs are scheduled using independent SLURM jobs
   save_sbatch_scripts: null  # Path to directory where sbatch scripts will be saved. If null, sbatch scripts will not be saved.
+  sbatch_time_factor: 1      # Time factor for SLURM. Multiplies all default times by this factor. TODO: not implemented
   sbatch_args:               # Additional arguments to pass to sbatch. Only used if run_scheduler is 'slurm_array'.
     # ntasks-per-node and gres are set to 'devices' by default
     # cpus-per-task is set to 'workers' by default

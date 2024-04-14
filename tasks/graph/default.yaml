@@ -21,6 +21,8 @@ task:
       norm: "batch_norm"
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:30:00
 optimizer:
   name: adamcpr
   weight_decay: 0.001

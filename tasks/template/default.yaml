@@ -12,6 +12,8 @@ task:
     activation: relu  # this parameter has to be in {relu, gelu}, modify the model.py to support more
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:05:00
 optimizer:  # you can set your favourite baseline as default like this
   name: adamw_baseline
   lr: 1.e-3  # you can also set a good default for the hyperparameter

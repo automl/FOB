@@ -7,7 +7,7 @@ from engine.run import Run
 from engine.utils import some
 
 
-# TODO: default values for sbatch_args.time in tasks
+# TODO: time multiplier for slurm jobs
 
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
@@ -58,7 +58,7 @@ def run_slurm(command: str, run: Run, args: dict[str, str], log_dir: Path):
             s.run(command)
     else:
         s = get_slurm(run, args, log_dir)
-        s.run(command, _cmd = "cat") # TODO: revert
+        s.run(command)
 
 
 def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> None:
