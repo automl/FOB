@@ -25,6 +25,7 @@ class Engine():
     def __init__(self) -> None:
         self._runs = []
         self._defaults = []
+        self._experiment = {}
         self._experiment_file = None
         self.task_key = "task"
         self.optimizer_key = "optimizer"
@@ -70,11 +71,13 @@ class Engine():
 
     def parse_experiment(self, searchspace: dict[str, Any], extra_args: Iterable[str] = tuple()):
         self.parser.parse_args_into_searchspace(searchspace, extra_args)
+        # normalize experiment
         self._named_dicts_to_list(
             searchspace,
             [self.optimizer_key, self.task_key],
             [optimizer_names(), task_names()]
         )
+        self._experiment = dict(searchspace)
         # exclude plotting from gridsearch
         if self.eval_key in searchspace:
             eval_config = searchspace.pop(self.eval_key)

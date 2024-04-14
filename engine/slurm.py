@@ -8,6 +8,7 @@ from engine.utils import some
 
 
 # TODO: time multiplier for slurm jobs
+# TODO: make this work for extra args
 
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
