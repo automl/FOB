@@ -4,10 +4,9 @@ from typing import Iterable, Optional
 from slurmpy import Slurm
 
 from engine.run import Run
-from engine.utils import some
+from engine.utils import seconds_to_str, some, str_to_seconds
 
 
-# TODO: time multiplier for slurm jobs
 # TODO: make this work for extra args
 
 
@@ -19,7 +18,10 @@ def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
     return True
 
 
-def ensure_args(args: dict[str, str], run: Run) -> None:
+def process_args(args: dict[str, str], run: Run) -> None:
+    if "time" in args:
+        seconds = str_to_seconds(args["time"]) if isinstance(args["time"], str) else args["time"]
+        args["time"] = seconds_to_str(int(run.engine.sbatch_time_factor * seconds))
     if not "gres" in args:
         args["gres"] = f"gpu:{run.engine.devices}"
     if not any(k in args for k in ["ntasks", "ntasks-per-node"]):
@@ -72,7 +74,7 @@ def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> Non
     log_dir = some(run.engine.slurm_log_dir, default=run.engine.output_dir / "slurm_logs")
     if not "array" in args:
         args["array"] = f"1-{len(runs)}"
-    ensure_args(args, run)
+    process_args(args, run)
     command = get_command(run_script, experiment_file, "$SLURM_ARRAY_TASK_ID")
     command = wrap_template(run.engine.sbatch_script_template, command)
     run_slurm(command, run, args, log_dir)
@@ -82,7 +84,7 @@ def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment_file: Path) -> 
     # TODO: do not pass experiment file to sbatch calls, instead pass command line args
     for i, run in enumerate(runs, start=1):
         args = run.engine.sbatch_args
-        ensure_args(args, run)
+        process_args(args, run)
         log_dir = some(run.engine.slurm_log_dir, default=run.run_dir / "slurm_logs")
         command = get_command(run_script, experiment_file, str(i))
         command = wrap_template(run.engine.sbatch_script_template, command)

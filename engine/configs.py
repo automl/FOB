@@ -88,6 +88,7 @@ class EngineConfig(BaseConfig):
         self.save_sbatch_scripts: Optional[Path] = maybe_abspath(cfg["save_sbatch_scripts"])
         self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
         self.sbatch_script_template: Optional[Path] = maybe_abspath(cfg["sbatch_script_template"])
+        self.sbatch_time_factor: float = cfg["sbatch_time_factor"]
         self.slurm_log_dir: Optional[Path] = maybe_abspath(cfg["slurm_log_dir"])
         self.silent: bool = cfg.get("silent", False)
         self.test: bool = cfg.get("test", True)

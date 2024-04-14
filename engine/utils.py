@@ -88,6 +88,12 @@ def precision_with_fallback(precision: str) -> str:
     return precision
 
 
+def str_to_seconds(s: str) -> int:
+    parts = s.split(":")
+    assert len(parts) == 3, f"Invalid time format: {s}. Use 'HH:MM:SS'."
+    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+
+
 def seconds_to_str(total_seconds: int, sep: str = ":") -> str:
     hours, rest = divmod(total_seconds, 3600)
     minutes, seconds = divmod(rest, 60)
