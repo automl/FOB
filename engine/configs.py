@@ -78,6 +78,7 @@ class EngineConfig(BaseConfig):
         self.max_steps: int = config[task_key].get("max_steps", None)
         self.optimize_memory: bool = cfg["optimize_memory"]
         self.output_dir = Path(cfg["output_dir"]).resolve()
+        self.plot: bool = cfg["plot"]
         self.precision: str = cfg["precision"]
         _resume = cfg.get("resume", False)
         self.resume: Optional[Path] | bool = Path(_resume).resolve() if isinstance(_resume, str) else _resume

@@ -11,6 +11,7 @@ engine:
   log_extra: false           # Activate logging of gradients and more.
   optimize_memory: false     # Use nondeterministic, but memory-efficient algorithms for self-attention
   output_dir: ./experiments  # Where you want to store the results
+  plot: true                 # Whether to plot the results.
   precision: bf16-mixed      # Floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
   resume: true               # You can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
   run_scheduler: sequential  # How to schedule the runs of the experiment. Supported values:

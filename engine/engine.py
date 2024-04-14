@@ -103,8 +103,10 @@ class Engine():
             yield run
 
     def plot(self, save: bool = True) -> list[Figure]:
-        # TODO: plot flag in engine config
-        config = next(self.runs()).evaluation
+        run = next(self.runs())
+        if not run.engine.plot:
+            return []
+        config = run.evaluation
         set_plotstyle(config)
         figs = []
         for mode in config.checkpoints:
