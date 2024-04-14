@@ -4,7 +4,7 @@ from tasks import TaskDataModule
 from engine.configs import TaskConfig
 from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader.dataloader import DataLoader as GeomDataLoader
-from lightning_utilities.core.rank_zero import log_debug
+from engine.utils import log_debug
 
 
 class OGBGDataModule(TaskDataModule):
