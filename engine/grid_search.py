@@ -62,6 +62,7 @@ def unique_append(xs, x):
 
 
 def gridsearch(d: dict[str, Any]) -> list[dict[str, Any]]:
+    # TODO: investigate poor performance if engine dict has too many keys
     ret = []
     if isinstance(d, dict):
         for k, v in d.items():

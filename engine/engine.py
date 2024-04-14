@@ -4,17 +4,16 @@ from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
 from engine import repository_root
-from engine.utils import log_warn, log_info
 from engine.configs import EvalConfig
+from engine.grid_search import gridsearch
+from engine.parser import YAMLParser
+from engine.run import Run
 from engine.slurm import slurm_array, slurm_jobs
+from engine.utils import log_debug, log_info, log_warn, some
 from evaluation import evaluation_path
 from evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from optimizers import optimizer_path, optimizer_names
 from tasks import task_path, task_names
-from .grid_search import gridsearch
-from .parser import YAMLParser
-from .run import Run
-from .utils import some
 
 
 def engine_path() -> Path:
@@ -49,18 +48,13 @@ class Engine():
                     log_info(f"Run {i}/{len(self._runs)} failed with {e}.")
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
-            for i, run in enumerate(self.runs(), start=1):
-                if i == n:
-                    log_info(f"Starting run {i}/{len(self._runs)}.")
-                    run.start()
+            log_info(f"Starting run {n}/{len(self._runs)}.")
+            run = self._make_run(n)
+            run.start()
         elif scheduler == "slurm_array":
-            if self._experiment_file is None:
-                raise ValueError("Must specify 'experiment_file' when using 'engine.run_scheduler=slurm_array'")
-            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment_file)
+            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment)
         elif scheduler == "slurm_jobs":
-            if self._experiment_file is None:
-                raise ValueError("Must specify 'experiment_file' when using 'engine.run_scheduler=slurm_jobs'")
-            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment_file)
+            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
@@ -83,24 +77,17 @@ class Engine():
             eval_config = searchspace.pop(self.eval_key)
         else:
             eval_config = {}
+        log_debug("Performing gridsearch...")
         self._runs = gridsearch(searchspace)
+        log_debug(f"Found {len(self._runs)} runs.")
         for run in self._runs:
             run[self.eval_key] = eval_config
         self._fill_runs_from_default(self._runs)
         self._fill_defaults()
 
     def runs(self) -> Iterator[Run]:
-        for config, default_config in zip(self._runs, self._defaults):
-            run = Run(
-                config,
-                default_config,
-                self.task_key,
-                self.optimizer_key,
-                self.engine_key,
-                self.eval_key,
-                self.identifier_key
-            )
-            yield run
+        for i, _ in enumerate(self._runs, start=1):
+            yield self._make_run(i)
 
     def plot(self, save: bool = True) -> list[Figure]:
         run = next(self.runs())
@@ -157,6 +144,21 @@ class Engine():
         if len(dfs) == 0:
             raise ValueError("no dataframes found, check your config")
         return concat(dfs, sort=False)
+
+    def _make_run(self, n: int) -> Run:
+        """
+        n: number of the run, starting from 1
+        """
+        i = n - 1
+        return Run(
+            self._runs[i],
+            self._defaults[i],
+            self.task_key,
+            self.optimizer_key,
+            self.engine_key,
+            self.eval_key,
+            self.identifier_key
+        )
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
         assert len(keys) == len(valid_options)

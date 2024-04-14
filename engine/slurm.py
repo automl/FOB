@@ -1,13 +1,16 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 from slurmpy import Slurm
+import yaml
 
 from engine.run import Run
 from engine.utils import seconds_to_str, some, str_to_seconds
 
 
-# TODO: make this work for extra args
+# TODO: plot only after all runs are finished
+
+
 
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
@@ -16,6 +19,14 @@ def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
         if not all(run.engine[key] == first.engine[key] for run in runs[1:]):
             return False
     return True
+
+
+def export_experiment(run: Run, experiment: dict[str, Any]) -> Path:
+    run.run_dir.mkdir(parents=True, exist_ok=True)
+    outfile = run.run_dir / "experiment.yaml"
+    with open(outfile, "w", encoding="utf8") as f:
+        yaml.safe_dump(experiment, f)
+    return outfile
 
 
 def process_args(args: dict[str, str], run: Run) -> None:
@@ -61,10 +72,10 @@ def run_slurm(command: str, run: Run, args: dict[str, str], log_dir: Path):
             s.run(command)
     else:
         s = get_slurm(run, args, log_dir)
-        s.run(command)
+        s.run(command, _cmd = "cat")
 
 
-def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> None:
+def slurm_array(runs: list[Run], run_script: Path, experiment: dict[str, Any]) -> None:
     equal_req = ["devices", "workers", "sbatch_args", "slurm_log_dir", "sbatch_script_template", "run_scheduler"]
     ok = argcheck_allequal_engine(runs, equal_req)
     if not ok:
@@ -75,17 +86,18 @@ def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> Non
     if not "array" in args:
         args["array"] = f"1-{len(runs)}"
     process_args(args, run)
+    experiment_file = [export_experiment(run, experiment).resolve() for run in runs][0]
     command = get_command(run_script, experiment_file, "$SLURM_ARRAY_TASK_ID")
     command = wrap_template(run.engine.sbatch_script_template, command)
     run_slurm(command, run, args, log_dir)
 
 
-def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment_file: Path) -> None:
-    # TODO: do not pass experiment file to sbatch calls, instead pass command line args
+def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment: dict[str, Any]) -> None:
     for i, run in enumerate(runs, start=1):
         args = run.engine.sbatch_args
         process_args(args, run)
         log_dir = some(run.engine.slurm_log_dir, default=run.run_dir / "slurm_logs")
+        experiment_file = export_experiment(run, experiment).resolve()
         command = get_command(run_script, experiment_file, str(i))
         command = wrap_template(run.engine.sbatch_script_template, command)
         run_slurm(command, run, args, log_dir)
