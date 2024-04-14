@@ -14,7 +14,7 @@ Estimated disk usage for the data: ~64M
 
 ## Training
 
-The task will be run on 2x2 hyperparameter on 3 different seeds for a total of 12 times.
+The task will be run on 2x2 hyperparameter on 2 different seeds for a total of 8 times.
 
 ```
 python experiment_runner.py evaluation/example/example_experiment_adamw.yaml task.max_epochs=1

@@ -6,8 +6,8 @@ evaluation:
   aggregate_groups:              # groups over which to aggregate values and compute mean/std. Default: [engine.seed]
     - engine.seed
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
+  checkpoints: [best, last]      # which model checkpoint to use
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
-  checkpoints: ["best", "last"]  # which model checkpoint to use
   verbose: False                 # debug prints
   column_split_key: null         # if set, will split the dataframe and plot it in columns. Default: optimizer.name
   column_split_order: null        # sets the order in which the columns are plotted.

@@ -1,0 +1,35 @@
+task:
+  name: mnist
+  max_epochs: 1
+optimizer:
+  - name: sgd_baseline
+    learning_rate: [0.01, 0.001]
+    weight_decay: [1.e-4, 1.e-5]
+  - name: adamw_baseline
+    learning_rate: [1.0e-2, 1.0e-3]
+    weight_decay: [0.1, 0.01]
+engine:
+  data_dir: ./evaluation/example/data
+  output_dir: ./evaluation/example/experiments
+  seed: [1, 2]
+  silent: True
+  workers: 2
+evaluation:
+  output_dir: ./evaluation/example/plots/
+  experiment_name: mnist_adamw-sgd_seed
+  checkpoints: 
+    - last
+  output_types:
+    - png
+  split_groups: ["engine.seed"]
+  aggregate_groups: []
+  plot:
+    std: True
+    x_axis:
+      - optimizer.weight_decay
+    y_axis:
+      - optimizer.learning_rate
+  plotstyle:
+    tight_layout: False  # the title is a little bit squeezed with this
+    text:
+      usetex: True
