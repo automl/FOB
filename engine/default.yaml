@@ -24,6 +24,7 @@ engine:
     nodes: 1
     mem-per-cpu: 2gb
     time: 00:30:00           # each task has their own default time (assumes A100 or similar gpu)
+  sbatch_script_template: null  # Path to template for the sbatch script. Script can contain placeholder '__FOB_COMMAND__'. Otherwise it will be executed before the experiment. 'sbatch_args' will be added to the beginning of the script.
   slurm_log_dir: null        # Default: 'output_dir/slurm_logs' for run_scheduler 'slurm_array' and 'run_dir/slurm_logs' for run_scheduler 'slurm_jobs'
   seed: 42                   # The seed to use for the experiment
   seed_mode: fixed           # Currently only supports 'fixed'

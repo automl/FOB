@@ -1,14 +1,13 @@
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
 from slurmpy import Slurm
 
 from engine.run import Run
 from engine.utils import some
 
 
-# TODO : default values for sbatch_args.time in tasks
+# TODO: default values for sbatch_args.time in tasks
 # TODO: option to save or discard sbatch scripts
-# TODO: bash script template for setup etc.
 
 def argcheck_allequal_engine(runs: list[Run], keys: list[str]) -> bool:
     first = runs[0]
@@ -27,10 +26,22 @@ def ensure_args(args: dict[str, str], run: Run) -> None:
         args["cpus-per-task"] = str(run.engine.workers)
 
 
+def wrap_template(template_path: Optional[Path], command: str, placeholder: str = "__FOB_COMMAND__") -> str:
+    if template_path is not None:
+        with open(template_path, "r", encoding="utf8") as f:
+            template = f.read()
+            if placeholder in template:
+                command = template.replace(placeholder, command)
+            else:
+                command = f"{template}\n{command}\n"
+    return command
+
+
 def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> None:
-    ok = argcheck_allequal_engine(runs, ["devices", "workers", "sbatch_args", "run_scheduler"])
+    equal_req = ["devices", "workers", "sbatch_args", "slurm_log_dir", "sbatch_script_template", "run_scheduler"]
+    ok = argcheck_allequal_engine(runs, equal_req)
     if not ok:
-        raise ValueError("All runs must have the same values for 'engine.devices', 'engine.workers', 'engine.sbatch_args', and 'engine.run_scheduler' when using 'engine.run_scheduler=slurm_array'")
+        raise ValueError(f"All runs must have the same values for {', '.join(map(lambda s: 'engine.' + s, equal_req))} when using 'engine.run_scheduler=slurm_array'")
     n_runs = len(runs)
     run = runs[0]
     args = run.engine.sbatch_args
@@ -39,17 +50,16 @@ def slurm_array(runs: list[Run], run_script: Path, experiment_file: Path) -> Non
         args["array"] = f"1-{n_runs}"
     ensure_args(args, run)
     s = Slurm(f"FOB-{run.task.name}-{run.optimizer.name}", args, log_dir=str(log_dir.resolve()))
-    command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:$SLURM_ARRAY_TASK_ID"
-    """
-    s.run(command)
+    command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:$SLURM_ARRAY_TASK_ID" """
+    s.run(wrap_template(run.engine.sbatch_script_template, command))
+
 
 def slurm_jobs(runs: Iterable[Run], run_script: Path, experiment_file: Path) -> None:
     # TODO: do not pass experiment file to sbatch calls, instead pass command line args
-    for i, run in enumerate(runs):
+    for i, run in enumerate(runs, start=1):
         args = run.engine.sbatch_args
         ensure_args(args, run)
         log_dir = some(run.engine.slurm_log_dir, default=run.run_dir / "slurm_logs")
         s = Slurm(f"FOB-{run.task.name}-{run.optimizer.name}", args, log_dir=str(log_dir.resolve()))
-        command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:{i}"
-        """
-        s.run(command)
+        command = f"""srun python {run_script} {experiment_file} "engine.run_scheduler=single:{i}" """
+        s.run(wrap_template(run.engine.sbatch_script_template, command), _cmd = "ls")

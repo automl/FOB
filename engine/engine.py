@@ -112,7 +112,7 @@ class Engine():
                 figs.append(fig)
             else:
                 # TODO: option to split into multiple files
-                raise NotImplementedError("Not implemented yet.")
+                raise NotImplementedError("evaluation.plot.single_file=False is not implemented yet.")
         return figs
 
     def plot_one_fig(self, df: DataFrame, config: EvalConfig):

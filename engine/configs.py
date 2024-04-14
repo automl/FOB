@@ -67,16 +67,16 @@ class EngineConfig(BaseConfig):
         self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.detect_anomaly: bool = cfg["detect_anomaly"]
-        self.devices: int = cfg.get("devices", 1)
+        self.devices: int = some(cfg["devices"], default=1)
         if cfg["early_stopping"] is not None:
             self.early_stopping: int = cfg["early_stopping"]
         else:
             self.early_stopping: int = config[task_key]["max_epochs"]
         self.gradient_clip_alg: str = cfg["gradient_clip_alg"]
-        self.gradient_clip_val: float | None = cfg["gradient_clip_val"]
-        self.log_extra: bool = cfg.get("log_extra", False)
+        self.gradient_clip_val: Optional[float] = cfg["gradient_clip_val"]
+        self.log_extra: bool = cfg["log_extra"]
         self.max_steps: int = config[task_key].get("max_steps", None)
-        self.optimize_memory: bool = cfg.get("optimize_memory", False)
+        self.optimize_memory: bool = cfg["optimize_memory"]
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.precision: str = cfg["precision"]
         resume = cfg.get("resume", False)
@@ -85,13 +85,22 @@ class EngineConfig(BaseConfig):
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
         self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
-        self.slurm_log_dir: Path | None = cfg.get("slurm_log_dir", None)
+        template = cfg.get("sbatch_script_template", None)
+        self.sbatch_script_template: Optional[Path] = Path(template).resolve() if isinstance(template, str) else template
+        log_dir = cfg["slurm_log_dir"]
+        self.slurm_log_dir: Optional[Path] = Path(log_dir).resolve() if isinstance(log_dir, str) else log_dir
         self.silent: bool = cfg.get("silent", False)
         self.test: bool = cfg.get("test", True)
         self.train: bool = cfg.get("train", True)
         self.workers: int = cfg["workers"]
-        cfg["max_steps"] = self.max_steps
+        cfg["data_dir"] = self.data_dir
+        cfg["devices"] = self.devices
         cfg["early_stopping"] = self.early_stopping
+        cfg["max_steps"] = self.max_steps
+        cfg["output_dir"] = self.output_dir
+        cfg["resume"] = self.resume
+        cfg["slurm_log_dir"] = self.slurm_log_dir
+        cfg["sbatch_script_template"] = self.sbatch_script_template
         super().__init__(cfg)
 
     def outpath_relevant_engine_keys(self, prefix: str = "") -> list[str]:
