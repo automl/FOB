@@ -40,16 +40,16 @@ class Engine():
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
-            sequential(self.create_runs(), len(self._runs), self._experiment)
+            sequential(self.runs(), len(self._runs), self._experiment)
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
             log_info(f"Starting run {n}/{len(self._runs)}.")
             run = self._make_run(n)
             run.start()
         elif scheduler == "slurm_array":
-            slurm_array(list(self.create_runs()), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment)
         elif scheduler == "slurm_jobs":
-            slurm_jobs(self.create_runs(), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
@@ -80,24 +80,23 @@ class Engine():
         self._fill_runs_from_default(self._runs)
         self._fill_defaults()
 
-    def create_runs(self, setup=False) -> Iterator[Run]:
+    def runs(self) -> Iterator[Run]:
         """
         Creates and initializes runs from parsed run config.
-
-        Arguments:
-        - setup: download and prepare data
         """
+        for n, _ in enumerate(self._runs, start=1):
+            yield self._make_run(n)
+
+    def prepare_data(self):
         prepared = set()
         for n, t in enumerate(self._runs, start=1):
             name = t["task"]["name"]
-            if setup and name not in prepared:
-                yield self._make_run(n, setup=True)
+            if name not in prepared:
+                self._make_run(n, setup=True)
                 prepared.add(name)
-            else:
-                yield self._make_run(n)
 
     def plot(self, save: bool = True) -> list[Figure]:
-        run = next(self.create_runs())
+        run = next(self.runs())
         if not run.engine.plot:
             return []
         config = run.evaluation
@@ -128,7 +127,7 @@ class Engine():
 
     def dataframe_from_runs(self, mode: Literal["last", "best"]) -> DataFrame:
         dfs: list[DataFrame] = []
-        for run in self.create_runs():
+        for run in self.runs():
             df = json_normalize(run.get_config())
             if mode == "last":
                 result_file = run.run_dir / run.evaluation.experiment_files.last_model
