@@ -92,6 +92,7 @@ class Engine():
             name = t["task"]["name"]
             if setup and name not in prepared:
                 yield self._make_run(n, setup=True)
+                prepared.add(name)
             else:
                 yield self._make_run(n)
 
