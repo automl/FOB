@@ -138,7 +138,7 @@ class EvalConfig(BaseConfig):
         self.verbose: bool = cfg.get("verbose", False)
         split = cfg.get("split_groups", False)
         self.split_groups: bool | list[str] = split if isinstance(split, bool) else wrap_list(split)
-        self.checkpoints: list[Literal["last", "best"]] = cfg["checkpoints"]
+        self.checkpoints: list[Literal["last", "best"]] = wrap_list(cfg["checkpoints"])
         column_split_key = cfg.get("column_split_key", None)
         self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
         self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)

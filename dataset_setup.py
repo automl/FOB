@@ -18,7 +18,7 @@ def get_parser():
 
 def main(args: argparse.Namespace, extra_args: list[str]):
     engine = Engine()
-    engine.parse_experiment(args.experiment_file, extra_args=extra_args)
+    engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args)
     done = set()
     for run in engine.runs():
         if run.task.name in done:
