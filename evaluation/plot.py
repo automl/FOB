@@ -373,8 +373,6 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     num_subfigures = max_i  # from left to right
     num_nested_subfigures = max_j  # from top to bottom
     dataframe = dataframe_list[i]
-    df_entry = dataframe.iloc[0]  # just get an arbitrary trial for the target metric mode and submission name
-    opti_name = df_entry['optimizer.name']
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
@@ -412,11 +410,14 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     else:
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
 
+    # reading optimizer and task name after grouping
+    df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
+    opti_name = df_entry['optimizer.name']
+    task_name = df_entry['task.name']
+
     # TITLE
-    # title (heading) of the heatmap <optimname> on <taskname> (+ additional info)
-    title = pretty_name(opti_name)
-    title += " on "
-    title += pretty_name(df_entry["task.name"])
+    # title (heading) of the heatmap: <optimname> on <taskname> (+ additional info)
+    title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
     if max_i > 1 or max_j > 1:
         title += "" if model_param == "default" else f"\n{model_param}"
     current_plot.set_title(title)
