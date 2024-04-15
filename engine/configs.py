@@ -125,7 +125,7 @@ class EngineConfig(BaseConfig):
 
 
 class EvalConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], eval_key: str, optimizer_key: str, identifier_key: str, ignore_keys = None) -> None:
+    def __init__(self, config: dict[str, Any], eval_key: str, ignore_keys = None) -> None:
         cfg = dict(config[eval_key])
         self.experiment_files = AttributeDict(dict(
             best_model = "results_best_model.json",
@@ -139,8 +139,7 @@ class EvalConfig(BaseConfig):
         split = cfg.get("split_groups", False)
         self.split_groups: bool | list[str] = split if isinstance(split, bool) else wrap_list(split)
         self.checkpoints: list[Literal["last", "best"]] = wrap_list(cfg["checkpoints"])
-        column_split_key = cfg.get("column_split_key", None)
-        self.column_split_key: Optional[str]  = some(column_split_key, default=f"{optimizer_key}.{identifier_key}")
+        self.column_split_key: Optional[str] = cfg.get("column_split_key", None)
         self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])

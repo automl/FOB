@@ -115,9 +115,12 @@ class Engine():
         return figs
 
     def plot_one_fig(self, df: DataFrame, config: EvalConfig):
-        groups = df.groupby(config.column_split_key)
-        order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
-        dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
+        if config.column_split_key is None:
+            dfs = [df]
+        else:
+            groups = df.groupby(config.column_split_key)
+            order = some(config.column_split_order, default=map(lambda x: x[0], sorted(groups)))
+            dfs: list[DataFrame] = [groups.get_group(group_name) for group_name in order]
         fig, _ = create_figure(dfs, config)
         return fig, dfs
 
