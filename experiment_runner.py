@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import logging
 from engine.utils import log_info
 
 from engine.engine import Engine
@@ -25,5 +26,17 @@ if __name__ == "__main__":
                         help="The yaml file specifying the experiment.")
     parser.add_argument("--send_timeout", action="store_true",
                         help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
+    parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
+                        help="Set the log level")
     args, extra_args = parser.parse_known_args()
+    pytorch_logger = logging.getLogger("lightning.pytorch")
+    match args.log_level:
+        case "debug":
+            pytorch_logger.setLevel(logging.DEBUG)
+        case "info":
+            pytorch_logger.setLevel(logging.INFO)
+        case "warn":
+            pytorch_logger.setLevel(logging.WARNING)
+        case "silent":
+            pytorch_logger.setLevel(logging.CRITICAL)
     main(args, extra_args)

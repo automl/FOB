@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
 from engine import repository_root
 from engine.configs import EvalConfig
-from engine.grid_search import gridsearch
+from engine.grid_search import grid_search
 from engine.parser import YAMLParser
 from engine.run import Run
 from engine.run_schedulers import sequential, slurm_array, slurm_jobs
@@ -73,7 +73,7 @@ class Engine():
         else:
             eval_config = {}
         log_debug("Performing gridsearch...")
-        self._runs = gridsearch(searchspace)
+        self._runs = grid_search(searchspace)
         log_debug(f"Found {len(self._runs)} runs.")
         for run in self._runs:
             run[self.eval_key] = eval_config
