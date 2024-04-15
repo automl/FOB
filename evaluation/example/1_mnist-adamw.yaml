@@ -8,7 +8,6 @@ engine:
   data_dir: ./evaluation/example/data
   output_dir: ./evaluation/example/experiments
   seed: [1, 2]
-  workers: 12
 evaluation:
   output_dir: ./evaluation/example/plots/
   experiment_name: 1_mnist-adamw

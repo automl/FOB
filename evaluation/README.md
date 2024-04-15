@@ -18,8 +18,8 @@ In the following you can find 4 example use cases for experiments and how to vis
 
 1. testing an optimizer on a task
 2. comparing two optimizers on the same task
-3. comparing the influence of single hyperparameter
-4. comparing multiple optimizers on different tasks
+3. comparing multiple optimizers on different tasks
+4. comparing the influence of a single hyperparameter
 
 Here we want to focus on the plotting. For instructions on how to run experiments, refer to the main [README](../README.md). To get started right away, we provide the data for this example. If you want to reproduce it, refer to [this section](#reproducing-the-data).
 
@@ -41,7 +41,7 @@ Experiment file: [evaluation/example/1_mnist-adamw.yaml](example/1_mnist-adamw.y
 
 ![your plot is not finished yet](example/plots/1_mnist-adamw-last-heatmap.png)
 
-Only use the final model performance and only create the plot as png.
+This example uses only the final model performance and only creates the plot as png.
 
 Helpful settings:
 
@@ -83,7 +83,7 @@ This list is useful if there are just a few parameters you want to split.
 #### Example 4
 
 Any parameter that is neither on the x-axis nor y-axis will either be aggregated over or split into subplots.
-Any individual square of a heatmap shows the *mean* and *std* over multiple runs. Here we show how to choose the runs to aggregate.
+Any individual square of a heatmap shows the *mean* and *std* over multiple runs (as seen in the previous plots). Here we show how to choose the runs to aggregate.
 
 ```python evaluate_experiment.py evaluation/example/4_adamw-vs-sgd_seeds.yaml```
 

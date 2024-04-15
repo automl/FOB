@@ -193,10 +193,9 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
     for i, df in enumerate(dataframe_list):
         x_axis = config.plot.x_axis[i]
         y_axis = config.plot.y_axis[0]
-        if df["evaluation.plot.metric"].nunique() > 1:
-            log_warn("More than one metric found, using the first one.")
-        metric = df["evaluation.plot.metric"].unique()[0]
-        ignored_cols = [x_axis, y_axis, metric]
+        metrics = df["evaluation.plot.metric"].unique()
+        ignored_cols = [x_axis, y_axis]
+        ignored_cols += list(metrics)
         ignored_cols += config.get("ignore_keys", [])
         ignored_cols += config.get("aggregate_groups", [])
         current_n_rows, current_names = get_num_rows(df, ignored_cols, config)

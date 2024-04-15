@@ -23,8 +23,7 @@ class Run():
             optimizer_key: str,
             engine_key: str,
             eval_key: str,
-            identifier_key: str,
-            setup=False
+            identifier_key: str
             ) -> None:
         """
         setup: download and prepare data before creating the Run
@@ -37,9 +36,6 @@ class Run():
         self.eval_key = eval_key
         self.identifier_key = identifier_key
         self._generate_configs()
-        if setup:
-            log_info(f"Setting up data for {self.task_key} '{self.task.name}'.")
-            self.get_datamodule().prepare_data()
         self._set_outpath()
         self._callbacks = AttributeDict({})
 
@@ -222,7 +218,6 @@ class Run():
         ]
 
     def _set_outpath(self):
-        self._ensure_max_steps()
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
         exclude_keys = self.outpath_exclude_keys()
         exclude_keys += self.engine.outpath_irrelevant_engine_keys()

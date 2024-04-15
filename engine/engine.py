@@ -92,7 +92,9 @@ class Engine():
         for n, t in enumerate(self._runs, start=1):
             name = t["task"]["name"]
             if name not in prepared:
-                self._make_run(n, setup=True)
+                run = self._make_run(n)
+                log_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
+                run.get_datamodule().prepare_data()
                 prepared.add(name)
 
     def plot(self, save: bool = True) -> list[Figure]:
@@ -154,7 +156,7 @@ class Engine():
             raise ValueError("no dataframes found, check your config")
         return concat(dfs, sort=False)
 
-    def _make_run(self, n: int, setup=False) -> Run:
+    def _make_run(self, n: int) -> Run:
         """
         n: number of the run, starting from 1
         setup: download and prepare data
@@ -167,8 +169,7 @@ class Engine():
             self.optimizer_key,
             self.engine_key,
             self.eval_key,
-            self.identifier_key,
-            setup=setup
+            self.identifier_key
         )
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):
