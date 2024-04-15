@@ -1,6 +1,5 @@
 task:
   name: mnist
-  max_epochs: 1
 optimizer:
   name: adamw_baseline
   learning_rate: [1.0e-2, 1.0e-3]
@@ -9,8 +8,7 @@ engine:
   data_dir: ./evaluation/example/data
   output_dir: ./evaluation/example/experiments
   seed: [1, 2]
-  silent: True
-  workers: 2
+  workers: 12
 evaluation:
   output_dir: ./evaluation/example/plots/
   experiment_name: 1_mnist-adamw

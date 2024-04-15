@@ -1,106 +1,93 @@
 # Evaluation
 
 During training you can monitor your experiments with [Tensorboard](https://www.tensorflow.org/tensorboard).  
-We also try to provide some usefull functionality to quickly evaluate and compare the results of your experiments.
+We also try to provide some useful functionality to quickly evaluate and compare the results of your experiments.
 
-One can use the ```evaluate_experiment.py``` or the ```experiment_runner.py``` to get a quick first impression of a finished experiment run.  
+One can use the ```evaluate_experiment.py``` to get a quick first impression of a finished experiment run.  
 
-In the following you can find 4 example use cases for experiments and how to visualize the results as heatmaps.
-
-## CSV
+## Plotting vs. raw data
 
 You can use the plotting pipeline with your customized setting (as shown in the usage examples).
-alternatively you can use the script to export your data to a .csv and process the data to your own needs.
+Alternatively you can use the script to export your data to a .csv and process the data to your own needs.
 
 In this scenario, set ```evaluation.output_types: [csv]  # no plotting, just the data``` in your experiment yaml.
 
 ## Usage Examples
 
+In the following you can find 4 example use cases for experiments and how to visualize the results as heatmaps.
+
 1. testing an optimizer on a task
-2. comparing two optimizer on the same task
+2. comparing two optimizers on the same task
 3. comparing the influence of single hyperparameter
-4. comparing multiple optimizer on different tasks
+4. comparing multiple optimizers on different tasks
 
-### Data creation
-
-Lets create some data that we can plot; from the root directory call:
-
-#### Data Download
-
-first we make sure the data is already downloaded beforehand:
-
-```python dataset_setup.py evaluation/example/4_mnist-and-tabular_adamw-vs-sgd.yaml```
-
-This will download the mnist data (required for 1-4) and tabular (required for 4) into the a ```evaluation/example/data``` directory - path can be changed in the correspong yaml you want to use (e.g.```evaluation/example/1_mnist-adamw.yaml``` if you have already set up your benchmark).
-
-Estimated disk usage for the data: ~65M
-
-#### Training
-
-The task will be run on 2x2 hyperparameter on 2 different seeds per optimizer for a total of 8 times.
-
-```python experiment_runner.py evaluation/example/1_mnist-adamw.yaml```
-
-Here we do not really care for the performance; alternatively remove the ```task.max_epochs: 1``` argument in the yaml. This will perform a full training on the default epochs.
-
-After training finished you should find 8 trial directories in ```evaluation/example/experiments/mnist/adamw_baseline```
-
-All parameters that differ from the default value are noted in the directory name.
+Here we want to focus on the plotting. For instructions on how to run experiments, refer to the main [README](../README.md). To get started right away, we provide the data for this example. If you want to reproduce it, refer to [this section](#reproducing-the-data).
 
 ### Plotting the experiment
 
-If not disabled in the experiment yaml, plotting the performance heatmap will be done together with training and testing.  
-
-Alternatively you can call the ```evaluate_experiment.py``` from the root directory:
-
-```python evaluate_experiment.py evaluation/example/1_mnist-adamw.yaml```
-
-
-Have a look at the values given under the ```evaluation``` key. Not mentioned parameter are either set per task (e.g. in ```bob/tasks/mnist/default.yaml```) or left on the defaults given in (```evaluation/default.yaml```).
-
-You can find the output in the newly created directory ```evaluation/example/plots```
-
-
-You can use the csv to run the data through your own custom plotting workflow.
+By default, calling the `experiment_runner.py` will plot the experiment after training and testing. To disable, set `engine.plot=false`.  
+To plot your experiment afterwards, call the `evaluate_experiment.py` with the same experiment yaml. To adjust how to plot, change the values under the `evaluation` key of the experiment. Take a look at the [evaluation/default.yaml](default.yaml) to see which settings are available. Some of these keys are explained in the examples below to give the reader a first impression. Note that some default parameters are set in the respective tasks (e.g. in [tasks/mnist/default.yaml](../tasks/mnist/default.yaml)).
 
 ### Example use cases
 
-Make sure to scroll through the ```evaluation``` key in the default.yaml if you are looking to adapt your plots; some of these keys are explained below the plots to give the reader a first impression.
+Here are some example scenarios to give you an understanding of how our plotting works. Run the commands from the root of the repository. Take a look at the yaml files used in the command to see what is going on.
 
-#### 1
+#### Example 1
 
 This example is a good starting point; it shows the performance of a single default optimizer on one of the tasks.
+Experiment file: [evaluation/example/1_mnist-adamw.yaml](example/1_mnist-adamw.yaml)  
 
-```python experiment_runner.py evaluation/example/1_mnist-adamw.yaml```
+```python evaluate_experiment.py evaluation/example/1_mnist-adamw.yaml```
 
-![your plot is not finished yet](plots/1_mnist-adamw.png)
+![your plot is not finished yet](example/plots/1_mnist-adamw-last-heatmap.png)
 
 Only use the final model performance and only create the plot as png.
 
-- ```evaluation.checkpoints: [last]```  # you could use [last, best] to additionaly plot the model with the best validation
+Helpful settings:
+
+- ```checkpoints: [last]```  # you could use [last, best] to additionaly plot the model with the best validation
 - ```output_types: [png]```  # you could use [pdf, png] to also create a pdf
 
 
-#### 2
+#### Example 2
 
-You can compare two different optimizer.
+You can compare two different optimizers.  
+Experiment file: [evaluation/example/2_adamw-vs-sgd.yaml](example/2_adamw-vs-sgd.yaml)
 
-```python experiment_runner.py evaluation/example/2_adamw-vs-sgd.yaml```
+```python evaluate_experiment.py evaluation/example/2_adamw-vs-sgd.yaml```
 
-![your plot is not finished yet](plots/2_adamw-vs-sgd.png)
+![your plot is not finished yet](example/plots/2_adamw-vs-sgd-last-heatmap.png)
 
 Helpful settings:
 
-- ```evaluation.plot.x_axis: [optimizer.weight_decay, optimizer.kappa_init_param]```  # the values given here are used as the value for the axis. The order in the list is used from left to right for the plot columns
+- ```plot.x_axis: [optimizer.weight_decay, optimizer.kappa_init_param]```  # the values given here are used as the value for the axis. The order in the list is used from left to right for the plot columns
+- `column_split_key: optimizer.name` This creates a column for each different optimizer (default behavior). You can set this to null to disable columns or choose a different key.
 
 
-#### 3
+#### Example 3
 
-The square of a heatmap show the *mean* and *std* over multiple
+There are multiple tasks in the benchmark, this example shows how to get a quick overview over multiple at the same time.
 
-```python experiment_runner.py evaluation/example/3_adamw-vs-sgd_seeds.yaml```
+```python evaluate_experiment.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
-![your plot is not finished yet](plots/3_adamw-vs-sgd_seeds.png)
+![your plot is not finished yet](example/plots/3_mnist-and-tabular_adamw-vs-sgd-last-heatmap.png)
+
+Helpful settings:
+
+ - ```split_groups: ["task.name"]```
+
+Every non unique value for each parameter name in `split_groups` will create its own subplot.
+Instead of a list you can set to `false` to disable splitting or `true` to split on every parameter that is different between runs (except those already in `column_split_key` or `aggregate_groups`).
+This list is useful if there are just a few parameters you want to split.
+
+#### Example 4
+
+Any parameter that is neither on the x-axis nor y-axis will either be aggregated over or split into subplots.
+Any individual square of a heatmap shows the *mean* and *std* over multiple runs. Here we show how to choose the runs to aggregate.
+
+```python evaluate_experiment.py evaluation/example/4_adamw-vs-sgd_seeds.yaml```
+
+![your plot is not finished yet](example/plots/4_adamw-vs-sgd_seeds-last-heatmap.png)
 
 Helpful settings:
 
@@ -109,25 +96,34 @@ Helpful settings:
     - ```plot.aggfunc: std```  # also try ```var```
 - control the rows with
     - ```split_groups: ["engine.seed"]```
-    - ```aggregate_groups: []```
+    - ```aggregate_groups: []``` 
 
-Per default (```split_groups: True```) the plot will display the *mean* calculated over *any* parameter that is neither on the x-axis nor y-axis.  
-Every non unique value for each value in this list will create a own row.
-This list is useful if there are just a few values to *not* aggreagte over
+Per default the plot will display the *mean* and *std* calculated over the seeds. 
+We need to remove the seed from the ```aggregate_groups``` list (by giving an empty list instead). This list is useful if there are additional parameters you want to aggregate over.
 
-We need to remove the seed from the ```aggregate_groups``` list (by giving an empty list instead). This list is useful if there are just a few values to aggreagte over.
 
-#### 4
+-------------------------------------------------------------------------------
 
-There are multiple tasks in the benchmark, this example shows how to get a quick overview over multiple at the same time.
+### Reproducing the Data
 
-```python experiment_runner.py evaluation/example/4_mnist-and-tabular_adamw-vs-sgd.yaml```
+Lets create some data that we can plot; from the root directory call:
 
-![your plot is not finished yet](plots/4_mnist-and-tabular_adamw-vs-sgd.png)
+#### Data Download
 
-Helpful settings:
+first we make sure the data is already downloaded beforehand:
 
- - ```split_groups: ["task.name"]```
+```python dataset_setup.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
- Just as in the seed example we explicitely add want to group by a specific value.
+This will download the mnist data (required for 1-4) and tabular (required for 3) into the [evaluation/example/data](example/data) directory - path can be changed in the corresponding yaml you want to use (e.g. [evaluation/example/1_mnist-adamw.yaml](example/1_mnist-adamw.yaml) if you have already set up your benchmark).
 
+Estimated disk usage for the data: ~65M
+
+#### Training
+
+The 2 tasks will be run on 2x2 hyperparameter on 2 different seeds per optimizer for a total of 32 runs.
+
+```python experiment_runner.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+
+After training finished you should find 32 run directories in [evaluation/example/experiments](example/experiments)
+
+All parameters that differ from the default value are noted in the directory name.

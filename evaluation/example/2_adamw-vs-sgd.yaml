@@ -1,18 +1,16 @@
 task:
   name: mnist
-  max_epochs: 1
 optimizer:
   - name: sgd_baseline
     learning_rate: [0.01, 0.001]
-    weight_decay: [1.e-4, 1.e-5]
+    weight_decay: [0.1, 0.01]
   - name: adamw_baseline
-    learning_rate: [1.0e-2, 1.0e-3]
+    learning_rate: [0.01, 0.001]
     weight_decay: [0.1, 0.01]
 engine:
   data_dir: ./evaluation/example/data
   output_dir: ./evaluation/example/experiments
   seed: [1, 2]
-  silent: True
   workers: 2
 evaluation:
   output_dir: ./evaluation/example/plots/
