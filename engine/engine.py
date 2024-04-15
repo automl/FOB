@@ -40,16 +40,16 @@ class Engine():
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
             "You cannot perform gridsearch on 'run_scheduler'."
         if scheduler == "sequential":
-            sequential(self.runs(), len(self._runs), self._experiment)
+            sequential(self.create_runs(), len(self._runs), self._experiment)
         elif scheduler.startswith("single"):
             n = int(scheduler.rsplit(":", 1)[-1])
             log_info(f"Starting run {n}/{len(self._runs)}.")
             run = self._make_run(n)
             run.start()
         elif scheduler == "slurm_array":
-            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_array(list(self.create_runs()), repository_root() / "experiment_runner.py", self._experiment)
         elif scheduler == "slurm_jobs":
-            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_jobs(self.create_runs(), repository_root() / "experiment_runner.py", self._experiment)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
@@ -80,12 +80,23 @@ class Engine():
         self._fill_runs_from_default(self._runs)
         self._fill_defaults()
 
-    def runs(self) -> Iterator[Run]:
-        for i, _ in enumerate(self._runs, start=1):
-            yield self._make_run(i)
+    def create_runs(self, setup=False) -> Iterator[Run]:
+        """
+        Creates and initializes runs from parsed run config.
+
+        Arguments:
+        - setup: download and prepare data
+        """
+        prepared = set()
+        for n, t in enumerate(self._runs, start=1):
+            name = t["task"]["name"]
+            if setup and name not in prepared:
+                yield self._make_run(n, setup=True)
+            else:
+                yield self._make_run(n)
 
     def plot(self, save: bool = True) -> list[Figure]:
-        run = next(self.runs())
+        run = next(self.create_runs())
         if not run.engine.plot:
             return []
         config = run.evaluation
@@ -116,7 +127,7 @@ class Engine():
 
     def dataframe_from_runs(self, mode: Literal["last", "best"]) -> DataFrame:
         dfs: list[DataFrame] = []
-        for run in self.runs():
+        for run in self.create_runs():
             df = json_normalize(run.get_config())
             if mode == "last":
                 result_file = run.run_dir / run.evaluation.experiment_files.last_model
@@ -140,9 +151,10 @@ class Engine():
             raise ValueError("no dataframes found, check your config")
         return concat(dfs, sort=False)
 
-    def _make_run(self, n: int) -> Run:
+    def _make_run(self, n: int, setup=False) -> Run:
         """
         n: number of the run, starting from 1
+        setup: download and prepare data
         """
         i = n - 1
         return Run(
@@ -152,7 +164,8 @@ class Engine():
             self.optimizer_key,
             self.engine_key,
             self.eval_key,
-            self.identifier_key
+            self.identifier_key,
+            setup=setup
         )
 
     def _named_dicts_to_list(self, searchspace: dict[str, Any], keys: list[str], valid_options: list[list[str]]):

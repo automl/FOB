@@ -23,8 +23,12 @@ class Run():
             optimizer_key: str,
             engine_key: str,
             eval_key: str,
-            identifier_key: str
+            identifier_key: str,
+            setup=False
             ) -> None:
+        """
+        setup: download and prepare data before creating the Run
+        """
         self._config = config
         self._default_config = default_config
         self.task_key = task_key
@@ -33,6 +37,9 @@ class Run():
         self.eval_key = eval_key
         self.identifier_key = identifier_key
         self._generate_configs()
+        if setup:
+            log_info(f"Setting up data for {self.task_key} '{self.task.name}'.")
+            self.get_datamodule().prepare_data()
         self._set_outpath()
         self._callbacks = AttributeDict({})
 

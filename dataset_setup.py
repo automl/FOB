@@ -1,12 +1,6 @@
 import argparse
 from pathlib import Path
-from engine.engine import Engine, Run
-from engine.utils import log_info
-
-
-def download_single_data(run: Run):
-    data_module = run.get_datamodule()
-    data_module.prepare_data()
+from engine.engine import Engine
 
 
 def get_parser():
@@ -19,13 +13,8 @@ def get_parser():
 def main(args: argparse.Namespace, extra_args: list[str]):
     engine = Engine()
     engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args)
-    done = set()
-    for run in engine.runs():
-        if run.task.name in done:
-            continue
-        log_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
-        download_single_data(run)
-        done.add(run.task.name)
+    for _ in engine.create_runs(setup=True):
+        pass
 
 
 if __name__ == '__main__':
