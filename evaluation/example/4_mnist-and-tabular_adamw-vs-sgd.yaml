@@ -18,7 +18,7 @@ engine:
   workers: 2
 evaluation:
   output_dir: ./evaluation/example/plots/
-  experiment_name: mnist-tabular_adamw-sgd
+  experiment_name: 4_mnist-and-tabular_adamw-vs-sgd
   checkpoints: 
     - last
   output_types:
