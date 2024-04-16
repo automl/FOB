@@ -21,7 +21,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
     return {
         "optimizer": optimizer,
         "lr_scheduler": {
-            "scheduler": scheduler(optimizer, total_iters=config.max_steps),
+            "scheduler": scheduler,
             "interval": config.lr_interval
         }
     }
