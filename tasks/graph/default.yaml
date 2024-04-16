@@ -1,7 +1,7 @@
 task:
   name: graph
   output_dir_name: graph
-  batch_size: 128  # TODO: reference implementation used 32, check if 128 is ok
+  batch_size: 128  # reference implementation used 32
   target_metric: val_rocauc
   target_metric_mode: max
   max_epochs: 100
