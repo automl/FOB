@@ -59,7 +59,8 @@ def get_slurm(run: Run, args: dict[str, str], log_dir: Path, scripts_dir: Option
         f"FOB-{run.task.name}-{run.optimizer.name}",
         args,
         log_dir=str(log_dir.resolve()),
-        scripts_dir=str(some(scripts_dir, run.engine.save_sbatch_scripts, default="fob-slurm-scripts"))
+        scripts_dir=str(some(scripts_dir, run.engine.save_sbatch_scripts, default="fob-slurm-scripts")),
+        bash_strict=False  # TODO: maybe add arg or just remove 'nounset'
     )
 
 
