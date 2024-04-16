@@ -16,7 +16,7 @@ engine:
     time: 07:00:00
 optimizer:
   name: adamw_baseline
-  learning_rate: 3.16e-4
+  learning_rate: 1.0e-3
   weight_decay: 0.1
   epsilon: 1.0e-9
   beta2: 0.98
