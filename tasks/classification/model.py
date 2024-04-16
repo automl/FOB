@@ -8,8 +8,6 @@ from tasks import TaskModel
 from engine.configs import TaskConfig
 from engine.utils import log_warn, log_info
 from optimizers import Optimizer
-from tasks.classification.wrn import wrn50_2
-
 
 class ImagenetModel(TaskModel):
     def __init__(self, optimizer: Optimizer, config: TaskConfig):
@@ -20,17 +18,12 @@ class ImagenetModel(TaskModel):
     def _create_model(self, config: TaskConfig):
         model_name: str = config.model.name
         # we want to create exactly the model the user specified in the yaml
-        if model_name == "our_wide_resnet50_2":
-            model = wrn50_2(in_size = (64, 64))
-        elif model_name == "our_wide_resnet36_5":
-            raise NotImplementedError()
-        else:
-            try:
-                model = create_model(model_name)
-            except RuntimeError as e:
-                available_models = list_models()
-                log_info(f"Available Models are {available_models}")
-                raise Exception("Unsupported model given.") from e
+        try:
+            model = create_model(model_name)
+        except RuntimeError as e:
+            available_models = list_models()
+            log_info(f"Available Models are {available_models}")
+            raise Exception("Unsupported model given.") from e
 
         # taking care of model specific changes
         if model_name == "wide_resnet50_2":
