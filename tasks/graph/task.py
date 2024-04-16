@@ -10,13 +10,5 @@ def get_datamodule(config: TaskConfig) -> TaskDataModule:
 
 def get_task(optimizer: Optimizer, config: TaskConfig) -> tuple[TaskModel, TaskDataModule]:
     datamodule = data.OGBGDataModule(config)
-    node_feature_dim = datamodule.feature_dim
-    num_classes = datamodule.num_classes
-    dataset_name = datamodule.dataset_name
-    ogbg_model = model.OGBGModel(optimizer,
-                                 node_feature_dim=node_feature_dim,
-                                 num_classes=num_classes,
-                                 dataset_name=dataset_name,
-                                 batch_size=datamodule.batch_size,
-                                 config=config)
+    ogbg_model = model.OGBGModel(optimizer, config)
     return ogbg_model, datamodule
