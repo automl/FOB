@@ -8,6 +8,6 @@ optimizer:
   name: adamw_baseline
   learning_rate: 1.0e-1
   weight_decay: 0
-  eta_min_factor: 0
+  eta_min_factor: 1
 engine:
   early_stopping: 10
