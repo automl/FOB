@@ -4,24 +4,24 @@ task:
   batch_size: 128
   max_epochs: 50
   max_steps: null
+  label_smoothing: 0.0
   model:
     name: resnet18
     hidden_channel: 64
     kernel_size: 3
     padding: 1
-    maxpool: False
+    maxpool: false
   train_transforms:
     random_crop:
-      use: True
+      use: true
       size: 32
       padding: 4
       padding_mode: reflect
     horizontal_flip:
-      use: True
+      use: true
       p: 0.5
     trivial_augment:
-      use: True
-  label_smoothing: 0.0
+      use: true
   target_metric: val_acc
   target_metric_mode: max
 engine:
