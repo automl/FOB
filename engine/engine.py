@@ -93,8 +93,9 @@ class Engine():
             name = t["task"]["name"]
             if name not in prepared:
                 run = self._make_run(n)
-                log_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
+                log_info(f"Setting up data for {run.task_key} '{run.task.name}'...")
                 run.get_datamodule().prepare_data()
+                log_info(f"... finished.")
                 prepared.add(name)
 
     def plot(self, save: bool = True) -> list[Figure]:
