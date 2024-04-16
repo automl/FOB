@@ -11,7 +11,7 @@ task:
     num_layers: 5
     virtual_node: false
     dropout: 0.5
-    graph_pooling: add  # {max, mean, add}
+    graph_pooling: mean  # {max, mean, sum, attention, set2set}
     jumping_knowledge: last  # {last, sum}
 engine:
   devices: 1
