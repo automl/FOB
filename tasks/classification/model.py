@@ -4,10 +4,11 @@ from torch import nn
 import torch.nn.functional as F
 from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
 from tasks import TaskModel
 from engine.configs import TaskConfig
+from engine.utils import log_warn, log_info
 from optimizers import Optimizer
+from tasks.classification.wrn import wrn50_2
 
 
 class ImagenetModel(TaskModel):
@@ -17,14 +18,19 @@ class ImagenetModel(TaskModel):
         self.loss_fn = nn.CrossEntropyLoss()
 
     def _create_model(self, config: TaskConfig):
-        model_name = config.model.name
+        model_name: str = config.model.name
         # we want to create exactly the model the user specified in the yaml
-        try:
-            model = create_model(model_name)
-        except RuntimeError as e:
-            available_models = list_models()
-            rank_zero_info(f"Available Models are {available_models}")
-            raise Exception("Unsupported model given.") from e
+        if model_name == "our_wide_resnet50_2":
+            model = wrn50_2(in_size = (64, 64))
+        elif model_name == "our_wide_resnet36_5":
+            raise NotImplementedError()
+        else:
+            try:
+                model = create_model(model_name)
+            except RuntimeError as e:
+                available_models = list_models()
+                log_info(f"Available Models are {available_models}")
+                raise Exception("Unsupported model given.") from e
 
         # taking care of model specific changes
         if model_name == "wide_resnet50_2":
@@ -39,6 +45,10 @@ class ImagenetModel(TaskModel):
             # pooling small images might be bad
             if not config.model.maxpool:
                 model.maxpool = nn.Identity()  # type:ignore
+
+        elif model_name == "our_wide_resnet50_2":
+            # no further modifications
+            pass
 
         elif model_name == "davit_tiny.msft_in1k":
             # msft_in1k: trained on imagenet 1k by authors
@@ -57,10 +67,10 @@ class ImagenetModel(TaskModel):
                     LayerNorm2d((96,))
                 )
             else:
-                rank_zero_warn(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
+                log_warn(f"WARNING: stem argument '{config.model.stem}' unknown to classification task.")
         else:
             # not throwing an error, its valid for the user to use an given default model
-            rank_zero_warn("WARNING: the model you have specified has no modification.")
+            log_warn("WARNING: the model you have specified has no modification.")
 
         return model
 

@@ -3,8 +3,8 @@ from typing import Any, Type
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, PolynomialLR, SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from lightning_utilities.core.rank_zero import rank_zero_info
 from engine.configs import OptimizerConfig
+from engine.utils import log_info
 from engine.parameter_groups import GroupedModel
 
 
@@ -23,7 +23,7 @@ def linear_warmup(
     if max_steps < 1:
         raise ValueError("max steps should be at least 1!")
     if warmup_steps == 0:
-        rank_zero_info(f"warmup = 0: using {scheduler} only")
+        log_info(f"warmup = 0: using {scheduler} only")
         return scheduler(optimizer, **scheduler_kwargs)
     warmup = LinearLR(
         optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)

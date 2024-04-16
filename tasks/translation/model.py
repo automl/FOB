@@ -1,12 +1,11 @@
 import sys
 import evaluate
 from torch.nn import Module
-from lightning_utilities.core.rank_zero import rank_zero_warn
 from transformers import AutoModelForSeq2SeqLM, T5Config
 
 from engine.parameter_groups import GroupedModel
 from engine.configs import TaskConfig
-from engine.utils import some
+from engine.utils import some, log_warn
 from optimizers import Optimizer
 from tasks import TaskModel
 from tasks.translation.data \
@@ -56,7 +55,7 @@ class WMTModel(TaskModel):
             result = self.bleu.compute(predictions=[p.strip() for p in preds],
                                        references=[[t.strip()] for t in target])
         except ZeroDivisionError:
-            rank_zero_warn("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
+            log_warn("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
             result = {"score": 0.0}
         return result["score"]  # type: ignore
 

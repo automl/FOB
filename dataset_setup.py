@@ -1,12 +1,6 @@
 import argparse
 from pathlib import Path
-from lightning_utilities.core.rank_zero import rank_zero_info, rank_zero_warn
-from engine.engine import Engine, Run
-
-
-def download_single_data(run: Run):
-    data_module = run.get_datamodule()
-    data_module.prepare_data()
+from engine.engine import Engine
 
 
 def get_parser():
@@ -18,14 +12,8 @@ def get_parser():
 
 def main(args: argparse.Namespace, extra_args: list[str]):
     engine = Engine()
-    engine.parse_experiment(args.experiment_file, extra_args=extra_args)
-    done = set()
-    for run in engine.runs():
-        if run.task.name in done:
-            continue
-        rank_zero_info(f"Setting up data for {run.task_key} '{run.task.name}'.")
-        download_single_data(run)
-        done.add(run.task.name)
+    engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args)
+    engine.prepare_data()
 
 
 if __name__ == '__main__':

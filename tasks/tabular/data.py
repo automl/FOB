@@ -6,9 +6,9 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-from lightning_utilities.core.rank_zero import rank_zero_info
 from sklearn.preprocessing import QuantileTransformer, StandardScaler
 from tasks import TaskDataModule
+from engine.utils import log_info
 
 
 class TabularDataset(Dataset):
@@ -31,7 +31,7 @@ class TabularDataModule(TaskDataModule):
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
         fetch_california_housing(data_home=str(self.data_dir), download_if_missing=True)
-        rank_zero_info("succesfully downloaded tabular dataset.")
+        log_info("succesfully downloaded tabular dataset.")
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.

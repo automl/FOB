@@ -2,10 +2,11 @@ import sys
 import torch
 from torch_geometric.nn import GIN, MLP, global_add_pool, global_mean_pool, global_max_pool
 from ogb.graphproppred import Evaluator
-from lightning_utilities.core.rank_zero import rank_zero_warn
+from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 
 from tasks import TaskModel
 from engine.configs import TaskConfig
+from engine.utils import log_warn
 from optimizers import Optimizer
 
 
@@ -94,7 +95,7 @@ class OGBGModel(TaskModel):
         try:
             ogb_score = self.evaluator.eval(validation_dict)
         except ValueError:
-            rank_zero_warn("Error: Input contains NaN.", file=sys.stderr)
+            log_warn("Error: Input contains NaN.", file=sys.stderr)
             ogb_score = {"rocauc": 0}
         self.log(log_label, ogb_score["rocauc"])  # type: ignore
 
@@ -129,6 +130,8 @@ class GINwithClassifier(torch.nn.Module):
             dropout=dropout,
             jk=jumping_knowledge
         )
+        self.atom_encoder = AtomEncoder(emb_dim=100)
+        self.bond_encoder = BondEncoder(emb_dim=100)
 
         if graph_pool == "add":
             self.graph_pool = global_add_pool

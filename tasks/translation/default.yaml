@@ -12,9 +12,17 @@ task:
     length_penalty: 1.0
 engine:
   devices: 4
+  sbatch_args:
+    time: 07:00:00
 optimizer:
   name: adamw_baseline
-  learning_rate: 3.16e-4
+  learning_rate: 1.0e-3
   weight_decay: 0.1
   epsilon: 1.0e-9
   beta2: 0.98
+evaluation:
+  plot:
+    metric: test_bleu
+    test_metric_mode: max
+    format: "0.3"
+    limits: [25, 31]

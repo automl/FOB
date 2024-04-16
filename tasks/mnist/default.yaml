@@ -11,7 +11,15 @@ task:
     activation: Sigmoid
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:05:00
 optimizer:
   name: adamw_baseline
   learning_rate: 1.0e-2
   weight_decay: 0.1
+evaluation:
+  plot:
+    metric: test_acc
+    test_metric_mode: max
+    format: "2.1"
+    limits: [85, 97]

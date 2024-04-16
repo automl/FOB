@@ -5,6 +5,7 @@ from optimizers import Optimizer
 from torch_geometric.nn import GCNConv
 from torch import nn
 import torch.nn.functional as F
+from tasks.graph_tiny.gcn import GCN as OurGCN
 
 
 class CoraModel(TaskModel):
@@ -17,12 +18,25 @@ class CoraModel(TaskModel):
         normalize = config.model.normalize
         dropout = config.model.dropout
         reset_params = config.model.reset_params
-        model = GCN(hidden_channels=hidden_channels,
+        model_name = config.model.name
+        if model_name == "GCN":
+            model = GCN(hidden_channels=hidden_channels,
                     num_layers=num_layers,
                     dropout=dropout,
                     cached=cached,
                     normalize=normalize,
                     reset_params=reset_params)
+        elif model_name == "our_GCN":
+            if num_layers != 2:
+                # also ignoring cached, normalize, reset_params from config atm
+                raise NotImplementedError()
+            nfeat = 1433
+            nclass = 7
+            model = OurGCN(nfeat=nfeat,
+                           nhid=hidden_channels,
+                           nclass=nclass,
+                           dropout=dropout)
+
         super().__init__(model, optimizer, config)
         self.loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -62,6 +76,8 @@ class CoraModel(TaskModel):
 class GCN(torch.nn.Module):
     def __init__(
             self,
+            num_features=1433,
+            num_classes=7,
             hidden_channels=32,
             num_layers: int = 2,
             dropout=0.5,
@@ -72,9 +88,6 @@ class GCN(torch.nn.Module):
         self.dropout = dropout
         self.num_layers = num_layers
         super().__init__()
-        # cora dataset:
-        num_features = 1433
-        num_classes = 7
 
         self.convs = nn.ModuleList()
         self.convs.append(

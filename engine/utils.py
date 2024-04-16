@@ -1,23 +1,37 @@
 from pathlib import Path
 import sys
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Callable, Iterable, Optional, Type
 import json
 import math
 import signal
 import torch
-from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_warn
+from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, rank_zero_debug, log
 
 
 @rank_zero_only
 def rank_zero_print(*args: Any, **kwargs: Any):
     return print(*args, **kwargs)
 
+@rank_zero_only
+def log_warn(msg: str, *args: Any, **kwargs: Any):
+    return log.warning(msg, *args, **kwargs)
+
+def log_info(*args: Any, **kwargs: Any):
+    return rank_zero_info(*args, **kwargs)
+
+def log_debug(*args: Any, **kwargs: Any):
+    return rank_zero_debug(*args, **kwargs)
 
 def write_results(results, filepath: Path):
     with open(filepath, "w", encoding="utf8") as f:
         json.dump(results, f, indent=4)
     print(f"Saved results into {filepath}.")
 
+
+def wrap_list(x: Any) -> list[Any]:
+    if isinstance(x, list):
+        return x
+    return [x]
 
 def calculate_steps(epochs: int, datapoints: int, devices: int, batch_size: int) -> int:
     return math.ceil(datapoints / batch_size / devices) * epochs
@@ -33,6 +47,12 @@ def some(*args, default):
     if first is not None:
         return first
     return some(*rest, default=default)
+
+
+def maybe_abspath(path: Optional[str | Path]) -> Optional[Path]:
+    if path is None:
+        return None
+    return Path(path).resolve()
 
 
 def findfirst(f: Callable, xs: Iterable):
@@ -60,12 +80,18 @@ def precision_with_fallback(precision: str) -> str:
     Check if cuda supports bf16, if not using cuda or if not available return 16 instead of bf16
     """
     if not torch.cuda.is_available():
-        rank_zero_warn("Warning: No CUDA available. Results can be different!", file=sys.stderr)
+        log_warn("Warning: No CUDA available. Results can be different!")
         return precision[2:]
     if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
-        rank_zero_warn("Warning: GPU does not support bfloat16. Results can be different!", file=sys.stderr)
+        log_warn("Warning: GPU does not support bfloat16. Results can be different!")
         return precision[2:]
     return precision
+
+
+def str_to_seconds(s: str) -> int:
+    parts = s.split(":")
+    assert len(parts) == 3, f"Invalid time format: {s}. Use 'HH:MM:SS'."
+    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
 
 
 def seconds_to_str(total_seconds: int, sep: str = ":") -> str:
@@ -149,6 +175,16 @@ def concatenate_dict_keys(
         else:
             result[new_key] = v
     return result
+
+
+class EndlessList(list):
+    """
+    Returns first element if out of bounds. Otherwise same as list.
+    """
+    def __getitem__(self, index):
+        if index >= len(self) and len(self) > 0:
+            return self[0]
+        return super().__getitem__(index)
 
 
 class AttributeDict(dict):

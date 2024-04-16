@@ -2,12 +2,15 @@ evaluation:
   data_dirs: null                # List of Paths
   output_dir: null               # output filename is output_dir / experiment_name
   experiment_name: null
-  split_groups: false            # if set to true, plot will create a group for each param that differs
+  split_groups: false            # {True, False, [param.a, param.b, ...]} create additional plots where the data is grouped by the given parameter; True to detect all params with multiple unique values
+  aggregate_groups:              # groups over which to aggregate values and compute mean/std. Default: [engine.seed]
+    - engine.seed
   depth: 1                       # the depth of the trial dirs relative to the given data_dirs
+  checkpoints: [best, last]      # which model checkpoint to use
   output_types: [pdf, png, csv]  # choose all you want from {csv, pdf, png} and put it in brackets
-  last_instead_of_best: False    # use the last model, if not set the ebst model will be used
   verbose: False                 # debug prints
-  dpi: 300
+  column_split_key: optimizer.name  # if set, will split the dataframe and plot it in columns. Default: optimizer.name
+  column_split_order: null        # sets the order in which the columns are plotted.
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:
@@ -16,14 +19,15 @@ evaluation:
     y_axis:                      # indices on y axis (same order as order of subigures given in data_dirs)
       - optimizer.learning_rate
     metric: null                 # is automatically chosen from task name, this will overwrite it
-    limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for autonatic
-    std: True                    # aggreagte over std
+    limits: null                 # sets the limits for the colormap, 2 ints, order does not matter, leave empty for automatic
+    std: True                    # show std over aggregated values
     aggfunc: std                 # for example {std, var, sem} which function to use to aggregate over the seeds; will only be used when 'std' is set to true
     # format:
     #  string, how many digits to display, expects two values seperated by a dot (e.g. "2.3")
     #  to make accuracy -> percent use a '2' in front of the dot
     #  to display 3 digits after the decimal point, write a '3' behind the dot
     format: null                 # for example {"2.0", "2.1", "2.3", "0.2", ...}
+    single_file: true            # if true, save all heatmaps in one file. 'split_groups' are represented as rows.
 
   plotstyle:
     tight_layout: True
@@ -41,82 +45,10 @@ evaluation:
 
     scale: 1.0                   # scales *figsize* argument by this value, useful for ".png"
     color_palette: "rocket"
+    dpi: 300
 
   # the name of the files storing the hyperparameters of the experiments and the scores
   experiment_files:
     best_model: results_best_model.json
     last_model: results_final_model.json
     config: config.yaml
-
-  # pretty names for the plot
-  names:  
-    # optimizer
-    adamw_baseline: AdamW
-    adamcpr: AdamCPR
-    sgd_baseline: SGD
-    # metric
-    test_acc: Accuracy (Test)
-    test_loss: Test Loss (lower is better)
-    test_mIoU: Intersection over Union
-    test_mAcc: Test mean Accuracy
-    # parameter
-    learning_rate: Learning Rate
-    weight_decay: Weight Decay
-    # tasks
-    classification: classification
-    classification_small: classification_small
-    detection: detection
-    graph: graph
-    graph_tiny: graph_tiny
-    mnist: mnist
-    segmentation: segmentation
-    tabular: tabular
-    template: template
-    translation: translation
-
-  # maps task -> metric to plot
-  task_to:
-    metric:
-      classification: test_top1_acc
-      classification_small: test_acc
-      detection: test_AP
-      graph: test_rocauc
-      graph_tiny: test_acc
-      mnist: test_acc
-      segmentation: test_mIoU
-      tabular: test_rmse
-      template: test_loss
-      translation: test_bleu
-    test_metric_mode:
-      classification: max
-      classification_small: max
-      detection: max
-      graph: max
-      graph_tiny: max
-      mnist: max
-      segmentation: max
-      tabular: min
-      template: min
-      translation: max
-    format:
-      classification: "2.1"
-      classification_small: "2.1"
-      detection: "2.1"
-      graph: "2.1"
-      graph_tiny: "2.1"
-      mnist: "2.1"
-      segmentation: "0.3"
-      tabular: "0.3"
-      template: "2.1"
-      translation: "0.3"
-    limits:
-      classification: [55, 69]
-      classification_small: [65, 77]
-      detection: [0, 100]
-      graph: [60, 75]
-      graph_tiny: [65, 80]
-      mnist: [85, 97]
-      segmentation: [30, 40]
-      tabular: [0.38, 0.5]
-      template: [0, 100]
-      translation: [25, 31]

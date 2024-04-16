@@ -12,7 +12,7 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 import torch
 import torch.distributed as dist
-from lightning_utilities.core.rank_zero import rank_zero_info
+from engine.utils import log_info
 
 
 class CocoEvaluator:
@@ -57,7 +57,7 @@ class CocoEvaluator:
 
     def summarize(self):
         for iou_type, coco_eval in self.coco_eval.items():
-            rank_zero_info(f"IoU metric: {iou_type}")
+            log_info(f"IoU metric: {iou_type}")
             coco_eval.summarize()
 
     def prepare(self, predictions, iou_type):

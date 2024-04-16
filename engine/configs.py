@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Literal, Optional
-from .utils import AttributeDict, convert_type_inside_dict
+from .utils import AttributeDict, EndlessList, convert_type_inside_dict, maybe_abspath, some, wrap_list
 
 
 class BaseConfig(AttributeDict):
@@ -65,23 +65,89 @@ class EngineConfig(BaseConfig):
         cfg = dict(config[engine_key])
         self.accelerator = cfg["accelerator"]
         self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
-        self.detect_anomaly: bool = cfg["detect_anomaly"]
-        self.gradient_clip_val: float | None = cfg["gradient_clip_val"]
-        self.gradient_clip_algorithm: str = cfg["gradient_clip_algorithm"]
-        self.devices: int = cfg["devices"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
-        self.log_extra: bool = cfg.get("log_extra", False)
+        self.detect_anomaly: bool = cfg["detect_anomaly"]
+        self.devices: int = some(cfg["devices"], default=1)
+        if cfg["early_stopping"] is not None:
+            self.early_stopping: int = cfg["early_stopping"]
+        else:
+            self.early_stopping: int = config[task_key]["max_epochs"]
+        self.gradient_clip_alg: str = cfg["gradient_clip_alg"]
+        self.gradient_clip_val: Optional[float] = cfg["gradient_clip_val"]
+        self.log_extra: bool = cfg["log_extra"]
         self.max_steps: int = config[task_key].get("max_steps", None)
-        self.optimize_memory: bool = cfg.get("optimize_memory", False)
+        self.optimize_memory: bool = cfg["optimize_memory"]
         self.output_dir = Path(cfg["output_dir"]).resolve()
+        self.plot: bool = cfg["plot"]
         self.precision: str = cfg["precision"]
-        resume = cfg.get("resume", False)
-        self.resume: Optional[Path] | bool = Path(resume).resolve() if isinstance(resume, str) else resume
+        _resume = cfg.get("resume", False)
+        self.resume: Optional[Path] | bool = Path(_resume).resolve() if isinstance(_resume, str) else _resume
         self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
+        self.save_sbatch_scripts: Optional[Path] = maybe_abspath(cfg["save_sbatch_scripts"])
+        self.sbatch_args: dict[str, str] = cfg["sbatch_args"]
+        self.sbatch_script_template: Optional[Path] = maybe_abspath(cfg["sbatch_script_template"])
+        self.sbatch_time_factor: float = cfg["sbatch_time_factor"]
+        self.slurm_log_dir: Optional[Path] = maybe_abspath(cfg["slurm_log_dir"])
         self.silent: bool = cfg.get("silent", False)
-        self.test_only: bool = cfg.get("test_only", False)
+        self.test: bool = cfg.get("test", True)
+        self.train: bool = cfg.get("train", True)
         self.workers: int = cfg["workers"]
+        cfg["data_dir"] = self.data_dir
+        cfg["devices"] = self.devices
+        cfg["early_stopping"] = self.early_stopping
         cfg["max_steps"] = self.max_steps
+        cfg["output_dir"] = self.output_dir
+        cfg["resume"] = self.resume
+        cfg["slurm_log_dir"] = self.slurm_log_dir
+        cfg["save_sbatch_scripts"] = self.save_sbatch_scripts
+        cfg["sbatch_script_template"] = self.sbatch_script_template
+        super().__init__(cfg)
+
+    def outpath_relevant_engine_keys(self, prefix: str = "") -> list[str]:
+        keys = [
+            "accelerator",
+            "deterministic",
+            "detect_anomaly",
+            "devices",
+            "early_stopping",
+            "gradient_clip_alg",
+            "gradient_clip_val",
+            "optimize_memory",
+            "precision",
+            "seed"
+        ]
+        return [f"{prefix}{k}" for k in keys]
+
+    def outpath_irrelevant_engine_keys(self, prefix: str = "") -> list[str]:
+        return [f"{prefix}{k}" for k in self.keys() if k not in self.outpath_relevant_engine_keys()]
+
+
+class EvalConfig(BaseConfig):
+    def __init__(self, config: dict[str, Any], eval_key: str, ignore_keys = None) -> None:
+        cfg = dict(config[eval_key])
+        self.experiment_files = AttributeDict(dict(
+            best_model = "results_best_model.json",
+            last_model = "results_final_model.json",
+            config = "config.yaml"
+        ))
+        self.output_types: list[str] = wrap_list(cfg["output_types"])
+        self.output_dir: Optional[Path] = maybe_abspath(cfg["output_dir"])  # TODO: check correct behavior if none
+        self.experiment_name: str = cfg["experiment_name"]
+        self.verbose: bool = cfg.get("verbose", False)
+        split = cfg.get("split_groups", False)
+        self.split_groups: bool | list[str] = split if isinstance(split, bool) else wrap_list(split)
+        self.checkpoints: list[Literal["last", "best"]] = wrap_list(cfg["checkpoints"])
+        self.column_split_key: Optional[str] = cfg.get("column_split_key", None)
+        self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
+        self.ignore_keys: list[str] = some(ignore_keys, default=[])
+        self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])
+        cfg["ignore_keys"] = self.ignore_keys
+        cfg["output_types"] = self.output_types
+        cfg["aggregate_groups"] = self.aggregate_groups
+        cfg["output_types"] = self.output_types
+        cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
+        cfg["plot"]["y_axis"] = EndlessList(wrap_list(cfg["plot"]["y_axis"]))
+        cfg["split_groups"] = self.split_groups
         super().__init__(cfg)
