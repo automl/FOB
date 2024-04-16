@@ -12,7 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch SegFormer model."""
+"""
+PyTorch SegFormer model.
+Applied changes suggested in https://github.com/NVlabs/SegFormer/pull/115
+"""
 
 
 import math
