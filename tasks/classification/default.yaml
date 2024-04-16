@@ -12,6 +12,7 @@ task:
   #   name: davit_tiny.msft_in1k
   #   stem: custom_conv  # {default, wrn_conv, custom_conv}
   # wide res net
+  label_smoothing: 0.1
   model:
    name: wide_resnet50_2
    kernel_size: 3

@@ -13,7 +13,7 @@ class ImagenetModel(TaskModel):
     def __init__(self, optimizer: Optimizer, config: TaskConfig):
         model = self._create_model(config)
         super().__init__(model, optimizer, config)
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
 
     def _create_model(self, config: TaskConfig):
         model_name: str = config.model.name
