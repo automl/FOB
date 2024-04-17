@@ -12,8 +12,16 @@ nodes are atoms, and edges are chemical bonds, exact feature desciptions can be 
 
 ## model
 
-We use a Graph Convolutional Network (GNN)
+The model for this task is a *Graph Isomorphism Network* (GIN) from [How powerful are Graph Neural Networks?](https://arxiv.org/abs/1810.00826v3) which is a Graph Neural Network (GNN).
+
+The model we use is the same as the one used as baseline on the official [OGB Leaderboard](https://ogb.stanford.edu/docs/leader_graphprop/) by the authors of the dataset.
 
 ## performance
 
+The **metric** used is `ROC_AUC`.
+
 ### performance comparison
+
+In [Semi-Supervised Classification with Graph Convolutional Networks]((https://arxiv.org/abs/1609.02907)), and on their [Leaderboard](https://ogb.stanford.edu/docs/leader_graphprop/) the OGB team reports a
+- `Test ROC-AUC` of 0.7558 ± 0.0140 and a
+- `Validation ROC-AUC` of 0.8232 ± 0.0090
