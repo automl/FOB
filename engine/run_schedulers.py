@@ -29,13 +29,14 @@ def export_experiment(run: Run, experiment: dict[str, Any]) -> Path:
 
 def process_args(args: dict[str, str], run: Run) -> None:
     if "time" in args:
-        seconds = str_to_seconds(args["time"]) if isinstance(args["time"], str) else args["time"]
+        time = args["time"]
+        seconds = str_to_seconds(time) if isinstance(time, str) else time
         args["time"] = seconds_to_str(int(run.engine.sbatch_time_factor * seconds))
-    if not "gres" in args:
+    if not "gres" in args and not "gpus" in args:
         args["gres"] = f"gpu:{run.engine.devices}"
-    if not any(k in args for k in ["ntasks", "ntasks-per-node"]):
-        args["ntasks"] = str(run.engine.devices)
-    if not any(k.startswith("cpu") for k in args):
+    if not any(k.startswith("ntasks") for k in args):
+        args["ntasks-per-node"] = str(run.engine.devices)
+    if not any(k.startswith("cpus") for k in args):
         args["cpus-per-task"] = str(run.engine.workers)
 
 
