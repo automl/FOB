@@ -8,7 +8,7 @@ from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, Mode
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 import torch
 import yaml
-from engine.callbacks import LogParamsAndGrads, PrintEpoch
+from engine.callbacks import LogParamsAndGrads, PrintEpochWithTime
 from engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
 from optimizers.optimizers import Optimizer
@@ -209,7 +209,7 @@ class Run():
             log_quantiles=self.engine.log_extra,
             log_every_n_steps=100  # maybe add arg for this?
         )
-        self._callbacks["print_epoch"] = PrintEpoch(self.engine.silent)
+        self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
 
     def outpath_exclude_keys(self) -> list[str]:
         return [
