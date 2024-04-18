@@ -1,12 +1,12 @@
 from typing import Any
 
 
-def unique(l: list) -> list:
+def unique(xs: list) -> list:
     """Returns deduplicated list"""
     res = []
-    for v in l:
-        if v not in res:
-            res.append(v)
+    for x in xs:
+        if x not in res:
+            res.append(x)
     return res
 
 

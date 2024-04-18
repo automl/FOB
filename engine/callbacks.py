@@ -48,8 +48,8 @@ class PrintEpochWithTime(Callback):
         if self.active:
             self.time["val_end"] = time.time()
 
-class LogParamsAndGrads(Callback):
 
+class LogParamsAndGrads(Callback):
     def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_every_n_steps: int):
         super().__init__()
         self.log_gradient = log_gradient

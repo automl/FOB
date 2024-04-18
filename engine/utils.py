@@ -12,15 +12,19 @@ from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, r
 def rank_zero_print(*args: Any, **kwargs: Any):
     return print(*args, **kwargs)
 
+
 @rank_zero_only
 def log_warn(msg: str, *args: Any, **kwargs: Any):
     return log.warning(msg, *args, **kwargs)
 
+
 def log_info(*args: Any, **kwargs: Any):
     return rank_zero_info(*args, **kwargs)
 
+
 def log_debug(*args: Any, **kwargs: Any):
     return rank_zero_debug(*args, **kwargs)
+
 
 def write_results(results, filepath: Path):
     with open(filepath, "w", encoding="utf8") as f:
@@ -32,6 +36,7 @@ def wrap_list(x: Any) -> list[Any]:
     if isinstance(x, list):
         return x
     return [x]
+
 
 def calculate_steps(epochs: int, datapoints: int, devices: int, batch_size: int) -> int:
     return math.ceil(datapoints / batch_size / devices) * epochs

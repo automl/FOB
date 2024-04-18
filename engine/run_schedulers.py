@@ -32,7 +32,7 @@ def process_args(args: dict[str, str], run: Run) -> None:
         time = args["time"]
         seconds = str_to_seconds(time) if isinstance(time, str) else time
         args["time"] = seconds_to_str(int(run.engine.sbatch_time_factor * seconds))
-    if not "gres" in args and not "gpus" in args:
+    if "gres" not in args and "gpus" not in args:
         args["gres"] = f"gpu:{run.engine.devices}"
     if not any(k.startswith("ntasks") for k in args):
         args["ntasks-per-node"] = str(run.engine.devices)
@@ -83,7 +83,7 @@ def slurm_array(runs: list[Run], run_script: Path, experiment: dict[str, Any]) -
     run = runs[0]  # all runs have the same args
     args = run.engine.sbatch_args
     log_dir = some(run.engine.slurm_log_dir, default=run.engine.output_dir / "slurm_logs")
-    if not "array" in args:
+    if "array" not in args:
         args["array"] = f"1-{len(runs)}"
     process_args(args, run)
     experiment_file = [export_experiment(run, experiment).resolve() for run in runs][0]

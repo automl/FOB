@@ -52,7 +52,7 @@ class ParameterGroup():
             d["lr"] = self.lr_multiplier * lr if self.lr_multiplier is not None else lr
         if weight_decay is not None:
             d["weight_decay"] = self.weight_decay_multiplier * weight_decay \
-            if self.weight_decay_multiplier is not None else weight_decay
+                if self.weight_decay_multiplier is not None else weight_decay
         return d
 
 
@@ -106,7 +106,7 @@ def group_named_parameters(
     ) -> list[ParameterGroup]:
     """
     Group named parameters based on specified conditions and return a list of ParameterGroup objects.
-    
+
     Args:
         model (Module): The neural network model.
         g1_conds (Iterable[Callable]): Conditions for selecting parameters for group 1.
@@ -115,7 +115,7 @@ def group_named_parameters(
         ignore_conds (Iterable[Callable]): Conditions for ignoring parameters (e.g. if they occur in submodules).
         g1_kwargs (Optional[dict[str, Any]]): Additional keyword arguments for constructor of group 1.
         g2_kwargs (Optional[dict[str, Any]]): Additional keyword arguments for constructor of group 2.
-    
+
     Returns:
         List[ParameterGroup]: A list of ParameterGroup objects containing named parameters.
     """
