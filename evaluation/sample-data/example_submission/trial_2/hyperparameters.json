@@ -1,7 +1,0 @@
-{
-    "learning_rate": 0.000316,
-    "weight_decay": 0.1,
-    "one_minus_beta1": 0.1,
-    "beta2": 0.999,
-    "warmup_factor": 0.01
-}
