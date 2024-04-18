@@ -23,7 +23,7 @@ configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerL
 - The `OptimizerConfig` has the `lr_interval, max_steps, max_epochs` attributes. It also gains all attributes provided in the `optimizer` section of the `experiment.yaml`.
 
 ### default.yaml
-Here you can provide default values for all the hyperparameters your optimizer needs. These values will be added to the `OptimizerConfig` passed to the `configure_optimizers`. So if you have the following `default,yaml`:
+Here you can provide default values for all the hyperparameters your optimizer needs. These values will be added to the `OptimizerConfig` passed to the `configure_optimizers`. So if you have the following `default.yaml`:
 ```yaml
 optimizer:
   name: my_awesome_optimizer
