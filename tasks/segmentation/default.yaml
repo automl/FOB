@@ -11,10 +11,10 @@ task:
     use_pretrained_model: false  # just to compare performance, use this with 'engine.test_only=true'
 engine:
   devices: 4
-optimizer:
-  name: adamw_baseline
   sbatch_args:
     time: 05:00:00
+optimizer:
+  name: adamw_baseline
 evaluation:
   plot:
     metric: test_mIoU
