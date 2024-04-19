@@ -41,15 +41,16 @@ class Run():
         self._callbacks = AttributeDict({})
 
     def start(self):
-        self._ensure_max_steps()
-        self._ensure_resume_path()
-        torch.set_float32_matmul_precision('high')
-        seed_everything(self.engine.seed, workers=True)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.export_config()
-        model, data_module = self.get_task()
+        if any([self.engine.train, self.engine.test]):
+            self._ensure_resume_path()
+            torch.set_float32_matmul_precision('high')
+            seed_everything(self.engine.seed, workers=True)
+            model, data_module = self.get_task()
         # TODO: test only correctness for last checkpoint
         if self.engine.train:
+            self._ensure_max_steps()
             trainer = self.get_trainer()
             self.train(trainer, model, data_module)
         if self.engine.test:
