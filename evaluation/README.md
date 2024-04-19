@@ -35,11 +35,11 @@ Here are some example scenarios to give you an understanding of how our plotting
 #### Example 1
 
 This example is a good starting point; it shows the performance of a single default optimizer on one of the tasks.
-Experiment file: [evaluation/example/1_mnist-adamw.yaml](example/1_mnist-adamw.yaml)  
+Experiment file: [examples/plotting/1_mnist-adamw.yaml](../examples/plotting/1_mnist-adamw.yaml)  
 
-```python evaluate_experiment.py evaluation/example/1_mnist-adamw.yaml```
+```python evaluate_experiment.py examples/plotting/1_mnist-adamw.yaml```
 
-![your plot is not finished yet](example/plots/1_mnist-adamw-last-heatmap.png)
+![your plot is not finished yet](../examples/plotting/1_mnist-adamw-last-heatmap.png)
 
 This example uses only the final model performance and only creates the plot as png.
 
@@ -52,11 +52,11 @@ Helpful settings:
 #### Example 2
 
 You can compare two different optimizers.  
-Experiment file: [evaluation/example/2_adamw-vs-sgd.yaml](example/2_adamw-vs-sgd.yaml)
+Experiment file: [examples/plotting/2_adamw-vs-sgd.yaml](../examples/plotting/2_adamw-vs-sgd.yaml)
 
-```python evaluate_experiment.py evaluation/example/2_adamw-vs-sgd.yaml```
+```python evaluate_experiment.py examples/plotting/2_adamw-vs-sgd.yaml```
 
-![your plot is not finished yet](example/plots/2_adamw-vs-sgd-last-heatmap.png)
+![your plot is not finished yet](../examples/plotting/2_adamw-vs-sgd-last-heatmap.png)
 
 Helpful settings:
 
@@ -66,11 +66,12 @@ Helpful settings:
 
 #### Example 3
 
-There are multiple tasks in the benchmark, this example shows how to get a quick overview over multiple at the same time.
+There are multiple tasks in the benchmark, this example shows how to get a quick overview over multiple at the same time.  
+Experiment file: [examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml](../examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml)
 
-```python evaluate_experiment.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python evaluate_experiment.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
-![your plot is not finished yet](example/plots/3_mnist-and-tabular_adamw-vs-sgd-last-heatmap.png)
+![your plot is not finished yet](../examples/plotting/3_mnist-and-tabular_adamw-vs-sgd-last-heatmap.png)
 
 Helpful settings:
 
@@ -83,11 +84,12 @@ This list is useful if there are just a few parameters you want to split.
 #### Example 4
 
 Any parameter that is neither on the x-axis nor y-axis will either be aggregated over or split into subplots.
-Any individual square of a heatmap shows the *mean* and *std* over multiple runs (as seen in the previous plots). Here we show how to choose the runs to aggregate.
+Any individual square of a heatmap shows the *mean* and *std* over multiple runs (as seen in the previous plots). Here we show how to choose the runs to aggregate.  
+Experiment file: [examples/plotting/4_adamw-vs-sgd_seeds.yaml](../examples/plotting/4_adamw-vs-sgd_seeds.yaml)
 
-```python evaluate_experiment.py evaluation/example/4_adamw-vs-sgd_seeds.yaml```
+```python evaluate_experiment.py examples/plotting/4_adamw-vs-sgd_seeds.yaml```
 
-![your plot is not finished yet](example/plots/4_adamw-vs-sgd_seeds-last-heatmap.png)
+![your plot is not finished yet](../examples/plotting/4_adamw-vs-sgd_seeds-last-heatmap.png)
 
 Helpful settings:
 
@@ -112,9 +114,9 @@ Lets create some data that we can plot; from the root directory call:
 
 first we make sure the data is already downloaded beforehand:
 
-```python dataset_setup.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python dataset_setup.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
-This will download the mnist data (required for 1-4) and tabular (required for 3) into the [evaluation/example/data](example/data) directory - path can be changed in the corresponding yaml you want to use (e.g. [evaluation/example/1_mnist-adamw.yaml](example/1_mnist-adamw.yaml) if you have already set up your benchmark).
+This will download the mnist data (required for 1-4) and tabular (required for 3) into the [examples/data](../examples/data) directory - path can be changed in the corresponding yaml you want to use (e.g. [examples/plotting/1_mnist-adamw.yaml](../examples/plotting/1_mnist-adamw.yaml) if you have already set up your benchmark).
 
 Estimated disk usage for the data: ~65M
 
@@ -122,8 +124,8 @@ Estimated disk usage for the data: ~65M
 
 The 2 tasks will be run on 2x2 hyperparameter on 2 different seeds per optimizer for a total of 32 runs.
 
-```python experiment_runner.py evaluation/example/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python experiment_runner.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
-After training finished you should find 32 run directories in [evaluation/example/experiments](example/experiments)
+After training finished you should find 32 run directories in [examples/plotting/outputs](../examples/plotting/outputs)
 
 All parameters that differ from the default value are noted in the directory name.

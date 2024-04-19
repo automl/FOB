@@ -5,11 +5,11 @@ optimizer:
   learning_rate: [1.0e-2, 1.0e-3]
   weight_decay: [0.1, 0.01]
 engine:
-  data_dir: ./evaluation/example/data
-  output_dir: ./evaluation/example/experiments
+  data_dir: ./examples/data
+  output_dir: ./examples/plotting/outputs
   seed: [1, 2]
 evaluation:
-  output_dir: ./evaluation/example/plots/
+  output_dir: ./examples/plotting
   experiment_name: 1_mnist-adamw
   checkpoints: 
     - last
