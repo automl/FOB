@@ -1,0 +1,8 @@
+task:
+  name: tabular
+engine:
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-1
+  train: false
+  test: false
+  plot: false

@@ -20,30 +20,27 @@ How to write your own can be found [here](tasks/README.md)
 
 | Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ---- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
-| mnist | MNIST | MLP | Image classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
-| classification | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
-| classification_small | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
-| segmentation | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 0.35 | 5h | 4 gpu |
-| graph_tiny | [cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.80 | 1min | 1 gpu |
-| tabular | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test RMSE | 0.40 | 2 min | 1 gpu |
-| translation | [WMT17(de-en)](https://machinetranslate.org/wmt17) (maybe subset in the future) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | machine translation | BLEU (sacrebleu) | 30 | 6h | 4 gpus |
+| [mnist](tasks/mnist) | MNIST | MLP | Image classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
+| [classification](tasks/classification) | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
+| [classification_small](tasks/classification_small) | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
+| [segmentation](tasks/segmentation) | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 0.35 | 5h | 4 gpu |
+| [graph](tasks/graph) | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | 0.73? | 20min | 1 gpu |
+| [graph_tiny](tasks/graph_tiny) | [cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.80 | 1min | 1 gpu |
+| [tabular](tasks/tabular) | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test RMSE | 0.40 | 2 min | 1 gpu |
+| [translation](tasks/translation) | [WMT17(de-en)](https://machinetranslate.org/wmt17) (maybe subset in the future) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | machine translation | BLEU (sacrebleu) | 30 | 6h | 4 gpus |
 
 
 ### Under Development
 
 | Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ----- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
-| graph | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | 0.73? | 20min | 1 gpu |
-| detection | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
-| speech | librispeech | conformer | speech recognition | ? | ? | ? | ? |
+| [detection](tasks/detection) | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | rna_folding | bpRNA | RNAformer | RNA secondary structure prediction | F1 | ? | ~4h | 4 gpus |
-| diffusion | FFHQ | ? | image diffusion | ? | ? | ? | ? |
-
 
 
 ## Optimizer and Scheduler
 
-An optimizer (together with the scheduler) contains the deep learning training algorithm to benchmark. Each optimizer has its own subfolder in the `optimizers` folder.
+An optimizer (together with the learning rate scheduler) contains the deep learning training algorithm to benchmark. Each optimizer has its own subfolder in the `optimizers` folder.
 We currently have the following optimizers:
 
 | Name | Optimizer | LR Scheduler |
@@ -112,4 +109,49 @@ or you can specify it inside the `experiment.yaml`:
 ```yaml
 engine:
   data_dir: <path>
+```
+## Usage Examples
+
+In the following you can find example use cases for experiments. Here we will focus on running the training and testing pipeline. For instructions on how to plot the results, refer to the [evaluation/README.md](evaluation/README.md). 
+
+In these examples we will perform 'dry-runs' by setting the following parameters in the `experiment.yaml`:
+```yaml
+engine:
+  train: false
+  test: false
+  plot: false
+```
+
+### Example 1: Running a single task
+This is a minimal example of how to run a single task. The default values should reproduce the performance stated in the task overview.
+
+```bash
+python experiment_runner.py examples/usage/1_single_task.yaml
+```
+
+If you only specify the task name, all other values will be taken from their respective `default.yaml`.
+```yaml
+task:
+  name: mnist
+```
+Take a look at the [output directory](examples/usage/outputs/experiment-1/) to see the results.
+
+### Example 2: Comparing optimizers
+TODO: zachi
+
+### Example 3: Running multiple tasks (benchmarking optimizer)
+If you want to use this repository for benchmarking an optimizer you most likely want to run multiple tasks.
+
+### Example 4: Running different versions of the same task (HPO/NAS)
+You can also run different versions of the same task. This may be useful for HPO and NAS.
+
+### Example 5: Running experiments with SLURM (convenience)
+You can run experiments with SLURM. This is a convenience feature that allows you to run experiments on remote clusters. It splits each run of the experiment inta seperate jobs.
+```yaml
+engine:
+  run_scheduler: slurm_array
+  save_sbatch_scripts: true
+  sbatch_args:
+    partition: my_gpu_partition        # adapt to your cluster
+  sbatch_script_template: template.sh  # template.sh
 ```

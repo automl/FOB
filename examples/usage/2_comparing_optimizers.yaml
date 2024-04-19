@@ -1,0 +1,15 @@
+task:
+  name: mnist
+optimizer:
+  - name: adamw_baseline
+    learning_rate: [1.0e-2, 1.0e-3]
+    weight_decay: [0.1, 0.01]
+  - name: adamcpr
+    learning_rate: [1.0e-2, 1.0e-3]
+    kappa_init_param: [0.5, 1, 2, 4, 8, 16, 32]
+engine:
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-2
+  train: false
+  test: false
+  plot: false
