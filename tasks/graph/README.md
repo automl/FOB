@@ -4,7 +4,9 @@ Molecular Property Prediction (Graph Property Prediction) on the ogbg-molhiv dat
 
 ## dataset
 
-![you can use the visualize.ipynb to look at the data](random_molecule.png)
+[you can use the visualize.ipynb to look at the data](visualize.ipynb)
+
+![molecule image from the notebook](random_molecule.png)
 
 [ogb-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) is adapted from [MoleculeNet](https://pubs.rsc.org/en/content/articlelanding/2018/sc/c7sc02664a)
 
