@@ -115,6 +115,7 @@ engine:
 In the following you can find example use cases for experiments. Here we will focus on running the training and testing pipeline. For instructions on how to plot the results, refer to the [evaluation/README.md](evaluation/README.md). 
 
 In these examples we will perform 'dry-runs' by setting the following parameters in the `experiment.yaml`:
+
 ```yaml
 engine:
   train: false
@@ -122,36 +123,165 @@ engine:
   plot: false
 ```
 
+(Note: it might be a good idea to perform a dry run locally before wasting compute ressources)
+
 ### Example 1: Running a single task
-This is a minimal example of how to run a single task. The default values should reproduce the performance stated in the task overview.
+
+This is an (quite) minimal example of how to run a single task. The model and training are customized. All other values will be taken from their respective `default.yaml`.
+
+```yaml
+task:
+  name: mnist
+  max_epochs: 1
+  model:
+    num_hidden: 42
+```
+
+Full experiment file: [examples/usage/1_single_task.yaml](examples/usage/1_single_task.yaml)
 
 ```bash
 python experiment_runner.py examples/usage/1_single_task.yaml
 ```
 
-If you only specify the task name, all other values will be taken from their respective `default.yaml`.
-```yaml
-task:
-  name: mnist
-```
 Take a look at the [output directory](examples/usage/outputs/experiment-1/) to see the results.
 
+Note on the *folder name* of the runs:  
+Any hyperparameter that differs from the default will be included in the directory name. This is helpful for example when observing runs with Tensorboard.
+
+Note on the *directory structure* of the outputs:  
+The individual runs will be placed 
+
+```
+examples/usage/outputs/experiment-1  # (customize via: engine.output_dir)
+└── taskname                         # (customize via: task.output_dir_name)  
+    └── optimizer name               # (customize via: optimizer.output_dir_name)  
+        ├── run_1                    # (name includes non-default parameters) 
+        ├── ...  
+        └── run_n  
+```
+
 ### Example 2: Comparing optimizers
-TODO: zachi
 
-### Example 3: Running multiple tasks (benchmarking optimizer)
-If you want to use this repository for benchmarking an optimizer you most likely want to run multiple tasks.
+To quickly run multiple optimizers on multiple hyperparameters, you can declare a list of values. This will perform a grid search over the values.
 
-### Example 4: Running different versions of the same task (HPO/NAS)
-You can also run different versions of the same task. This may be useful for HPO and NAS.
+```yaml
+optimizer:
+  - name: adamw_baseline
+    learning_rate: [1.0e-2, 1.0e-3]
+    weight_decay: [0.1, 0.01]
+  - name: adamcpr
+    learning_rate: [1.0e-2, 1.0e-3]
+    kappa_init_param: [0.5, 1, 2, 4, 8, 16, 32]
+```
+
+AdamW is used 4 (= 2 x 2) times, AdamCPR is used 14 (= 2 x 7) times, for a total of 18 runs.
+
+Full experiment file: [examples/usage/2_comparing_optimizers.yaml](examples/usage/2_comparing_optimizers.yaml)
+
+```bash
+python experiment_runner.py examples/usage/2_comparing_optimizers.yaml
+```
+
+Take a look at the [output directory](examples/usage/outputs/experiment-2/) to see the 18 run folders.
+
+### Example 3: Running multiple tasks
+
+If you want to use this repository for benchmarking an optimizer you most likely want to run multiple tasks, on multiple seeds.
+
+```yaml
+task:
+  - classification
+  - classification_small
+  - graph
+  - graph_tiny
+  - mnist
+  - segmentation
+  - tabular
+  - translation
+engine:
+  seed: [1, 2, 3]
+```
+
+You can use any subset of the full task list, if some tasks are not relevant for you.  
+Every task will be run on every seed. By default, the benchmark uses deterministic algorithms wherever possible and logs a warning otherwise.
+
+Full experiment file: [examples/usage/3_benchmark_optimizers.yaml](examples/usage/3_benchmark_optimizers.yaml)
+
+```bash
+python experiment_runner.py examples/usage/3_benchmark_optimizers.yaml
+```
+
+Take a look at the [output directory](examples/usage/outputs/experiment-3/) to see the results.
+
+### Example 4: Running different versions of the same task
+
+You can also run different versions of the same task (or optimizer).  
+This might be useful when you do not want a full grid search, but only want to combine certain groups.
+
+The full grid search would be 2x2x2x2, we only want 8  
+🟦: group1  normalizer=quantile and noise=1.e-3 (+optimizer)  
+🟧: group2  normalizer=standard and noise=0   
+⬜: unwanted parameter combinations  
+
+🟦⬜⬜🟧  
+⬜🟦🟧⬜  
+⬜🟧🟦⬜  
+🟧⬜⬜🟦  
+
+```yaml
+task:
+  - name: tabular
+    output_dir_name: tabular_quantile
+    train_transforms:
+      normalizer: quantile
+      noise: 1.e-3
+  - name: tabular
+    output_dir_name: tabular_standard
+    train_transforms:
+      normalizer: standard
+      noise: 0
+optimizer:
+  name: adamw_baseline
+  learning_rate: [1.e-2, 1.e-3]
+  weight_decay: [1.e-2, 1.e-3]
+```
+
+Full experiment file: [examples/usage/4_multiple_task_versions.yaml](examples/usage/4_multiple_task_versions.yaml)
+
+```bash
+python experiment_runner.py examples/usage/4_multiple_task_versions.yaml
+```
+
+Take a look at the [output directory](examples/usage/outputs/experiment-4/) to see the results.
 
 ### Example 5: Running experiments with SLURM (convenience)
-You can run experiments with SLURM. This is a convenience feature that allows you to run experiments on remote clusters. It splits each run of the experiment inta seperate jobs.
+
+You can run experiments with SLURM. This is a convenience feature that allows you to run experiments on remote clusters. It splits each run of the experiment into a seperate job.
+
 ```yaml
 engine:
   run_scheduler: slurm_array
-  save_sbatch_scripts: true
   sbatch_args:
-    partition: my_gpu_partition        # adapt to your cluster
-  sbatch_script_template: template.sh  # template.sh
+    partition: my_gpu_partition  # adapt to your cluster
+  sbatch_script_template: path/to/template.sh
 ```
+
+- The `slurm_array` scheduler will put the runs into an array job. Therefore all slurm relevant parameters (e.g. devices, time, workers, ...) need to be equal across all runs. Using this scheduler is only recommended when running a single task.  
+The `slurm_jobs` scheduler on the other hand will put each run into a seperate job.
+- arguments put in `sbatch_args` will be passed to sbatch.  
+  e.g. `partition: my_gpu_partition` is parsed to `--partition=my_gpu_partition`
+
+  - per default gpus equal to `engine.devices` and a number of cpus according to `engine.workers` are requested.
+  - The requested time is set according to the defaults per task. It is recommended to use the `engine.sbatch_time_factor` to scale the default time per task for slower / faster machines.
+- Wrap the FOB execution in your pre- and post commands (e.g. conda activation) with an `sbatch_script_template` the placeholder `__FOB_COMMAND__` in [examples/usage/sbatch_template.sh](examples/usage/sbatch_template.sh) will be replaced.
+
+
+Full experiment file: [examples/usage/5_slurm.yaml](examples/usage/5_slurm.yaml)
+
+Running this command without slurm will crash, but save the individual slurm scripts into [`path/to/sbatch_scripts`](examples/usage/outputs/experiment-5/sbatch_scripts) for us to look at. 
+
+```bash
+python experiment_runner.py examples/usage/5_slurm.yaml
+```
+
+Take a look at the [output directory](examples/usage/outputs/experiment-5/) to see the results.

@@ -15,6 +15,7 @@ optimizer:
     learning_rate: [1.0e-2, 1.0e-3]
     kappa_init_param: [0.5, 1, 2, 4, 8, 16, 32]
 engine:
+  seed: [1, 2, 3]
   data_dir: examples/data
   output_dir: examples/usage/outputs/experiment-3
   train: false
