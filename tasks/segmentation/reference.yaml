@@ -1,0 +1,12 @@
+task:
+  name: segmentation
+  output_dir_name: segmentation_reference
+  batch_size: 2  # they say batch size 16 in the paper, but they probably mean total batch size and not per gpu. In the code they set samples_per_gpu=2 and train on 8 gpus. See https://github.com/NVlabs/SegFormer/blob/master/local_configs/segformer/B0/segformer.b0.512x512.ade.160k.py
+
+optimizer:
+  name: adamw_baseline
+  learning_rate: 6.e-4  # using 10x higher learning rate because we decrease the lr of the backbone instead of increasing the lr of the head.
+  weight_decay: 0.01
+  lr_scheduler: poly
+  lr_power: 1.0
+  warmup_factor: 0.04  # they use 1600 warmup steps, this yields about 1617
