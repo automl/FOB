@@ -1,6 +1,8 @@
+import logging
 import torch
 from torch.nn.functional import interpolate
 from mmseg.evaluation.metrics import IoUMetric
+from mmengine.logging import MMLogger
 from tasks import TaskModel
 from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from engine.configs import TaskConfig
@@ -101,6 +103,8 @@ class SegmentationModel(TaskModel):
 
     def _get_metric(self):
         metric = IoUMetric()
+        logger: MMLogger = MMLogger.get_current_instance()
+        logger.setLevel(logging.WARN)
         metric.dataset_meta = {"classes": list(range(150))}
         return metric
 
