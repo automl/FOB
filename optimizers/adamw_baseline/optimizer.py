@@ -45,7 +45,13 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         fused=False
     )
     min_lr = config.eta_min_factor * lr
-    warmup_steps, scheduler_steps = warmup_split(config.max_steps, config.warmup_factor)
+    if config.warmup_steps is not None:
+        warmup_steps = config.warmup_steps
+        scheduler_steps = config.max_steps - warmup_steps
+    elif config.warmup_factor is not None:
+        warmup_steps, scheduler_steps = warmup_split(config.max_steps, config.warmup_factor)
+    else:
+        raise ValueError("Either 'warmup_steps' or 'warmup_factor' should be specified.")
     if config.lr_scheduler == "cosine":
         scheduler = CosineAnnealingLR
         scheduler_kwargs = dict(

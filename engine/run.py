@@ -45,12 +45,12 @@ class Run():
         self.export_config()
         if any([self.engine.train, self.engine.test]):
             self._ensure_resume_path()
+            self._ensure_max_steps()
             torch.set_float32_matmul_precision('high')
             seed_everything(self.engine.seed, workers=True)
             model, data_module = self.get_task()
         # TODO: test only correctness for last checkpoint
         if self.engine.train:
-            self._ensure_max_steps()
             trainer = self.get_trainer()
             self.train(trainer, model, data_module)
         if self.engine.test:

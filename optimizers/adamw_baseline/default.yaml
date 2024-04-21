@@ -5,6 +5,7 @@ optimizer:
   one_minus_beta1: 0.1  # 1 - beta1 AdamW parameter
   beta2: 0.999          # AdamW parameter
   warmup_factor: 0.01   # factor of the total steps used for warmup
+  warmup_steps: null    # number of steps used for warmup, overrides warmup_factor
   weight_decay: 0.01    # AdamW parameter
   epsilon: 1.e-8        # AdamW parameter
   eta_min_factor: 0.01  # the minimum learning rate of the cosine annealing given as a factor of the initial learning rate

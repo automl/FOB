@@ -8,7 +8,7 @@ optimizer:
   weight_decay: 0.01
   lr_scheduler: poly
   lr_power: 1.0
-  warmup_factor: 0.04  # they use 1600 warmup steps, this yields about 1617
+  warmup_steps: 1600
 engine:
   devices: 8
   sbatch_args:
