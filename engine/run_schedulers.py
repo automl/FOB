@@ -69,10 +69,10 @@ def run_slurm(command: str, run: Run, args: dict[str, str], log_dir: Path):
     if run.engine.save_sbatch_scripts is None:
         with TemporaryDirectory() as tmpdir:
             s = get_slurm(run, args, log_dir, Path(tmpdir).resolve())
-            s.run(command)
+            s.run(command, name_addition="")
     else:
         s = get_slurm(run, args, log_dir)
-        s.run(command)
+        s.run(command, name_addition="")
 
 
 def slurm_array(runs: list[Run], run_script: Path, experiment: dict[str, Any]) -> None:
