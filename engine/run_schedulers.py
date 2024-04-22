@@ -1,3 +1,4 @@
+import traceback
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Iterable, Optional
@@ -109,5 +110,6 @@ def sequential(runs: Iterable[Run], n_runs: int, experiment: dict[str, Any]):
         export_experiment(run, experiment)
         try:
             run.start()
-        except RuntimeError as e:  # detect_anomaly raises RuntimeError
-            log_info(f"Run {i}/{n_runs} failed with {e}.")
+        except RuntimeError as _e:  # detect_anomaly raises RuntimeError
+            t = traceback.format_exc()
+            log_info(f"Run {i}/{n_runs} failed with {t}.")
