@@ -386,7 +386,7 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
         if pd.api.types.is_numeric_dtype(dataframe[param_name]):
             param_value = float(param_value)
         try:
-            current_dataframe = dataframe.groupby([param_name]).get_group(param_value)
+            current_dataframe = dataframe.groupby([param_name]).get_group((param_value,))
         except KeyError:
             log_warn(f"WARNING: was not able to groupby '{param_name}'," +
                            "maybe the data was created with different versions of fob; skipping this row")
