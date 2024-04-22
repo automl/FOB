@@ -2,8 +2,10 @@
 names:  
   # optimizer
   adamw_baseline: AdamW
-  adamcpr: AdamCPR
   sgd_baseline: SGD
+  adamcpr: AdamCPR
+  adamcpr_fast: AdamCPR
+  sgd_stepwise: SGD (stepwise)
   # metric
   test_acc: Accuracy (Test)
   test_loss: Test Loss (lower is better)
@@ -12,6 +14,7 @@ names:
   # parameter
   learning_rate: Learning Rate
   weight_decay: Weight Decay
+  kappa_init_param: Kappa Init Param
   # tasks
   classification: classification
   classification_small: classification_small
