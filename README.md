@@ -27,7 +27,7 @@ How to write your own can be found [here](tasks/README.md)
 | [graph](tasks/graph) | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | graph property prediction | ROC-AUC | 0.73? | 20min | 1 gpu |
 | [graph_tiny](tasks/graph_tiny) | [cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.80 | 1min | 1 gpu |
 | [tabular](tasks/tabular) | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | tabular regression | Test RMSE | 0.40 | 2 min | 1 gpu |
-| [translation](tasks/translation) | [WMT17(de-en)](https://machinetranslate.org/wmt17) (maybe subset in the future) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | machine translation | BLEU (sacrebleu) | 30 | 6h | 4 gpus |
+| [translation](tasks/translation) | [WMT17(en-de)](https://machinetranslate.org/wmt17) (maybe subset in the future) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | machine translation | BLEU (sacrebleu) | 26.3 | 6h | 4 gpus |
 
 
 ### Under Development
