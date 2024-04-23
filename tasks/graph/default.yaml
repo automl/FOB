@@ -26,4 +26,4 @@ evaluation:
     metric: test_rocauc
     test_metric_mode: max
     format: "2.1"
-    limits: [60, 75]
+    limits: [65, 80]
