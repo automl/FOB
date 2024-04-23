@@ -1,12 +1,12 @@
-# task
+# Task
 
-node classification on the cora dataset.
+Node Classification on the Cora Dataset.
 
 ![](https://production-media.paperswithcode.com/datasets/Cora-0000000700-ce1c5ec7_LD7pZnT.jpg)
 
 image source: https://arxiv.org/abs/1611.08402
 
-## dataset
+## Dataset
 
 The cora dataset consists of a single network of 2708 publications classified into one of seven classes and consist of 5429 links.
 
@@ -16,7 +16,7 @@ Here we use the planetoid version from [Revisiting Semi-Supervised Learning with
 
 [Paperswithcode](https://paperswithcode.com/sota/node-classification-on-cora)
 
-## model
+## Model
 
 Here we use a GCN (Graph Convolutional Network), which was first introduced by [Semi-Supervised Classification with Graph Convolutional Networks, Kipf & Welling 2017](https://arxiv.org/abs/1609.02907)
 
@@ -25,13 +25,14 @@ Here we use a GCN (Graph Convolutional Network), which was first introduced by [
 (image source: https://tkipf.github.io/graph-convolutional-networks/)
 
 
-## performance
+## Performance
 
-The model achieves a performance of 81.9%
+We compare the Accuracy. The search grid used to find the optimal hyperparameters can be found [here](../../baselines/graph_tiny.yaml).
+Our model achieves a performance of `0.81.9 ± 0.6%` (using the best checkpoint).
 
-### performance comparison
+### Performance Comparison
 
-Performance using a GCN was reported in [Semi-Supervised Classification with Graph Convolutional Networks, Kipf & Welling 2017](https://arxiv.org/abs/1609.02907), where the authors report a classificationa accuracy of 81.5%
+Performance using a GCN was reported in [Semi-Supervised Classification with Graph Convolutional Networks, Kipf & Welling 2017](https://arxiv.org/abs/1609.02907), where the authors report a classificationa accuracy of `81.5%`
 
 Their GCN configuration was found by training models:
 - 200 epochs (training iterations)
@@ -47,6 +48,6 @@ Their model:
 - learning rate 0.01
 - L2 regularization: 5 · 10−4  (first GCN layer)
 
-## additional information
+## Additional Information
 
 During development training was numerically unstable for learning rates > 1.0e-3 when using 16bit Automatic Mixed Precision (AMP).

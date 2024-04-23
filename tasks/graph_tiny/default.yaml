@@ -20,7 +20,8 @@ engine:
     time: 00:05:00
 optimizer:
   name: adamw_baseline
-  learning_rate: 1.0e-2
+  learning_rate: 1.0e-1
+  weight_decay: 1.0e-3
 evaluation:
   plot:
     metric: test_acc
