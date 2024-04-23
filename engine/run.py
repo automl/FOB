@@ -49,16 +49,24 @@ class Run():
             torch.set_float32_matmul_precision('high')
             seed_everything(self.engine.seed, workers=True)
             model, data_module = self.get_task()
-        # TODO: test only correctness for last checkpoint
         if self.engine.train:
             trainer = self.get_trainer()
             self.train(trainer, model, data_module)
         if self.engine.test:
             tester = self.get_tester()
-            self.test(tester, model, data_module)
+            if self.engine.train:  # no need to load last checkpoint, model is already loaded
+                self.test(tester, model, data_module)
+            elif self.engine.resume is not None:
+                self.test(tester, model, data_module, ckpt=self.engine.resume)  # type: ignore (see ensure_resume_path)
+            else:
+                log_info(
+                    "No last checkpoint found, skipping test. If this is unexpected, try to set 'engine.resume=true'."
+                )
             best_path = self.get_best_checkpoint()
             if best_path is not None:
                 self.test(tester, model, data_module, Path(best_path))
+            else:
+                log_info("No best checkpoint found, skipping test.")
 
     def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
         start_time = time.time()
@@ -78,6 +86,7 @@ class Run():
     def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
         ckpt_path = self.engine.resume if ckpt is None else ckpt
         mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"  # type: ignore
+        log_info(f"Testing {mode} checkpoint...")
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)  # type: ignore
         write_results(score, self.run_dir / f"results_{mode}_model.json")
 
