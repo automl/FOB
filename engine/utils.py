@@ -1,5 +1,4 @@
 from pathlib import Path
-import sys
 from typing import Any, Callable, Iterable, Optional, Type
 import json
 import math
@@ -14,16 +13,16 @@ def rank_zero_print(*args: Any, **kwargs: Any):
 
 
 @rank_zero_only
-def log_warn(msg: str, *args: Any, **kwargs: Any):
-    return log.warning(msg, *args, **kwargs)
+def log_warn(msg: str, *args: Any, prefix: str = "[FOB WARNING] ", **kwargs: Any):
+    return log.warning(f"{prefix}{msg}", *args, **kwargs)
 
 
-def log_info(*args: Any, **kwargs: Any):
-    return rank_zero_info(*args, **kwargs)
+def log_info(msg: str, *args: Any, prefix: str = "[FOB INFO] ", **kwargs: Any):
+    return rank_zero_info(f"{prefix}{msg}", *args, **kwargs)
 
 
-def log_debug(*args: Any, **kwargs: Any):
-    return rank_zero_debug(*args, **kwargs)
+def log_debug(msg: str, *args: Any, prefix: str = "[FOB DEBUG] ", **kwargs: Any):
+    return rank_zero_debug(f"{prefix}{msg}", *args, **kwargs)
 
 
 def write_results(results, filepath: Path):
