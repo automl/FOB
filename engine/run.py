@@ -248,5 +248,6 @@ class Run():
         self.evaluation = EvalConfig(
             self._config,
             eval_key=self.eval_key,
+            engine_key=self.engine_key,
             ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.") + [f"{self.optimizer_key}.output_dir_name", f"{self.task_key}.output_dir_name"]
         )

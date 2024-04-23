@@ -125,7 +125,7 @@ class EngineConfig(BaseConfig):
 
 
 class EvalConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], eval_key: str, ignore_keys = None) -> None:
+    def __init__(self, config: dict[str, Any], eval_key: str, engine_key: str, ignore_keys = None) -> None:
         cfg = dict(config[eval_key])
         self.experiment_files = AttributeDict(dict(
             best_model = "results_best_model.json",
@@ -133,7 +133,8 @@ class EvalConfig(BaseConfig):
             config = "config.yaml"
         ))
         self.output_types: list[str] = wrap_list(cfg["output_types"])
-        self.output_dir: Optional[Path] = maybe_abspath(cfg["output_dir"])  # TODO: check correct behavior if none
+        experiment_dir = Path(config[engine_key]["output_dir"]).resolve()
+        self.output_dir: Path = some(maybe_abspath(cfg["output_dir"]), default=experiment_dir / "plots")
         self.experiment_name: str = cfg["experiment_name"]
         self.verbose: bool = cfg.get("verbose", False)
         split = cfg.get("split_groups", False)
@@ -145,6 +146,7 @@ class EvalConfig(BaseConfig):
         self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])
         cfg["ignore_keys"] = self.ignore_keys
         cfg["output_types"] = self.output_types
+        cfg["output_dir"] = self.output_dir
         cfg["aggregate_groups"] = self.aggregate_groups
         cfg["output_types"] = self.output_types
         cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
