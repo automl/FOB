@@ -2,7 +2,7 @@
 
 Fast and cheap Benchmark for HPO and Optimizer.
 
-Master Project at ML chair Freiburg,
+Master Project at Machine Learning Lab Freiburg,
 Simon Blauth, Tobias Bürger, Zacharias Häringer
 
 This benchmark aims to be fast while maintaining a wide selection of different tasks. It also tries to be independent of the hardware used, however it requires a minimum of 4 gpus ideally capable of bfloat16 mixed precision.  
@@ -70,6 +70,9 @@ Activate and install requirements
 conda activate fob
 pip install -r requirements.txt
 ```
+
+#### Troubleshooting
+Sometimes pip fails to install the correct version of `mmcv`. If you encounter errors, try to install the correct version of `mmcv` as instructed on their [website](https://mmcv.readthedocs.io/en/latest/get_started/installation.html).
 
 ### How to run an experiment
 
