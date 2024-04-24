@@ -99,6 +99,11 @@ class Run():
             d = convert_type_inside_dict(d, EndlessList, list)
             yaml.safe_dump(d, f)
 
+    def export_config_dict(self) -> dict[str, Any]:
+        d = path_to_str_inside_dict(self._config)
+        d = convert_type_inside_dict(d, EndlessList, list)
+        return d
+
     def get_config(self) -> AttributeDict:
         return AttributeDict(self._config)
 
