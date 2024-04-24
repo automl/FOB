@@ -55,13 +55,16 @@ class Run():
         if self.engine.test:
             tester = self.get_tester()
             if self.engine.train:  # no need to load last checkpoint, model is already loaded
-                self.test(tester, model, data_module)
+                ckpt = None
             elif self.engine.resume is not None:
-                self.test(tester, model, data_module, ckpt=self.engine.resume)  # type: ignore (see ensure_resume_path)
+                ckpt=self.engine.resume
             else:
-                log_info(
-                    "No last checkpoint found, skipping test. If this is unexpected, try to set 'engine.resume=true'."
+                log_warn(
+                    "No last checkpoint found, evaluating untrained model. " + \
+                    "If this is unexpected, try to set 'engine.resume=true'."
                 )
+                ckpt = None
+            self.test(tester, model, data_module, ckpt=ckpt)  # type: ignore (see ensure_resume_path)
             best_path = self.get_best_checkpoint()
             if best_path is not None:
                 self.test(tester, model, data_module, Path(best_path))
@@ -155,7 +158,8 @@ class Run():
     def get_best_checkpoint(self) -> Optional[Path]:
         model_checkpoint = self._callbacks.get("model_checkpoint", None)
         if model_checkpoint is not None:
-            model_checkpoint = model_checkpoint.best_model_path
+            model_checkpoint = Path(model_checkpoint.best_model_path)
+            model_checkpoint = model_checkpoint if not model_checkpoint.is_dir() else None
         if model_checkpoint is None:
             available_checkpoints = self.get_available_checkpoints()
             model_checkpoint = findfirst(lambda x: x.stem.startswith("best"), available_checkpoints)
@@ -167,6 +171,9 @@ class Run():
         return []
 
     def _ensure_resume_path(self):
+        """
+        Ensures that `self.engine.resume` is either a valid Path or None.
+        """
         if isinstance(self.engine.resume, Path):
             pass
         elif isinstance(self.engine.resume, bool):
@@ -183,6 +190,9 @@ class Run():
             raise TypeError(f"Unsupportet type for 'resume', got {type(self.engine.resume)=}.")
 
     def _ensure_max_steps(self):
+        """
+        Ensures that `self.task.max_steps` is calculated and set correctly.
+        """
         if self.task.max_steps is None:
             max_steps = self._calc_max_steps()
             self._config[self.task_key]["max_steps"] = max_steps
@@ -206,13 +216,14 @@ class Run():
             mode=self.task.target_metric_mode,
             save_last=True
         )
-        self._callbacks["early_stopping"] = EarlyStopping(
-            monitor=self.task.target_metric,
-            mode=self.task.target_metric_mode,
-            patience=self.engine.early_stopping,
-            check_finite=self.engine.check_finite,
-            log_rank_zero_only=True
-        )
+        if self.engine.early_stopping is not None:
+            self._callbacks["early_stopping"] = EarlyStopping(
+                monitor=self.engine.early_stopping_metric,
+                mode=self.task.target_metric_mode,
+                patience=self.engine.early_stopping,
+                check_finite=self.engine.check_finite,
+                log_rank_zero_only=True
+            )
         self._callbacks["lr_monitor"] = LearningRateMonitor(logging_interval=self.optimizer.lr_interval)
         self._callbacks["extra"] = LogParamsAndGrads(
             log_gradient=self.engine.log_extra,

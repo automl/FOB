@@ -68,10 +68,8 @@ class EngineConfig(BaseConfig):
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.detect_anomaly: bool = cfg["detect_anomaly"]
         self.devices: int = some(cfg["devices"], default=1)
-        if cfg["early_stopping"] is not None:
-            self.early_stopping: int = cfg["early_stopping"]
-        else:
-            self.early_stopping: int = config[task_key]["max_epochs"]
+        self.early_stopping: Optional[int] = cfg["early_stopping"]
+        self.early_stopping_metric: str = some(cfg["early_stopping_metric"], default=config[task_key]["target_metric"])
         self.gradient_clip_alg: str = cfg["gradient_clip_alg"]
         self.gradient_clip_val: Optional[float] = cfg["gradient_clip_val"]
         self.log_extra: bool = cfg["log_extra"]
@@ -96,7 +94,7 @@ class EngineConfig(BaseConfig):
         self.workers: int = cfg["workers"]
         cfg["data_dir"] = self.data_dir
         cfg["devices"] = self.devices
-        cfg["early_stopping"] = self.early_stopping
+        cfg["early_stopping_metric"] = self.early_stopping_metric
         cfg["max_steps"] = self.max_steps
         cfg["output_dir"] = self.output_dir
         cfg["resume"] = self.resume
