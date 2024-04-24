@@ -17,6 +17,7 @@ class SegmentationDataModule(TaskDataModule):
     """
     def __init__(self, config: TaskConfig):
         super().__init__(config)
+        self.revision = "ac1c0c0e23875e74cd77aca0fd725fd6a35c3667"
         image_processor = SegformerImageProcessor.from_pretrained(
             "nvidia/mit-b0",
             cache_dir=self.data_dir
@@ -55,7 +56,7 @@ class SegmentationDataModule(TaskDataModule):
 
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
-        load_dataset("scene_parse_150", cache_dir=str(self.data_dir), trust_remote_code=True)
+        load_dataset("scene_parse_150", cache_dir=str(self.data_dir), trust_remote_code=True, revision=self.revision)
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
@@ -81,7 +82,8 @@ class SegmentationDataModule(TaskDataModule):
             "scene_parse_150",
             cache_dir=str(self.data_dir),
             split=split,
-            trust_remote_code=True
+            trust_remote_code=True,
+            revision=self.revision
         )
         return self._remove_invalid_images(ds)  # type:ignore
 
