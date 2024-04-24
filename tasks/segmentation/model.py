@@ -3,15 +3,16 @@ import torch
 from torch.nn.functional import interpolate
 from mmseg.evaluation.metrics import IoUMetric
 from mmengine.logging import MMLogger
+from transformers import SegformerForSemanticSegmentation, SegformerConfig
 from tasks import TaskModel
 from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
 from engine.configs import TaskConfig
 from optimizers import Optimizer
-from .modeling_segformer import SegformerForSemanticSegmentation, SegformerConfig
+from .segformer_contiguous import SegformerForSemanticSegmentationContiguous
 
 
 class SegFormerGroupedModel(GroupedModel):
-    def __init__(self, model: SegformerForSemanticSegmentation) -> None:
+    def __init__(self, model: SegformerForSemanticSegmentation | SegformerForSemanticSegmentationContiguous) -> None:
         super().__init__(model)
 
     def parameter_groups(self) -> list[ParameterGroup]:
@@ -52,13 +53,17 @@ class SegmentationModel(TaskModel):
             id2label=id2label,
             label2id=label2id
         )
+        if config.model.contiguous_memory:
+            model_class = SegformerForSemanticSegmentationContiguous
+        else:
+            model_class = SegformerForSemanticSegmentation
         if config.model.use_pretrained_model:
-            model = SegformerForSemanticSegmentation.from_pretrained(
+            model = model_class.from_pretrained(
                 "nvidia/segformer-b0-finetuned-ade-512-512",
                 cache_dir=config.data_dir
             )
         else:
-            model = SegformerForSemanticSegmentation.from_pretrained(
+            model = model_class.from_pretrained(
                 model_name,
                 cache_dir=config.data_dir,
                 config=model_config

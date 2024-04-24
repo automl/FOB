@@ -612,7 +612,7 @@ class SegformerDecodeHead(SegformerPreTrainedModel):
     """SegFormer Model transformer with an all-MLP decode head on top e.g. for ADE20k, CityScapes.""",
     SEGFORMER_START_DOCSTRING,
 )
-class SegformerForSemanticSegmentation(SegformerPreTrainedModel):
+class SegformerForSemanticSegmentationContiguous(SegformerPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.segformer = SegformerModel(config)

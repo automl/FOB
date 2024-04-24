@@ -9,6 +9,7 @@ task:
   model:
     name: nvidia/mit-b0
     use_pretrained_model: false  # just to compare performance, use this with 'engine.test_only=true'
+    contiguous_memory: true  # silences pytorch warnings but increases memory footprint
 engine:
   devices: 4
   sbatch_args:
