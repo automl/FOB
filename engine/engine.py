@@ -3,7 +3,6 @@ from typing import Any, Callable, Iterable, Iterator, Literal
 from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
-from engine import repository_root
 from engine.configs import EvalConfig
 from engine.grid_search import grid_search
 from engine.parser import YAMLParser
@@ -26,6 +25,7 @@ class Engine():
         self._defaults = []
         self._experiment = {}
         self._experiment_file = None
+        self._block_plotting = False
         self.task_key = "task"
         self.optimizer_key = "optimizer"
         self.engine_key = "engine"
@@ -47,9 +47,11 @@ class Engine():
             run = self._make_run(n)
             run.start()
         elif scheduler == "slurm_array":
-            slurm_array(list(self.runs()), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_array(list(self.runs()), self._experiment)
+            self._block_plotting = True
         elif scheduler == "slurm_jobs":
-            slurm_jobs(self.runs(), repository_root() / "experiment_runner.py", self._experiment)
+            slurm_jobs(list(self.runs()), self._experiment)
+            self._block_plotting = True
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
@@ -95,12 +97,12 @@ class Engine():
                 run = self._make_run(n)
                 log_info(f"Setting up data for {run.task_key} '{run.task.name}'...")
                 run.get_datamodule().prepare_data()
-                log_info(f"... finished.")
+                log_info("... finished.")
                 prepared.add(name)
 
     def plot(self, save: bool = True) -> list[Figure]:
         run = next(self.runs())
-        if not run.engine.plot:
+        if self._block_plotting or not run.engine.plot:
             return []
         config = run.evaluation
         set_plotstyle(config)
