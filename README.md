@@ -1,4 +1,4 @@
-# Fast Optimization Benchmark
+# Fast Optimizer Benchmark
 
 Fast and cheap Benchmark for HPO and Optimizer.
 
