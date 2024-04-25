@@ -24,11 +24,10 @@ Here we use a GCN (Graph Convolutional Network), which was first introduced by [
 
 (image source: https://tkipf.github.io/graph-convolutional-networks/)
 
-
 ## Performance
 
 We compare the Accuracy. The search grid used to find the optimal hyperparameters can be found [here](../../baselines/graph_tiny.yaml).
-Our model achieves a performance of `0.81.9 ± 0.6%` (using the best checkpoint).
+Our model achieves a performance of `81.9 ± 0.6%` (using the best checkpoint).
 
 ### Performance Comparison
 
@@ -47,7 +46,3 @@ Their model:
 - dropout: 0.5
 - learning rate 0.01
 - L2 regularization: 5 · 10−4  (first GCN layer)
-
-## Additional Information
-
-During development training was numerically unstable for learning rates > 1.0e-3 when using 16bit Automatic Mixed Precision (AMP).
