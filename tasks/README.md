@@ -1,11 +1,30 @@
 # Tasks
 We provide a set of tasks to train and evaluate models. A task consists of a model and a dataset.
 
+Each task has their own `README.md` file with more details.
+
 We currently have the following tasks:
 
-TODO: table from main when its final.
+### Ready to use
 
-Each task has their own `README.md` file with more details.
+| Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
+| ------- | ---- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
+| [mnist](tasks/mnist) | MNIST | MLP | Image Classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
+| [classification](tasks/classification) | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image Classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
+| [classification_small](tasks/classification_small) | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image Classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
+| [segmentation](tasks/segmentation) | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 0.35 | 5h | 4 gpu |
+| [graph](tasks/graph) | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | Graph Property Prediction | ROC-AUC | 0.77 | 20min | 1 gpu |
+| [graph_tiny](tasks/graph_tiny) | [Cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.82 | 1min | 1 gpu |
+| [tabular](tasks/tabular) | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | Tabular Regression | Test RMSE | 0.40 | 2 min | 1 gpu |
+| [translation](tasks/translation) | [WMT17(en-de)](https://machinetranslate.org/wmt17) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | Machine Translation | BLEU (sacrebleu) | 26.3 | 6h | 4 gpus |
+
+
+### Under Development
+
+| Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
+| ------- | ----- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
+| [detection](tasks/detection) | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
+| rna_folding | bpRNA | RNAformer | RNA secondary structure prediction | F1 | ? | ~4h | 4 gpus |
 
 ## Adding your own task
 To add your own task, you need to create a subfolder in the `tasks` directory. The name of that folder will be the name used to invoke the task. Within the folder you need to provide the following files: `task.py`, `model.py`, `data.py`, `default.yaml` and `README.md`. 
