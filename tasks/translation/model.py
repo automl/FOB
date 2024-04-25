@@ -1,10 +1,11 @@
 import sys
 import evaluate
-
+from torch.nn import Module
 from transformers import AutoModelForSeq2SeqLM, T5Config
 
 from engine.parameter_groups import GroupedModel
 from engine.configs import TaskConfig
+from engine.utils import some, log_warn
 from optimizers import Optimizer
 from tasks import TaskModel
 from tasks.translation.data \
@@ -12,8 +13,15 @@ from tasks.translation.data \
 
 
 class GroupedTransformer(GroupedModel):
-    def generate(self, inputs: list[str], tokenizer, device, num_beams=4, length_penalty=1.0) -> list[str]:
+    def __init__(self, model: Module, num_beams: int, length_penalty: float) -> None:
+        self.num_beams = num_beams
+        self.length_penalty = length_penalty
+        super().__init__(model)
+
+    def generate(self, inputs: list[str], tokenizer, device, num_beams=None, length_penalty=None) -> list[str]:
         token_inputs = tokenizer(inputs, return_tensors="pt", padding=True).to(device)
+        num_beams = some(num_beams, default=self.num_beams)
+        length_penalty = some(length_penalty, default=self.length_penalty)
         output = self.model.generate(input_ids=token_inputs["input_ids"],
                                      attention_mask=token_inputs["attention_mask"],
                                      do_sample=False,
@@ -35,36 +43,35 @@ class WMTModel(TaskModel):
             raise Exception("prepare dataset before running the model!")
         model_config = T5Config.from_pretrained("google-t5/t5-small", cache_dir=str(data_module.cache_dir))
         model = AutoModelForSeq2SeqLM.from_config(model_config)
-        model = GroupedTransformer(model)
+        model = GroupedTransformer(model, config.model.num_beams, config.model.length_penalty)
         super().__init__(model, optimizer, config)
 
     def training_step(self, batch, _batch_idx):
         return self.compute_and_log_loss(batch, "train_loss")
 
-    def compute_bleu(self, en_preds: list[str], en_target: list[str]) -> float:
-        assert len(en_preds) == len(en_target)
+    def compute_bleu(self, preds: list[str], target: list[str]) -> float:
+        assert len(preds) == len(target)
         try:
-            result = self.bleu.compute(predictions=[p.strip() for p in en_preds],
-                                       references=[[t.strip()] for t in en_target])
+            result = self.bleu.compute(predictions=[p.strip() for p in preds],
+                                       references=[[t.strip()] for t in target])
         except ZeroDivisionError:
-            print("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
+            log_warn("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
             result = {"score": 0.0}
         return result["score"]  # type: ignore
 
     def validation_step(self, batch, _batch_idx):
-        de, en = batch
-        batch = self.tokenizer(de, text_target=en, padding=True, return_tensors="pt").to(self.device)
+        src, tgt = batch
+        batch = self.tokenizer(src, text_target=tgt, padding=True, return_tensors="pt").to(self.device)
         self.compute_and_log_loss(batch, "val_loss")
-        self.metric_cache_trues += en
-        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device, num_beams=1, length_penalty=1.0)
+        self.metric_cache_trues += tgt
+        self.metric_cache_pred += self.model.generate(src, self.tokenizer, self.device, num_beams=1, length_penalty=1.0)
 
     def test_step(self, batch, _batch_idx):
-        de, en = batch
-        batch = self.tokenizer(de, text_target=en, padding=True, return_tensors="pt").to(self.device)
+        src, tgt = batch
+        batch = self.tokenizer(src, text_target=tgt, padding=True, return_tensors="pt").to(self.device)
         self.compute_and_log_loss(batch, "test_loss")
-        self.metric_cache_trues += en
-        self.metric_cache_pred += self.model.generate(de, self.tokenizer, self.device)
-
+        self.metric_cache_trues += tgt
+        self.metric_cache_pred += self.model.generate(src, self.tokenizer, self.device)
 
     def on_validation_epoch_end(self):
         bleu = self.compute_bleu(self.metric_cache_pred, self.metric_cache_trues)

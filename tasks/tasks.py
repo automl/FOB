@@ -36,6 +36,9 @@ class TaskModel(LightningModule):
         self.optimizer = optimizer
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
 
+    def forward(self, *args, **kwargs):
+        return self.model.forward(*args, **kwargs)
+
     def configure_optimizers(self) -> OptimizerLRScheduler:
         return self.optimizer.configure_optimizers(self.model)
 

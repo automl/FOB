@@ -1,10 +1,10 @@
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Iterable, Optional
 from torch import nn
 from torch.nn import Module
 from torch.nn.parameter import Parameter
-from .utils import some
+from engine.utils import some, log_warn
 
 
 @dataclass
@@ -52,7 +52,7 @@ class ParameterGroup():
             d["lr"] = self.lr_multiplier * lr if self.lr_multiplier is not None else lr
         if weight_decay is not None:
             d["weight_decay"] = self.weight_decay_multiplier * weight_decay \
-            if self.weight_decay_multiplier is not None else weight_decay
+                if self.weight_decay_multiplier is not None else weight_decay
         return d
 
 
@@ -81,6 +81,10 @@ class GroupedModel(Module):
 
 
 def merge_parameter_splits(split1: list[ParameterGroup], split2: list[ParameterGroup]) -> list[ParameterGroup]:
+    """
+    Merge two lists of ParameterGroup objects into a single list.
+    Assumes that both input lists partition the parameters.
+    """
     groups = []
     for pg1 in split1:
         for pg2 in split2:
@@ -90,66 +94,103 @@ def merge_parameter_splits(split1: list[ParameterGroup], split2: list[ParameterG
     return groups
 
 
-def wd_group_named_parameters(model: Module):
-    apply_decay = set()
-    apply_no_decay = set()
-    special = set()
-    whitelist_weight_modules = (nn.Linear, nn.Conv2d)
-    ignore_modules = (nn.Sequential, )
-    blacklist_weight_modules = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
-                                nn.Embedding,
-                                nn.LazyBatchNorm1d, nn.LazyBatchNorm2d, nn.LazyBatchNorm3d,
-                                nn.GroupNorm, nn.SyncBatchNorm,
-                                nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d,
-                                nn.LayerNorm, nn.LocalResponseNorm)
+def group_named_parameters(
+        model: Module,
+        g1_conds: Iterable[Callable] = (lambda *_: True,),
+        g2_conds: Iterable[Callable] = (lambda *_: True,),
+        special_conds: Iterable[Callable] = tuple(),
+        ignore_conds: Iterable[Callable] = tuple(),
+        g1_kwargs: Optional[dict[str, Any]] = None,
+        g2_kwargs: Optional[dict[str, Any]] = None,
+        debug: bool = False
+    ) -> list[ParameterGroup]:
+    """
+    Group named parameters based on specified conditions and return a list of ParameterGroup objects.
 
+    Args:
+        model (Module): The neural network model.
+        g1_conds (Iterable[Callable]): Conditions for selecting parameters for group 1.
+        g2_conds (Iterable[Callable]): Conditions for selecting parameters for group 2.
+        special_conds (Iterable[Callable]): Conditions for selecting special parameters that should not be grouped.
+        ignore_conds (Iterable[Callable]): Conditions for ignoring parameters (e.g. if they occur in submodules).
+        g1_kwargs (Optional[dict[str, Any]]): Additional keyword arguments for constructor of group 1.
+        g2_kwargs (Optional[dict[str, Any]]): Additional keyword arguments for constructor of group 2.
+
+    Returns:
+        List[ParameterGroup]: A list of ParameterGroup objects containing named parameters.
+    """
+    g1_kwargs = g1_kwargs if g1_kwargs is not None else {}
+    g2_kwargs = g2_kwargs if g2_kwargs is not None else {}
+    s1 = set()
+    s2 = set()
+    special = set()
     param_dict = {pn: p for pn, p in model.named_parameters() if p.requires_grad}
     for mn, m in model.named_modules():
         for pn, p in m.named_parameters():
             fpn = f"{mn}.{pn}" if mn else pn  # full param name
             if not p.requires_grad or fpn not in param_dict:
                 continue  # frozen weights
-            if isinstance(m, ignore_modules):
-                continue  # parameters of sequential are added from their own modules
-            if hasattr(p, '_optim'):
+            elif any(c(m, p, fpn) for c in ignore_conds):
+                continue
+            elif any(c(m, p, fpn) for c in special_conds):
                 special.add(fpn)
-            elif pn.endswith('bias'):
-                apply_no_decay.add(fpn)
-            elif pn.endswith('weight') and isinstance(m, whitelist_weight_modules):
-                apply_decay.add(fpn)
-            elif isinstance(m, blacklist_weight_modules):
-                apply_no_decay.add(fpn)
-            # else:  # for debug purposes
-            #     print("wd_group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
+            elif any(c(m, p, fpn) for c in g1_conds):
+                s1.add(fpn)
+            elif any(c(m, p, fpn) for c in g2_conds):
+                s2.add(fpn)
+            elif debug:
+                log_warn("group_named_parameters: Not using any rule for ", fpn, " in ", type(m))
 
-    apply_decay |= (param_dict.keys() - apply_no_decay - special)
+    s1 |= (param_dict.keys() - s2 - special)
 
     # validate that we considered every parameter
-    inter_params = apply_decay & apply_no_decay
-    union_params = apply_decay | apply_no_decay
-    assert len(inter_params) == 0, f"Parameters {str(inter_params)} made it into both apply_decay/apply_no_decay sets!"
+    inter_params = s1 & s2
+    union_params = s1 | s2
+    assert len(inter_params) == 0, f"Parameters {str(inter_params)} made it into both s1/s2 sets!"
     assert len(
         param_dict.keys() - special - union_params) == 0, \
             f"parameters {str(param_dict.keys() - union_params)} \
-                were not separated into either apply_decay/apply_no_decay set!"
+                were not separated into either s1/s2 set!"
 
-    if not apply_no_decay:
+    if not s2:
         param_groups = [ParameterGroup(
-            named_parameters=dict(zip(sorted(union_params), (param_dict[pn] for pn in sorted(union_params)))),
-            weight_decay_multiplier=0.
+            named_parameters=dict(zip(sorted(union_params), (param_dict[pn] for pn in sorted(union_params))))
         )]
     else:
         param_groups = [
             ParameterGroup(
-                named_parameters=dict(zip(sorted(apply_no_decay), (param_dict[pn] for pn in sorted(apply_no_decay)))),
-                weight_decay_multiplier=0.
+                named_parameters=dict(zip(sorted(s1), (param_dict[pn] for pn in sorted(s1)))),
+                **g1_kwargs
             ),
             ParameterGroup(
-                named_parameters=dict(zip(sorted(apply_decay), (param_dict[pn] for pn in sorted(apply_decay))))
+                named_parameters=dict(zip(sorted(s2), (param_dict[pn] for pn in sorted(s2)))),
+                **g2_kwargs
             ),
         ]
 
     return param_groups
+
+
+def wd_group_named_parameters(model: Module) -> list[ParameterGroup]:
+    whitelist_weight_modules = (nn.Linear, nn.modules.conv._ConvNd)  # pylint: disable=protected-access # noqa
+    blacklist_weight_modules = (nn.modules.batchnorm._NormBase,  # pylint: disable=protected-access # noqa
+                                nn.GroupNorm, nn.LayerNorm,
+                                nn.LocalResponseNorm,
+                                nn.Embedding)
+    ignore_modules = (nn.Sequential,)
+    apply_decay_conds = [lambda m, _, pn: pn.endswith('weight') and isinstance(m, whitelist_weight_modules)]
+    apply_no_decay_conds = [lambda m, _, pn: pn.endswith('bias') or isinstance(m, blacklist_weight_modules)]
+    special_conds = [lambda m, p, pn: hasattr(p, '_optim')]
+    ignore_conds = [lambda m, p, pn: isinstance(m, ignore_modules)]
+
+    return group_named_parameters(
+        model,
+        g1_conds=apply_decay_conds,
+        g2_conds=apply_no_decay_conds,
+        special_conds=special_conds,
+        ignore_conds=ignore_conds,
+        g2_kwargs={'weight_decay_multiplier': 0.0}
+    )
 
 
 def resolve_parameter_dicts(dict1: dict[str, Any], dict2: dict[str, Any]) -> list[dict[str, Any]]:

@@ -1,0 +1,11 @@
+task:
+  name: tabular
+  max_epochs: 1
+  model:
+    num_hidden: 42
+engine:
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-1
+  train: false
+  test: false
+  plot: false

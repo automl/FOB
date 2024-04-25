@@ -1,30 +1,35 @@
 import math
+from typing import Any, Type
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.optim.lr_scheduler import LinearLR
-from torch.optim.lr_scheduler import SequentialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, PolynomialLR, SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from engine.configs import OptimizerConfig
+from engine.utils import log_info
 from engine.parameter_groups import GroupedModel
 
 
-def cosine_warmup(
-        step_hint: int,
-        warmup_factor: float,
-        eta_min: float,
-        optimizer) -> SequentialLR | CosineAnnealingLR:
-    if step_hint < 1:
-        raise ValueError("step hint should be at least 1!")
-    warmup_steps = math.ceil(warmup_factor * step_hint)
+def warmup_split(max_steps: int, warmup_factor: float) -> tuple[int, int]:
+    warmup_steps = int(math.ceil(max_steps * warmup_factor))
+    return warmup_steps, max(max_steps - warmup_steps, 1)
+
+
+def linear_warmup(
+        optimizer,
+        max_steps: int,
+        warmup_steps: int,
+        scheduler: Type[CosineAnnealingLR] | Type[PolynomialLR],
+        scheduler_kwargs: dict[str, Any]
+    ) -> SequentialLR | CosineAnnealingLR | PolynomialLR:
+    if max_steps < 1:
+        raise ValueError("max steps should be at least 1!")
     if warmup_steps == 0:
-        print("warmup = 0: using CosineAnnealingLR only")
-        return CosineAnnealingLR(optimizer, T_max=step_hint)
+        log_info(f"warmup = 0: using {scheduler} only")
+        return scheduler(optimizer, **scheduler_kwargs)
     warmup = LinearLR(
         optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
-    cosine_steps = max(step_hint - warmup_steps, 1)
-    cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps, eta_min=eta_min)
+    actual_scheduler = scheduler(optimizer, **scheduler_kwargs)
     return SequentialLR(
-        optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
+        optimizer, schedulers=[warmup, actual_scheduler], milestones=[warmup_steps])
 
 
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
@@ -39,11 +44,39 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         weight_decay=weight_decay,
         fused=False
     )
-    scheduler = cosine_warmup(config.max_steps, config.warmup_factor, config.eta_min_factor * lr, optimizer)
+    min_lr = config.eta_min_factor * lr
+    if config.warmup_steps is not None:
+        warmup_steps = config.warmup_steps
+        scheduler_steps = config.max_steps - warmup_steps
+    elif config.warmup_factor is not None:
+        warmup_steps, scheduler_steps = warmup_split(config.max_steps, config.warmup_factor)
+    else:
+        raise ValueError("Either 'warmup_steps' or 'warmup_factor' should be specified.")
+    if config.lr_scheduler == "cosine":
+        scheduler = CosineAnnealingLR
+        scheduler_kwargs = dict(
+            T_max=scheduler_steps,
+            eta_min=min_lr
+        )
+    elif config.lr_scheduler == "poly":
+        scheduler = PolynomialLR
+        scheduler_kwargs = dict(
+            power=config.lr_power,
+            total_iters=scheduler_steps
+        )
+    else:
+        raise ValueError(f"unknown lr_scheduler: {config.lr_scheduler}")
+    lr_scheduler = linear_warmup(
+        optimizer,
+        max_steps=config.max_steps,
+        warmup_steps=warmup_steps,
+        scheduler=scheduler,
+        scheduler_kwargs=scheduler_kwargs
+    )
     return {
         "optimizer": optimizer,
         "lr_scheduler": {
-            "scheduler": scheduler,
+            "scheduler": lr_scheduler,
             "interval": config.lr_interval
         }
     }

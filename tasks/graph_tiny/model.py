@@ -1,14 +1,16 @@
 import torch
+import torch.nn.functional as F
+from torch import nn
+from torch import Tensor
+from torch_geometric.nn import GCNConv
+import torch_geometric.data as geom_data
 from tasks import TaskModel
 from engine.configs import TaskConfig
 from optimizers import Optimizer
-from torch_geometric.nn import GCNConv
-from torch import nn
-import torch.nn.functional as F
 
 
 class CoraModel(TaskModel):
-    """simple GCN implementation / GAT from pytorch geometric"""
+    """simple GCN implementation from pytorch geometric"""
     def __init__(self, optimizer: Optimizer, config: TaskConfig):
         self.batch_size = config.batch_size
         hidden_channels = config.model.hidden_channels
@@ -16,15 +18,20 @@ class CoraModel(TaskModel):
         cached = config.model.cached
         normalize = config.model.normalize
         dropout = config.model.dropout
-        model = GCN(hidden_channels=hidden_channels,
-                    num_layers=num_layers,
-                    dropout=dropout,
-                    cached=cached,
-                    normalize=normalize)
-        super().__init__(model, optimizer, config)
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        reset_params = config.model.reset_params
+        model = GCN(
+            hidden_channels=hidden_channels,
+            num_layers=num_layers,
+            dropout=dropout,
+            cached=cached,
+            normalize=normalize,
+            reset_params=reset_params
+        )
 
-    def forward(self, data: torch.Tensor, mode="train") -> torch.Tensor:
+        super().__init__(model, optimizer, config)
+        self.loss_fn = nn.CrossEntropyLoss()
+
+    def forward(self, data: geom_data.data.BaseData, mode="train") -> tuple[Tensor, Tensor]:
         x, edge_index = data.x, data.edge_index
         x = self.model(x, edge_index)
 
@@ -36,7 +43,7 @@ class CoraModel(TaskModel):
         elif mode == "test":
             mask = data.test_mask
         else:
-            assert False, "Unknown forward mode: %s" % mode
+            assert False, f"Unknown forward mode: {mode}"
 
         loss = self.loss_fn(x[mask], data.y[mask])
         acc = (x[mask].argmax(dim=-1) == data.y[mask]).sum().float() / mask.sum()
@@ -60,18 +67,18 @@ class CoraModel(TaskModel):
 class GCN(torch.nn.Module):
     def __init__(
             self,
+            num_features=1433,
+            num_classes=7,
             hidden_channels=32,
             num_layers: int = 2,
             dropout=0.5,
             cached: bool = False,
-            normalize: bool = True
+            normalize: bool = True,
+            reset_params: bool = False
             ):
         self.dropout = dropout
         self.num_layers = num_layers
         super().__init__()
-        # cora dataset:
-        num_features = 1433
-        num_classes = 7
 
         self.convs = nn.ModuleList()
         self.convs.append(
@@ -102,12 +109,29 @@ class GCN(torch.nn.Module):
                 normalize=normalize,
             )
         )
+        if reset_params:
+            self._reset_parameters()
+
+    def _reset_parameters(self):
+        """
+        initialization from https://github.com/tkipf/pygcn/blob/master/pygcn/layers.py
+        which follows https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
+        """
+        for conv in self.convs:
+            for param in conv.parameters():
+                if param.dim() > 1:  # weight parameter
+                    stdv = 1. / torch.sqrt(torch.tensor(param.size(1)))
+                    nn.init.uniform_(param, -stdv.item(), stdv.item())
+                else:  # bias
+                    stdv = 1. / torch.sqrt(torch.tensor(param.size(0)))
+                    nn.init.uniform_(param, -stdv.item(), stdv.item())
 
     def forward(self, x, edge_index):
-        # print(edge_index)
         for idx, conv in enumerate(self.convs):
             x = conv(x, edge_index)
-            if idx < self.num_layers - 1:
+
+            not_last: bool = idx < self.num_layers - 1
+            if not_last:
                 x = F.relu(x)
                 x = F.dropout(x, p=self.dropout, training=self.training)
             else:

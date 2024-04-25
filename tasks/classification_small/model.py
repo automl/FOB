@@ -21,7 +21,7 @@ class CIFAR100Model(TaskModel):
         if not config.model.maxpool:
             model.maxpool = nn.Identity()  # type:ignore
         super().__init__(model, optimizer, config)
-        self.loss_fn = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)

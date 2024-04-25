@@ -1,31 +1,29 @@
 task:
   name: graph
   output_dir_name: graph
-  batch_size: 32
+  batch_size: 128  # reference implementation used 32
   target_metric: val_rocauc
   target_metric_mode: max
-  max_epochs: 50
+  max_epochs: 100
   max_steps: null
   model:  # GIN
     hidden_channels: 300
     num_layers: 5
+    virtual_node: false
     dropout: 0.5
-    jumping_knowledge: last
-    mlp:
-      hidden_channels: 300
-      layers: 2
-      dropout: 0.5
-      norm: "batch_norm"
+    graph_pooling: mean  # {max, mean, sum, attention, set2set}
+    jumping_knowledge: last  # {last, sum}
 engine:
   devices: 1
-# TODO: currently the task is pretty unstable
-# we had good results some months ago with this maybe seed was 42?
+  sbatch_args:
+    time: 00:30:00
 optimizer:
-  name: sgd_baseline
-  weight_decay: 0.001
-  learning_rate: 0.00316
-# and with (TODO see discord plot)
-# optimizer:
-#   name: adamw_baseline
-#   weight_decay: [0.0, 0.001, 0.1]
-#   learning_rate: [0.001, 0.0001]
+  name: adamw_baseline
+  weight_decay: 0
+  eta_min_factor: 1  # reference implementation used no lr scheduling
+evaluation:
+  plot:
+    metric: test_rocauc
+    test_metric_mode: max
+    format: "2.1"
+    limits: [65, 80]

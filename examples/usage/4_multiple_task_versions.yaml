@@ -1,0 +1,21 @@
+task:
+  - name: tabular
+    output_dir_name: tabular_quantile
+    train_transforms:
+      normalizer: quantile
+      noise: 1.e-3
+  - name: tabular
+    output_dir_name: tabular_standard
+    train_transforms:
+      normalizer: standard
+      noise: 0
+optimizer:
+  name: adamw_baseline
+  learning_rate: [1.e-2, 1.e-3]
+  weight_decay: [1.e-2, 1.e-3]
+engine:
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-4
+  train: false
+  test: false
+  plot: false

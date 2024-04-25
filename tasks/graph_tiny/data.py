@@ -34,43 +34,37 @@ class CoraDataModule(TaskDataModule):
         #   train, validation, and test sets will be randomly generated,
         #   according to num_train_per_class, num_val and num_test. (default: "public")
 
-        dataset = Planetoid(root=self.data_dir, name='Cora', split=self.split, transform=NormalizeFeatures())
-
-        print_cora_stats = False
-        if print_cora_stats:
-            print()
-            print(f'Dataset: {dataset}:')
-            print('======================')
-            print(f'  Number of graphs: {len(dataset)}')
-            print(f'  Number of features: {dataset.num_features}')
-            print(f'  Number of classes: {dataset.num_classes}')
-            data = dataset[0]
-            print('  --------------------')
-            print(f'  Number of nodes: {data.num_nodes}')
-            print(f'  Number of edges: {data.num_edges}')
-            print(f'  Average node degree: {data.num_edges / data.num_nodes:.2f}')
-            print(f'  Number of training nodes: {data.train_mask.sum()}')
-            print(f'  Training node label rate: {int(data.train_mask.sum()) / data.num_nodes:.2f}')
-            print(f'  Has isolated nodes: {data.has_isolated_nodes()}')
-            print(f'  Has self-loops: {data.has_self_loops()}')
-            print(f'  Is undirected: {data.is_undirected()}')
-            print()
+        Planetoid(root=str(self.data_dir), name='Cora', split=self.split, transform=NormalizeFeatures())
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
+        for this task the forward pass will use masks and
+        only calculate the loss on the nodes corresponding to the mask
         """
-        split = self.split
-        self.dataset = Planetoid(root=self.data_dir, name='Cora', split=split, transform=NormalizeFeatures())
-        self.loader = geom_loader.DataLoader(self.dataset, batch_size=self.batch_size, num_workers=self.workers)
+        dataset = Planetoid(root=str(self.data_dir), name='Cora', split=self.split, transform=NormalizeFeatures())
+        if stage == "fit":
+            self.data_train = dataset
+            self.data_val = dataset
+        elif stage == "validate":
+            self.data_val = dataset
+        elif stage == "test":
+            self.data_test = dataset
+        elif stage == "predict":
+            raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
+    def get_dataloader(self, dataset):
+        return geom_loader.DataLoader(dataset, batch_size=self.batch_size, num_workers=self.workers)
 
     def train_dataloader(self):
-        return self.loader
+        return self.get_dataloader(self.data_train)
 
     def val_dataloader(self):
-        return self.loader
+        return self.get_dataloader(self.data_val)
 
     def test_dataloader(self):
-        return self.loader
+        return self.get_dataloader(self.data_test)
 
     def predict_dataloader(self):
-        return self.loader
+        return self.get_dataloader(self.data_predict)

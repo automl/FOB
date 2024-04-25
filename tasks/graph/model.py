@@ -1,8 +1,10 @@
 import torch
-from torch_geometric.nn import GIN, MLP, global_add_pool
 from ogb.graphproppred import Evaluator
+
 from tasks import TaskModel
+from tasks.graph.snap.gnn import GNN
 from engine.configs import TaskConfig
+from engine.utils import log_warn
 from optimizers import Optimizer
 
 
@@ -11,29 +13,23 @@ class OGBGModel(TaskModel):
     def __init__(
             self,
             optimizer: Optimizer,
-            node_feature_dim: int,
-            num_classes: int,
-            dataset_name: str,
-            batch_size: int,
-            config: TaskConfig
+            config: TaskConfig,
+            dataset_name: str = "ogbg-molhiv",
+            num_classes: int = 2
     ):
         # https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pytorch_lightning/gin.py
-        self.batch_size = batch_size
+        self.batch_size = config.batch_size
 
         gin_params = config.model
-        mlp_params = config.model.mlp
-        model = GINwithClassifier(
-            node_feature_dim=node_feature_dim,
-            num_classes=num_classes,
-            hidden_channels=gin_params.hidden_channels,
-            num_layers=gin_params.num_layers,
-            dropout=gin_params.dropout,
+        model = GNN(
+            num_tasks=num_classes,
+            num_layer=gin_params.num_layers,
+            emb_dim=gin_params.hidden_channels,
+            drop_ratio=gin_params.dropout,
             jumping_knowledge=gin_params.jumping_knowledge,
-            classifier_hidden_channel=mlp_params.hidden_channels,
-            classifier_num_layers=mlp_params.layers,
-            classifier_dropout=mlp_params.dropout,
-            classifier_norm=mlp_params.norm
-            )
+            virtual_node=gin_params.virtual_node,
+            graph_pooling=gin_params.graph_pooling
+        )
         super().__init__(model, optimizer, config)
         self.metric_preds: list[torch.Tensor] = []  # probabilities for class 1
         self.metric_trues: list[torch.Tensor] = []  # labels for classes
@@ -46,7 +42,7 @@ class OGBGModel(TaskModel):
         self.loss_fn = torch.nn.BCEWithLogitsLoss()
 
     def forward(self, data) -> torch.Tensor:
-        return self.model.forward(data.x, data.edge_index, data.batch).softmax(dim=-1)
+        return self.model.forward(data)
 
     def training_step(self, data, batch_idx):
         y_hat = self.forward(data)
@@ -81,52 +77,20 @@ class OGBGModel(TaskModel):
         """
         https://lightning.ai/docs/pytorch/stable/common/lightning_module.html#validation-epoch-level-metrics
         """
-        all_trues = torch.cat(self.metric_trues)
-        all_preds = torch.cat(self.metric_preds)
+        all_trues = torch.cat(self.metric_trues).float()
+        all_preds = torch.cat(self.metric_preds).float()
 
         validation_dict = {"y_true": all_trues, "y_pred": all_preds}
-        ogb_score = self.evaluator.eval(validation_dict)
+        try:
+            ogb_score = self.evaluator.eval(validation_dict)
+        except ValueError:
+            log_warn("Error: Input contains NaN.")
+            ogb_score = {"rocauc": 0}
+        except RuntimeError:
+            log_warn("Error: Cannot compute ROCAUC.")
+            ogb_score = {"rocauc": 0}
         self.log(log_label, ogb_score["rocauc"])  # type: ignore
 
         # free memory
         self.metric_trues.clear()
         self.metric_preds.clear()
-
-
-class GINwithClassifier(torch.nn.Module):
-    def __init__(
-        self,
-        node_feature_dim,
-        num_classes,
-        hidden_channels=300,
-        num_layers=5,
-        dropout=0.5,
-        jumping_knowledge="last",
-        classifier_hidden_channel=300,
-        classifier_num_layers=2,
-        classifier_norm="batch_norm",
-        classifier_dropout=0.5
-    ):
-        super().__init__()
-        self.gin = GIN(
-            in_channels=node_feature_dim,
-            hidden_channels=hidden_channels,
-            num_layers=num_layers,
-            dropout=dropout,
-            jk=jumping_knowledge
-        )
-
-        self.classifier = MLP(
-            in_channels=hidden_channels,
-            hidden_channels=classifier_hidden_channel,
-            out_channels=num_classes,
-            num_layers=classifier_num_layers,
-            norm=classifier_norm,
-            dropout=classifier_dropout
-        )
-
-    def forward(self, x, edge_index, batch):
-        x = self.gin(x, edge_index)
-        x = global_add_pool(x, batch)
-        x = self.classifier(x)
-        return x

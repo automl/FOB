@@ -1,0 +1,29 @@
+task:
+  name: translation
+  output_dir_name: algoperf_comparison
+  max_epochs: 12  # algoperf does not specify the steps but time, we need ~6h on 4xA100 compared to 8xV100 with ~13.5h
+  max_steps: null
+  batch_size: 128
+  target_metric: val_loss
+  target_metric_mode: min
+  model:  # our model (T5_small) 60.5M parameters, algoperf: 133.5M parameters
+    translation_direction: de-en
+    num_beams: 4
+    length_penalty: 0.6
+engine:
+  devices: 4 # original uses 8
+  seed: 1
+  sbatch_args:
+    time: 07:00:00
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.0e-3
+  weight_decay: 0.1
+  epsilon: 1.0e-9
+  beta2: 0.98
+evaluation:
+  plot:
+    metric: test_bleu
+    test_metric_mode: max
+    format: "0.3"
+    limits: [20, 34]

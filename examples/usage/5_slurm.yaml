@@ -1,0 +1,30 @@
+task:
+  - name: tabular
+    output_dir_name: tabular_quantile
+    train_transforms:
+      normalizer: quantile
+      noise: 1.e-3
+  - name: tabular
+    output_dir_name: tabular_standard
+    train_transforms:
+      normalizer: standard
+      noise: 0
+optimizer:
+  - name: adamw_baseline
+    learning_rate: [1.e-2, 1.e-3, 1.e-4]
+    weight_decay: [10, 1.e-0, 1.e-1, 1.e-2, 1.e-3]
+  - name: adamcpr
+    learning_rate: [1.e-2, 1.e-3, 1.e-4]
+    kappa_init_param: [0.5, 1, 2, 4, 8]
+engine:
+  seed: [1, 2, 3]
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-5
+  train: false
+  test: false
+  plot: false
+  run_scheduler: slurm_array
+  save_sbatch_scripts: examples/usage/outputs/experiment-5/sbatch_scripts
+  sbatch_args:
+    partition: my_gpu_partition        # adapt to your cluster
+  sbatch_script_template: examples/usage/sbatch_template.sh

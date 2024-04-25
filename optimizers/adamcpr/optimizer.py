@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pytorch_cpr import CPR, cpr_group_named_parameters
 from engine.configs import OptimizerConfig
+from engine.utils import log_info
 from engine.parameter_groups import GroupedModel, intersect_parameter_dicts
 
 
@@ -26,7 +27,7 @@ def cosine_warmup(
         optimizer
         ) -> SequentialLR | CosineAnnealingLR:
     if warmup_steps == 0:
-        print("warmup = 0: using CosineAnnealingLR only")
+        log_info("warmup = 0: using CosineAnnealingLR only")
         return CosineAnnealingLR(optimizer, T_max=total_steps)
     warmup = LinearLR(
         optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
@@ -80,8 +81,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         kappa_init_method=kappa_init_method,
         reg_function=config.reg_function,
         kappa_adapt=config.kappa_adapt,
-        kappa_update=config.kappa_update,
-        apply_lr=config.apply_lr
+        kappa_update=config.kappa_update
     )
     scheduler = cosine_warmup(step_hint, lr_warmup_steps, config.eta_min_factor * lr, optimizer)
     return {

@@ -11,5 +11,4 @@ optimizer:
   reg_function: l2
   kappa_adapt: false
   kappa_update: 1.0
-  apply_lr: false
   lr_interval: step

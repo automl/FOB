@@ -1,0 +1,31 @@
+task:
+  name: tabular
+  output_dir_name: tabular_reference
+  train_size: 13209
+  val_size: 3303
+  test_size: 4128
+  batch_size: 256
+  max_epochs: 50
+  max_steps: null
+  target_metric: val_loss
+  target_metric_mode: min
+  model:  # FTTransformer
+    n_blocks: 3
+  train_transforms:
+    normalizer: quantile
+    noise: 1.e-3
+engine:
+  devices: 1
+  sbatch_args:
+    time: 00:05:00
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.e-4
+  weight_decay: 1.e-5
+  eta_min_factor: 1.0  # reference implementation used no lr scheduling
+evaluation:
+  plot:
+    metric: test_rmse
+    test_metric_mode: min
+    format: "0.3"
+    limits: [0.38, 0.5]

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable
 import numpy as np
 import torch
@@ -5,9 +6,9 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, StandardScaler
 from tasks import TaskDataModule
-from engine.configs import TaskConfig
+from engine.utils import log_debug
 
 
 class TabularDataset(Dataset):
@@ -26,14 +27,11 @@ class TabularDataModule(TaskDataModule):
     """
     DataModule for california housing tabular data task.
     """
-    def __init__(self, config: TaskConfig):
-        super().__init__(config)
-        self.train_split = config.train_split
 
     def prepare_data(self):
         self.data_dir.mkdir(exist_ok=True)
         fetch_california_housing(data_home=str(self.data_dir), download_if_missing=True)
-        print("succesfully downloaded tabular dataset.")
+        log_debug("succesfully downloaded tabular dataset.")
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
@@ -43,12 +41,14 @@ class TabularDataModule(TaskDataModule):
         features = features.astype(np.float32)  # type:ignore
 
         all_idx = np.arange(len(targets))
-        trainval_idx, test_idx = train_test_split(
-            all_idx, train_size=self.train_split
-        )
+        test_idx = self._load_test_idx()
+        trainval_idx = np.setdiff1d(all_idx, test_idx)
         train_idx, val_idx = train_test_split(
-            trainval_idx, train_size=self.train_split
+            trainval_idx, train_size=self.config.train_size
         )
+        assert len(train_idx) == self.config.train_size
+        assert len(val_idx) == self.config.val_size
+        assert len(test_idx) == self.config.test_size
         feature_preprocessor = self._get_feature_preprocessor(features[train_idx], train_idx)
         target_preprocessor = self._get_target_preprocessor(targets[train_idx])
         if stage == "fit":
@@ -76,19 +76,31 @@ class TabularDataModule(TaskDataModule):
                 target_preprocessor(targets[test_idx])
             )
 
+    def _load_test_idx(self) -> np.ndarray:
+        # using test idx from https://github.com/yandex-research/rtdl-revisiting-models
+        path = Path(__file__).resolve().parent / "idx_test.npy"
+        return np.load(path)
+
     def _get_feature_preprocessor(self, train_features: np.ndarray, train_index: list) -> Callable:
-        noise = (
-            np.random.default_rng(0)
-            .normal(0.0, 1e-5, train_features.shape)
-            .astype(train_features.dtype)
-        )
-        qt = QuantileTransformer(
-            n_quantiles=max(min(len(train_index) // 30, 1000), 10),
-            output_distribution="normal",
-            subsample=10**9,
-        ).fit(train_features + noise)
+        noise = self.config.train_transforms.noise
+        if noise > 0:
+            stds = np.std(train_features, axis=0, keepdims=True)
+            noise_std = noise / np.maximum(stds, noise)
+            noise = np.random.normal(0.0, noise_std, train_features.shape).astype(train_features.dtype)
+        else:
+            noise = 0.0
+        if self.config.train_transforms.normalizer == "quantile":
+            normalizer = QuantileTransformer(
+                n_quantiles=max(min(len(train_index) // 30, 1000), 10),
+                output_distribution="normal",
+                subsample=10**9,
+            ).fit(train_features + noise)
+        elif self.config.train_transforms.normalizer == "standard":
+            normalizer = StandardScaler().fit(train_features + noise)
+        else:
+            raise ValueError(f"Unknown normalizer {self.config.train_transforms.normalizer}")
         def preprocessor(features: np.ndarray) -> np.ndarray:
-            return qt.transform(features)  # type:ignore
+            return normalizer.transform(features)  # type:ignore
         return preprocessor
 
     def _get_target_preprocessor(self, train_targets: np.ndarray) -> Callable:

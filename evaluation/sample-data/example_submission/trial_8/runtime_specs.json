@@ -1,7 +1,0 @@
-{
-    "max_epochs": 50,
-    "max_steps": 51600,
-    "devices": 1,
-    "target_metric": "val_rocauc",
-    "target_metric_mode": "max"
-}

@@ -80,7 +80,6 @@ class ImagenetDataModule(TaskDataModule):
         """
         if stage == "fit":
             self.data_train = self._load_dataset("train")
-            print(len(self.data_train))
             self.data_val = self._load_dataset("validation")
             self.data_train.set_transform(self.train_transforms)
             self.data_val.set_transform(self.val_transforms)

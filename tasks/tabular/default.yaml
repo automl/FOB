@@ -1,15 +1,28 @@
 task:
   name: tabular
   output_dir_name: tabular
-  train_split: 0.8
+  train_size: 13209
+  val_size: 3303
+  test_size: 4128
   batch_size: 256
-  max_epochs: 100
+  max_epochs: 50
   max_steps: null
   target_metric: val_loss
   target_metric_mode: min
   model:  # FTTransformer
     n_blocks: 3  # The supported values are: 1, 2, 3, 4, 5, 6
+  train_transforms:
+    normalizer: quantile  # supports 'standard' and 'quantile'
+    noise: 1.e-3
 engine:
   devices: 1
+  sbatch_args:
+    time: 00:05:00
 optimizer:
   name: adamw_baseline
+evaluation:
+  plot:
+    metric: test_rmse
+    test_metric_mode: min
+    format: "0.3"
+    limits: [0.38, 0.48]

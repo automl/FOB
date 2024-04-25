@@ -9,7 +9,16 @@ task:
   model:
     name: nvidia/mit-b0
     use_pretrained_model: false  # just to compare performance, use this with 'engine.test_only=true'
+    contiguous_memory: true  # silences pytorch warnings but increases memory footprint
 engine:
   devices: 4
+  sbatch_args:
+    time: 05:00:00
 optimizer:
   name: adamw_baseline
+evaluation:
+  plot:
+    metric: test_mIoU
+    test_metric_mode: max
+    format: "0.3"
+    limits: [30, 40]

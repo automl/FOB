@@ -1,0 +1,30 @@
+# T5 small comparison with the paper, they pre-train the model on C4
+# we just train on wmt from scratch and skip pre-training
+task:
+  name: translation
+  output_dir_name: t5_comparison
+  max_epochs: 12  # we are using less steps
+  max_steps: null
+  batch_size: 128  # batch size is the same but they fill each batch to 512 tokens (we use a max of 128 tokens and do not fill)
+  target_metric: val_loss
+  target_metric_mode: min
+  model:  # reference uses pre-training on C4
+    translation_direction: en-de
+    num_beams: 4
+    length_penalty: 0.6
+engine:
+  devices: 4  # they use a combination of data and model parallelism on "multiple" TPU pods on google cloud
+  seed: 1
+  sbatch_args:
+    time: 07:00:00
+optimizer:
+  name: adafactor
+  learning_rate: 1.0e-3
+  weight_decay: 0.1
+  eta_min_factor: 1.0  # they use constant learning rate for fine-tuning = consine with same start and end learning rate
+evaluation:
+  plot:
+    metric: test_bleu
+    test_metric_mode: max
+    format: "0.3"
+    limits: [20, 34]

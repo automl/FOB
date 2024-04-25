@@ -14,3 +14,11 @@ task:
       p: 0.5
 engine:
   devices: 4
+  sbatch_args:
+    time: 05:00:00
+evaluation:
+  plot:
+    metric: test_AP
+    test_metric_mode: max
+    format: "2.1"
+    limits: [0, 100]

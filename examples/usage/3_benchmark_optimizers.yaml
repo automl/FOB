@@ -1,0 +1,23 @@
+task:
+  - classification
+  - classification_small
+  - graph
+  - graph_tiny
+  - mnist
+  - segmentation
+  - tabular
+  - translation
+optimizer:
+  - name: adamw_baseline
+    learning_rate: [1.0e-2, 1.0e-3]
+    weight_decay: [0.1, 0.01]
+  - name: adamcpr
+    learning_rate: [1.0e-2, 1.0e-3]
+    kappa_init_param: [0.5, 1, 2, 4, 8, 16, 32]
+engine:
+  seed: [1, 2, 3]
+  data_dir: examples/data
+  output_dir: examples/usage/outputs/experiment-3
+  train: false
+  test: false
+  plot: false

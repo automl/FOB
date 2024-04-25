@@ -10,6 +10,7 @@ from pycocotools.coco import COCO
 from tqdm import tqdm
 from tasks import TaskDataModule
 from engine.configs import TaskConfig
+from engine.utils import log_info
 
 
 class COCODataModule(TaskDataModule):
@@ -66,9 +67,9 @@ class COCODataModule(TaskDataModule):
         filename = wget.detect_filename(url)
         outfile = dl_dir / filename
         if outfile.exists():
-            print(f"{subject} already downloaded.")
+            log_info(f"{subject} already downloaded.")
         else:
-            print(f"Downloading {subject}...")
+            log_info(f"Downloading {subject}...")
             try:
                 wget.download(url, str(outfile))
             except BaseException as e:
@@ -87,7 +88,7 @@ class COCODataModule(TaskDataModule):
         with open(state_file, "r", encoding="utf8") as f:
             extracted_subjects = f.readlines()
             if subject in map(lambda s: s.strip(), extracted_subjects):
-                print(f"{subject} already extracted.")
+                log_info(f"{subject} already extracted.")
                 return
         with zipfile.ZipFile(file, "r") as f:
             for img in tqdm(f.infolist(), desc=f"Extracting {subject}"):

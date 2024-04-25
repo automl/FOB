@@ -1,26 +1,55 @@
+import math
+import time
+from typing import Optional
+import deepspeed
 import torch
 import lightning.pytorch as pl
 from lightning import Callback, Trainer, LightningModule
 from lightning_utilities.core.rank_zero import rank_zero_only
-import deepspeed
+from engine.utils import log_warn, log_info, seconds_to_str
 
 
-class PrintEpoch(Callback):
-    def __init__(self, active: bool = True) -> None:
+class PrintEpochWithTime(Callback):
+    def __init__(self, active: bool = True):
         super().__init__()
-        self.active = active
-        self.epoch = 0
+        self.active: bool = active
+        self.time: dict[str, Optional[float]]
+        self.reset_time()
+
+    def reset_time(self):
+        self.time = {
+            "train_start": None,
+            "val_start": None,
+            "val_end": None
+        }
+
+    @rank_zero_only
+    def on_train_epoch_start(self, trainer: Trainer, pl_module: LightningModule):
+        if self.active:
+            self.time["train_start"] = time.time()
 
     @rank_zero_only
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule):
-        # TODO: better logging (with time spent on epoch and stuff)
-        if self.active:
+        # need to print here since train epoch ends after validation is done
+        if self.active and all(v is not None for v in self.time.values()):
             max_epochs = pl_module.config.max_epochs
-            print(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}.")
+            train_time = math.ceil(time.time() - self.time["train_start"])  # type: ignore
+            val_time = math.ceil(self.time["val_end"] - self.time["val_start"])  # type: ignore
+            log_info(f"Finished training epoch {trainer.current_epoch + 1} of {max_epochs}. Time spent: training: {seconds_to_str(train_time - val_time)}, validation: {seconds_to_str(val_time)}, total: {seconds_to_str(train_time)}.")
+            self.reset_time()
+
+    @rank_zero_only
+    def on_validation_epoch_start(self, trainer: Trainer, pl_module: LightningModule):
+        if self.active:
+            self.time["val_start"] = time.time()
+
+    @rank_zero_only
+    def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule):
+        if self.active:
+            self.time["val_end"] = time.time()
 
 
 class LogParamsAndGrads(Callback):
-
     def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_every_n_steps: int):
         super().__init__()
         self.log_gradient = log_gradient
@@ -40,9 +69,9 @@ class LogParamsAndGrads(Callback):
                         v_detached = v.detach()
 
                         if torch.isnan(v_detached).sum() > 0:
-                            print(f"# NaN in param {k}")
+                            log_warn(f"# NaN in param {k}")
                         if torch.isinf(v_detached).sum() > 0:
-                            print(f"# Inf in param {k}")
+                            log_warn(f"# Inf in param {k}")
 
                         stats[f"param/{k}/mean"] = v_detached.mean().item()
                         if v_detached.shape[0] > 1:
@@ -68,9 +97,9 @@ class LogParamsAndGrads(Callback):
 
                     if grad_data is not None and trainer.global_rank == 0:
                         if torch.isnan(grad_data).sum() > 0:
-                            print(f"# NaN in grad {k}")
+                            log_warn(f"# NaN in grad {k}")
                         if torch.isinf(grad_data).sum() > 0:
-                            print(f"# Inf in grad {k}")
+                            log_warn(f"# Inf in grad {k}")
 
                         if torch.isnan(grad_data).sum() > 0 or torch.isinf(grad_data).sum() > 0:
                             stats[f"grad/{k}/mean"] = -10

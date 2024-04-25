@@ -1,16 +1,28 @@
 task:
   name: translation
   output_dir_name: translation
-  max_epochs: 18
+  max_epochs: 12
   max_steps: null
   batch_size: 128
   target_metric: val_loss
   target_metric_mode: min
+  model:
+    translation_direction: en-de  # in {de-en, en-de} for English to German and vice versa
+    num_beams: 4
+    length_penalty: 0.6  # 1.0 might be better
 engine:
   devices: 4
+  sbatch_args:
+    time: 07:00:00
 optimizer:
   name: adamw_baseline
-  learning_rate: 3.0e-4
+  learning_rate: 1.0e-3
   weight_decay: 0.1
   epsilon: 1.0e-9
   beta2: 0.98
+evaluation:
+  plot:
+    metric: test_bleu
+    test_metric_mode: max
+    format: "0.3"
+    limits: [20, 34]
