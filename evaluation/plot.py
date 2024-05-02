@@ -438,8 +438,8 @@ def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth:
 def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDict, suffix: str = "") -> Path:
     task_names = [df.iloc[0]["task.name"] for df in dataframe_list]
     optim_names = [df.iloc[0]["optimizer.name"] for df in dataframe_list]
-    task_name = "_".join(set(task_names))
-    optim_name = "_".join(set(optim_names))
+    task_name = "_".join(sorted(set(task_names)))
+    optim_name = "_".join(sorted(set(optim_names)))
 
     here = Path(__file__).parent.resolve()
 
