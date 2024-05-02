@@ -18,3 +18,9 @@ engine:
   sbatch_time_factor: 1.8  # increase this for slower machine
   sbatch_args:
     partition: single  # adapt to your cluster
+evaluation:
+  output_types: [pdf]
+  plot:
+    x_axis:
+      - optimizer.kappa_init_param
+      - optimizer.weight_decay
