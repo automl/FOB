@@ -21,5 +21,5 @@ evaluation:
   plot:
     metric: test_acc
     test_metric_mode: max
-    format: "2.1"
+    format: "2.2"
     limits: [85, 100]
