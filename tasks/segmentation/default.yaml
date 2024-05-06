@@ -20,5 +20,5 @@ evaluation:
   plot:
     metric: test_mIoU
     test_metric_mode: max
-    format: "0.3"
-    limits: [30, 40]
+    format: "0.2"
+    limits: [30, 38]

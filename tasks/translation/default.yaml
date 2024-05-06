@@ -24,5 +24,5 @@ evaluation:
   plot:
     metric: test_bleu
     test_metric_mode: max
-    format: "0.3"
+    format: "0.2"
     limits: [20, 34]

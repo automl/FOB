@@ -1,8 +1,8 @@
 import sys
-import evaluate
 from torch.nn import Module
 from transformers import AutoModelForSeq2SeqLM, T5Config
-
+from sacrebleu.metrics import BLEU
+from sacrebleu.metrics.bleu import BLEUScore
 from engine.parameter_groups import GroupedModel
 from engine.configs import TaskConfig
 from engine.utils import some, log_warn
@@ -36,7 +36,7 @@ class WMTModel(TaskModel):
         self.batch_size = data_module.batch_size
         self.train_data_len = data_module.train_data_len
         self.tokenizer = data_module.tokenizer
-        self.bleu = evaluate.load("sacrebleu", cache_dir=str(data_module.cache_dir))
+        self.bleu = BLEU()
         self.metric_cache_pred: list[str] = []
         self.metric_cache_trues: list[str] = []
         if self.tokenizer is None:
@@ -52,12 +52,12 @@ class WMTModel(TaskModel):
     def compute_bleu(self, preds: list[str], target: list[str]) -> float:
         assert len(preds) == len(target)
         try:
-            result = self.bleu.compute(predictions=[p.strip() for p in preds],
-                                       references=[[t.strip()] for t in target])
+            result : BLEUScore = self.bleu.corpus_score(hypotheses=[p.strip() for p in preds],
+                                                        references=[[t.strip() for t in target]])
+            return result.score
         except ZeroDivisionError:
             log_warn("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
-            result = {"score": 0.0}
-        return result["score"]  # type: ignore
+            return 0.0
 
     def validation_step(self, batch, _batch_idx):
         src, tgt = batch

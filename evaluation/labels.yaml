@@ -7,10 +7,12 @@ names:
   adamcpr_fast: AdamCPR
   sgd_stepwise: SGD (stepwise)
   # metric
-  test_acc: Accuracy (Test)
-  test_loss: Test Loss (lower is better)
-  test_mIoU: Intersection over Union
+  test_acc: Test Accuracy
+  test_loss: Test Loss
+  test_mIoU: Test mean Intersection over Union
   test_mAcc: Test mean Accuracy
+  test_rmse: Test Root Mean Square Error (RMSE)
+  test_rocauc: Test ROC-AUC
   # parameter
   learning_rate: Learning Rate
   weight_decay: Weight Decay

@@ -438,8 +438,8 @@ def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth:
 def get_output_file_path(dataframe_list: list[pd.DataFrame], config: AttributeDict, suffix: str = "") -> Path:
     task_names = [df.iloc[0]["task.name"] for df in dataframe_list]
     optim_names = [df.iloc[0]["optimizer.name"] for df in dataframe_list]
-    task_name = "_".join(task_names)
-    optim_name = "_".join(optim_names)
+    task_name = "_".join(sorted(set(task_names)))
+    optim_name = "_".join(sorted(set(optim_names)))
 
     here = Path(__file__).parent.resolve()
 
@@ -490,7 +490,7 @@ def save_csv(dfs: list[pd.DataFrame], output_filename: Path):
 
 
 def save_plot(fig: Figure, output_file_path: Path, file_type: str, dpi: int):
-    plot_output_filename = f"{output_file_path.resolve()}-heatmap.{file_type}"
+    plot_output_filename = f"{output_file_path.resolve()}.{file_type}"
     log_info(f"saving figure as <{plot_output_filename}>")
     fig.savefig(plot_output_filename, dpi=dpi)
 
