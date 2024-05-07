@@ -161,7 +161,7 @@ class Run():
         )
 
     def get_best_checkpoint(self) -> Optional[Path]:
-        model_checkpoint = self._callbacks.get("model_checkpoint", None)
+        model_checkpoint = self._callbacks.get("best_model_checkpoint", None)
         if model_checkpoint is not None:
             model_checkpoint = Path(model_checkpoint.best_model_path)
             model_checkpoint = model_checkpoint if not model_checkpoint.is_dir() else None
@@ -214,11 +214,16 @@ class Run():
         return calculate_steps(self.task.max_epochs, train_samples, self.engine.devices, self.task.batch_size)
 
     def _init_callbacks(self):
-        self._callbacks["model_checkpoint"] = ModelCheckpoint(
+        self._callbacks["best_model_checkpoint"] = ModelCheckpoint(
             dirpath=self.checkpoint_dir,
             filename="best-{epoch}-{step}",
             monitor=self.task.target_metric,
-            mode=self.task.target_metric_mode,
+            mode=self.task.target_metric_mode
+        )
+        self._callbacks["model_checkpoint"] = ModelCheckpoint(
+            dirpath=self.checkpoint_dir,
+            enable_version_counter=False,
+            every_n_epochs=1,
             save_last=True
         )
         if self.engine.early_stopping is not None:
