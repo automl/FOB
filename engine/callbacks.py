@@ -6,7 +6,36 @@ import torch
 import lightning.pytorch as pl
 from lightning import Callback, Trainer, LightningModule
 from lightning_utilities.core.rank_zero import rank_zero_only
-from engine.utils import log_warn, log_info, seconds_to_str
+from engine.utils import log_debug, log_info, log_warn, seconds_to_str
+
+
+class RestrictTrainEpochs(Callback):
+    """Counts number of epochs since start of training and stops if max_epochs is reached."""
+    def __init__(self, max_epochs: int):
+        super().__init__()
+        self.max_epochs = max_epochs
+        self.epochs = 0
+        self.skip_first = False
+
+    def on_train_start(self, trainer: Trainer, pl_module: LightningModule):
+        log_debug(f"Training for {self.max_epochs} epochs...")
+        self.epochs = 0
+        trainer.should_stop = False
+
+    def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule):
+        if self.skip_first:
+            self.skip_first = False
+        else:
+            self.epochs += 1
+        log_debug(f"Epoch {self.epochs}/{self.max_epochs}")
+        # TODO: test for DDP, do we need 'trainer.strategy.reduce_boolean_decision'?
+        if self.epochs >= self.max_epochs:
+            log_debug(f"Stopping training after {self.epochs} epochs")
+            trainer.should_stop = True
+
+    def on_load_checkpoint(self, trainer: Trainer, pl_module: LightningModule, checkpoint):
+        # checkpoint loads the model at the end of the epoch, so we do not count the first epoch
+        self.skip_first = True
 
 
 class PrintEpochWithTime(Callback):

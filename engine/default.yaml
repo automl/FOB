@@ -14,6 +14,7 @@ engine:
   output_dir: ./experiments  # Where you want to store the results
   plot: true                 # Whether to plot the results.
   precision: bf16-mixed      # Floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
+  restrict_train_epochs: null  # Only train for a specific number of epochs. Set to null to disable. The epochs set here are counted from start of training, so this works with 'resume'.
   resume: true               # You can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
   run_scheduler: sequential  # How to schedule the runs of the experiment. Supported values:
                                # 'sequential': runs are performed sequentially 

@@ -78,6 +78,7 @@ class EngineConfig(BaseConfig):
         self.output_dir = Path(cfg["output_dir"]).resolve()
         self.plot: bool = cfg["plot"]
         self.precision: str = cfg["precision"]
+        self.restrict_train_epochs: Optional[int] = cfg["restrict_train_epochs"]
         _resume = cfg.get("resume", False)
         self.resume: Optional[Path] | bool = Path(_resume).resolve() if isinstance(_resume, str) else _resume
         self.run_scheduler: str = cfg["run_scheduler"]
