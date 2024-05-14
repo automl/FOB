@@ -45,12 +45,13 @@ How to write your own can be found [here](optimizers/README.md)
 
 ### Installation
 
-This repo was tested with Python 3.10, Python 3.11 works as well.
-Some libraries are not updates so currently Python 3.12 breaks.
+This repo was tested with Python 3.10, Python 3.11 works as well.  
+Some libraries are not updates so currently Python 3.12 breaks.  
 Create conda environment:
 ```bash
 conda env create --file environment.yml
 ```
+
 or alternatively:
 ```bash
 conda create -n fob python=3.10 -y
