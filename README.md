@@ -64,6 +64,7 @@ pip install -e .
 ```
 
 #### Troubleshooting
+
 Sometimes pip fails to install the correct version of `mmcv`. If you encounter errors, try to install the correct version of `mmcv` as instructed on their [website](https://mmcv.readthedocs.io/en/latest/get_started/installation.html).
 
 ### How to run an experiment
