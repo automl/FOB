@@ -36,4 +36,5 @@ engine:
   silent: false              # whether to hide progress bars. Recommended when writing outputs to a log file.
   test: true                 # Whether to test the model.
   train: true                # Whether to train the model.
+  validate: false            # Whether to validate the model after training (only useful if you are interested in the results, for example for HPO).
   workers: 16                # The number of processes to use for dataloading

@@ -92,6 +92,7 @@ class EngineConfig(BaseConfig):
         self.silent: bool = cfg.get("silent", False)
         self.test: bool = cfg.get("test", True)
         self.train: bool = cfg.get("train", True)
+        self.validate: bool = cfg.get("validate", False)
         self.workers: int = cfg["workers"]
         cfg["data_dir"] = self.data_dir
         cfg["devices"] = self.devices

@@ -6,6 +6,7 @@ from typing import Any, Optional
 from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
+from lightning.pytorch.utilities.types import _EVALUATE_OUTPUT
 import torch
 import yaml
 from engine.callbacks import LogParamsAndGrads, PrintEpochWithTime, RestrictTrainEpochs
@@ -40,9 +41,10 @@ class Run():
         self._set_outpath()
         self._callbacks = AttributeDict({})
 
-    def start(self):
+    def start(self) -> dict[str, _EVALUATE_OUTPUT]:
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.export_config()
+        scores: dict[str, _EVALUATE_OUTPUT] = {}
         if any([self.engine.train, self.engine.test]):
             self._ensure_resume_path()
             self._ensure_max_steps()
@@ -51,7 +53,9 @@ class Run():
             model, data_module = self.get_task()
         if self.engine.train:
             trainer = self.get_trainer()
-            self.train(trainer, model, data_module)
+            self._train(trainer, model, data_module)
+        if self.engine.validate:
+            scores["validation"] = self._validate(trainer, model, data_module)
         if self.engine.test:
             tester = self.get_tester()
             if self.engine.train:  # no need to load last checkpoint, model is already loaded
@@ -64,14 +68,15 @@ class Run():
                     "If this is unexpected, try to set 'engine.resume=true'."
                 )
                 ckpt = None
-            self.test(tester, model, data_module, ckpt=ckpt)  # type: ignore (see ensure_resume_path)
+            scores["test_final"] = self._test(tester, model, data_module, ckpt=ckpt)  # type: ignore (see ensure_resume_path)
             best_path = self.get_best_checkpoint()
             if best_path is not None:
-                self.test(tester, model, data_module, Path(best_path))
+                scores["test_best"] = self._test(tester, model, data_module, Path(best_path))
             else:
                 log_info("No best checkpoint found, skipping test.")
+        return scores
 
-    def train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
+    def _train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
         start_time = time.time()
         if self.engine.accelerator == "gpu" and torch.cuda.is_available():
             with torch.backends.cuda.sdp_kernel(
@@ -86,12 +91,17 @@ class Run():
         train_time = int(end_time - start_time)
         log_info(f"Finished training in {seconds_to_str(train_time)}.")
 
-    def test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None):
+    def _validate(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule) -> _EVALUATE_OUTPUT:
+        score = trainer.validate(model, datamodule=data_module)
+        return score
+
+    def _test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None) -> _EVALUATE_OUTPUT:
         ckpt_path = self.engine.resume if ckpt is None else ckpt
         mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"  # type: ignore
         log_info(f"Testing {mode} checkpoint...")
         score = tester.test(model, datamodule=data_module, ckpt_path=ckpt_path)  # type: ignore
         write_results(score, self.run_dir / f"results_{mode}_model.json")
+        return score
 
     def export_config(self):
         with open(self.run_dir / "config.yaml", "w", encoding="utf8") as f:
