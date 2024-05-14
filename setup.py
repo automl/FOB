@@ -8,7 +8,7 @@ setup(
     version='0.1.0',
     description='Fast Optimizer Benchmark',
     url='https://github.com/automl/fob',
-    author='Simon Blauth, Tobias Bürger, Zacharis Häringer',
+    author='Simon Blauth, Tobias Bürger, Zacharias Häringer',
     license='MIT',
     packages=['pytorch_fob'],
     install_requires=requirements,
