@@ -6,7 +6,7 @@ import torch
 import lightning.pytorch as pl
 from lightning import Callback, Trainer, LightningModule
 from lightning_utilities.core.rank_zero import rank_zero_only
-from engine.utils import log_debug, log_info, log_warn, seconds_to_str
+from pytorch_fob.engine.utils import log_debug, log_info, log_warn, seconds_to_str
 
 
 class RestrictTrainEpochs(Callback):

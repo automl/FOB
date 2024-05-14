@@ -6,7 +6,7 @@ import argparse
 from pprint import pprint
 from pathlib import Path
 import yaml
-from engine.engine import Engine
+from pytorch_fob.engine.engine import Engine
 
 
 def deep_diff(dict1, dict2):

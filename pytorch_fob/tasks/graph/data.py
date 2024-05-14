@@ -2,9 +2,9 @@
 
 from ogb.graphproppred import PygGraphPropPredDataset
 from torch_geometric.loader import DataLoader as GeomDataLoader
-from engine.configs import TaskConfig
-from engine.utils import log_debug
-from tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import log_debug
+from pytorch_fob.tasks import TaskDataModule
 
 
 class OGBGDataModule(TaskDataModule):

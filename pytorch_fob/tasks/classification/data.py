@@ -5,8 +5,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import v2
 from transformers.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from tasks import TaskDataModule
-from engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
 
 
 class Imagenet64Dataset(Dataset):

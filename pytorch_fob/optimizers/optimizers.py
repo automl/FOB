@@ -1,12 +1,12 @@
 import importlib
 from pathlib import Path
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from engine.parameter_groups import GroupedModel
-from engine.configs import OptimizerConfig
+from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.configs import OptimizerConfig
 
 
 def import_optimizer(name: str):
-    return importlib.import_module(f"optimizers.{name}.optimizer")
+    return importlib.import_module(f"pytorch_fob.optimizers.{name}.optimizer")
 
 
 def optimizer_path(name: str) -> Path:

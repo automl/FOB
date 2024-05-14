@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterable, Optional
 from torch import nn
 from torch.nn import Module
 from torch.nn.parameter import Parameter
-from engine.utils import some, log_warn
+from pytorch_fob.engine.utils import some, log_warn
 
 
 @dataclass

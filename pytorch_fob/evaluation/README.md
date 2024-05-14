@@ -37,7 +37,7 @@ Here are some example scenarios to give you an understanding of how our plotting
 This example is a good starting point; it shows the performance of a single default optimizer on one of the tasks.
 Experiment file: [examples/plotting/1_mnist-adamw.yaml](../examples/plotting/1_mnist-adamw.yaml)  
 
-```python evaluate_experiment.py examples/plotting/1_mnist-adamw.yaml```
+```python -m pytorch_fob.evaluate_experiment examples/plotting/1_mnist-adamw.yaml```
 
 ![your plot is not finished yet](../examples/plotting/1_mnist-adamw-last-heatmap.png)
 
@@ -54,7 +54,7 @@ Helpful settings:
 You can compare two different optimizers.  
 Experiment file: [examples/plotting/2_adamw-vs-sgd.yaml](../examples/plotting/2_adamw-vs-sgd.yaml)
 
-```python evaluate_experiment.py examples/plotting/2_adamw-vs-sgd.yaml```
+```python -m pytorch_fob.evaluate_experiment examples/plotting/2_adamw-vs-sgd.yaml```
 
 ![your plot is not finished yet](../examples/plotting/2_adamw-vs-sgd-last-heatmap.png)
 
@@ -69,7 +69,7 @@ Helpful settings:
 There are multiple tasks in the benchmark, this example shows how to get a quick overview over multiple at the same time.  
 Experiment file: [examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml](../examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml)
 
-```python evaluate_experiment.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python -m pytorch_fob.evaluate_experiment examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
 ![your plot is not finished yet](../examples/plotting/3_mnist-and-tabular_adamw-vs-sgd-last-heatmap.png)
 
@@ -87,7 +87,7 @@ Any parameter that is neither on the x-axis nor y-axis will either be aggregated
 Any individual square of a heatmap shows the *mean* and *std* over multiple runs (as seen in the previous plots). Here we show how to choose the runs to aggregate.  
 Experiment file: [examples/plotting/4_adamw-vs-sgd_seeds.yaml](../examples/plotting/4_adamw-vs-sgd_seeds.yaml)
 
-```python evaluate_experiment.py examples/plotting/4_adamw-vs-sgd_seeds.yaml```
+```python -m pytorch_fob.evaluate_experiment examples/plotting/4_adamw-vs-sgd_seeds.yaml```
 
 ![your plot is not finished yet](../examples/plotting/4_adamw-vs-sgd_seeds-last-heatmap.png)
 
@@ -114,7 +114,7 @@ Lets create some data that we can plot; from the root directory call:
 
 first we make sure the data is already downloaded beforehand:
 
-```python dataset_setup.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python -m pytorch_fob.dataset_setup examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
 This will download the mnist data (required for 1-4) and tabular (required for 3) into the [examples/data](../examples/data) directory - path can be changed in the corresponding yaml you want to use (e.g. [examples/plotting/1_mnist-adamw.yaml](../examples/plotting/1_mnist-adamw.yaml) if you have already set up your benchmark).
 
@@ -124,7 +124,7 @@ Estimated disk usage for the data: ~65M
 
 The 2 tasks will be run on 2x2 hyperparameter on 2 different seeds per optimizer for a total of 32 runs.
 
-```python experiment_runner.py examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python -m pytorch_fob.experiment_runner examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
 After training finished you should find 32 run directories in [examples/plotting/outputs](../examples/plotting/outputs)
 

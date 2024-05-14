@@ -1,8 +1,8 @@
 from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from engine.configs import TaskConfig
-from tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
 
 
 class MNISTDataModule(TaskDataModule):

@@ -1,6 +1,6 @@
 from pathlib import Path
 import argparse
-from engine.engine import Engine
+from pytorch_fob.engine.engine import Engine
 
 
 if __name__ == "__main__":

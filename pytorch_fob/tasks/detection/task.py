@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.detection.data import COCODataModule
-from tasks.detection.model import COCODetectionModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.detection.data import COCODataModule
+from pytorch_fob.tasks.detection.model import COCODetectionModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

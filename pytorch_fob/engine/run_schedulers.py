@@ -3,14 +3,13 @@ from tempfile import TemporaryDirectory
 from typing import Any, Iterable, Optional, Sequence
 import traceback
 import yaml
-from engine import repository_root
-from engine.run import Run
-from engine.slurm import Slurm
-from engine.utils import log_info, log_warn, seconds_to_str, some, str_to_seconds
+from pytorch_fob.engine.run import Run
+from pytorch_fob.engine.slurm import Slurm
+from pytorch_fob.engine.utils import log_info, log_warn, seconds_to_str, some, str_to_seconds
 
 
-FOB_RUN_SCRIPT = repository_root() / "experiment_runner.py"
-FOB_EVAL_SCRIPT = repository_root() / "evaluate_experiment.py"
+FOB_RUN_SCRIPT = "pytorch_fob.experiment_runner"
+FOB_EVAL_SCRIPT = "pytorch_fob.evaluate_experiment"
 
 
 def argcheck_allequal_engine(
@@ -65,7 +64,7 @@ def get_command(experiment_file: Path, index: Optional[str], plot: bool) -> str:
     run_script = FOB_EVAL_SCRIPT if plot else FOB_RUN_SCRIPT
     disable_plot = "" if plot else "engine.plot=false"
     scheduler = "" if index is None else f"engine.run_scheduler=single:{index}"
-    return f"""srun python {run_script} {experiment_file} {scheduler} {disable_plot}"""
+    return f"""srun python -m {run_script} {experiment_file} {scheduler} {disable_plot}"""
 
 
 def get_job_name(run: Run) -> str:

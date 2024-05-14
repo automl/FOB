@@ -1,7 +1,7 @@
 import torch
-from tasks import TaskModel
-from engine.configs import TaskConfig
-from optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
 
 
 class MNISTModel(TaskModel):

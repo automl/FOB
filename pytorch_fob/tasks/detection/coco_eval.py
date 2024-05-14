@@ -12,7 +12,7 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 import torch
 import torch.distributed as dist
-from engine.utils import log_info
+from pytorch_fob.engine.utils import log_info
 
 
 class CocoEvaluator:

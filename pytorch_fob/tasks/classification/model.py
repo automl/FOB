@@ -4,10 +4,10 @@ from torch import nn
 import torch.nn.functional as F
 from timm import create_model, list_models
 from sklearn.metrics import top_k_accuracy_score
-from tasks import TaskModel
-from engine.configs import TaskConfig
-from engine.utils import log_warn, log_info
-from optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import log_warn, log_info
+from pytorch_fob.optimizers import Optimizer
 
 class ImagenetModel(TaskModel):
     def __init__(self, optimizer: Optimizer, config: TaskConfig):

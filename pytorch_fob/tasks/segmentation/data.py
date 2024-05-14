@@ -4,8 +4,8 @@ from datasets import load_dataset, Dataset
 from huggingface_hub import hf_hub_download
 from transformers import SegformerImageProcessor
 from torchvision.transforms import v2
-from engine.configs import TaskConfig
-from tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
 
 
 class SegmentationDataModule(TaskDataModule):

@@ -3,9 +3,9 @@ from typing import Any, Type
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, PolynomialLR, SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from engine.configs import OptimizerConfig
-from engine.utils import log_info
-from engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.engine.utils import log_info
+from pytorch_fob.engine.parameter_groups import GroupedModel
 
 
 def warmup_split(max_steps: int, warmup_factor: float) -> tuple[int, int]:

@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.graph_tiny import data
-from tasks.graph_tiny import model
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.graph_tiny import data
+from pytorch_fob.tasks.graph_tiny import model
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

@@ -1,8 +1,8 @@
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch.optim import SGD
 from torch.optim.lr_scheduler import LinearLR
-from engine.parameter_groups import GroupedModel
-from engine.configs import OptimizerConfig
+from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.configs import OptimizerConfig
 
 
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:

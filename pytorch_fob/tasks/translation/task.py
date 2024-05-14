@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.translation.data import WMTDataModule
-from tasks.translation.model import WMTModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.translation.data import WMTDataModule
+from pytorch_fob.tasks.translation.model import WMTModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

@@ -3,7 +3,7 @@
 import torch
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
 
-from tasks.graph.snap.conv import GNNNode, GNNNodeVirtualnode
+from pytorch_fob.tasks.graph.snap.conv import GNNNode, GNNNodeVirtualnode
 
 class GNN(torch.nn.Module):
 

@@ -1,8 +1,8 @@
 import torch
 from torchvision.datasets import CIFAR100
 from torchvision.transforms import v2
-from tasks import TaskDataModule
-from engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
 
 
 class CIFAR100DataModule(TaskDataModule):

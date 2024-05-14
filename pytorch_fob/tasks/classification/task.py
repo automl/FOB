@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.classification.data import ImagenetDataModule
-from tasks.classification.model import ImagenetModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.classification.data import ImagenetDataModule
+from pytorch_fob.tasks.classification.model import ImagenetModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

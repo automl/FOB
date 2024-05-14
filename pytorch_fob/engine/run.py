@@ -8,11 +8,11 @@ from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, Mode
 from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 import torch
 import yaml
-from engine.callbacks import LogParamsAndGrads, PrintEpochWithTime, RestrictTrainEpochs
-from engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
-from engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
-from optimizers.optimizers import Optimizer
-from tasks.tasks import TaskDataModule, TaskModel, import_task
+from pytorch_fob.engine.callbacks import LogParamsAndGrads, PrintEpochWithTime, RestrictTrainEpochs
+from pytorch_fob.engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
+from pytorch_fob.engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
+from pytorch_fob.optimizers.optimizers import Optimizer
+from pytorch_fob.tasks.tasks import TaskDataModule, TaskModel, import_task
 
 
 class Run():

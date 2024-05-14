@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from engine.engine import Engine
+from pytorch_fob.engine.engine import Engine
 
 
 def get_parser():

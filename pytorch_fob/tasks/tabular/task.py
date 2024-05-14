@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.tabular.data import TabularDataModule
-from tasks.tabular.model import TabularModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.tabular.data import TabularDataModule
+from pytorch_fob.tasks.tabular.model import TabularModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

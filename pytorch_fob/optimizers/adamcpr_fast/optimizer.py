@@ -7,10 +7,10 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from engine.configs import OptimizerConfig
-from engine.utils import log_info
-from engine.parameter_groups import GroupedModel
-from optimizers.adamcpr_fast.adam_cpr_fast import AdamCPRfast
+from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.engine.utils import log_info
+from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.optimizers.adamcpr_fast.adam_cpr_fast import AdamCPRfast
 
 
 def warmup_steps(total_steps: int, warmup_factor: float) -> int:

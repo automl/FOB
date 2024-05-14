@@ -59,6 +59,7 @@ Activate and install requirements
 ```bash
 conda activate fob
 pip install -r requirements.txt
+pip install -e .
 ```
 
 #### Troubleshooting
@@ -88,12 +89,12 @@ Each undefined parameter will be set using either `engine/default.yaml`, `optimi
 
 Before you run the experiment make sure the datasets are prepared:
 ```bash
-python dataset_setup.py experiment.yaml
+python -m pytorch_fob.dataset_setup experiment.yaml
 ```
 
 Then you run the experiment:
 ```bash
-python experiment_runner.py experiment.yaml
+python -m pytorch_fob.experiment_runner experiment.yaml
 ```
 This runs all tasks with all optimizers and hyperparameter specified inside `experiment.yaml` using grid-search.
 You can either supply one value or a list of values for each entry. Grid-search combines each possible combination.  
@@ -101,7 +102,7 @@ For example: you specified 3 task, 2 optimizer, 2 different learning rates and 4
 
 You can additionally set values trough the command line (this overrides existing values). For example you can set the `data_dir` where datasets are stored using either:
 ```bash
-python "<script>.py" experiment.yaml "engine.data_dir=<path>"
+python -m script experiment.yaml "engine.data_dir=<path>"
 ```
 or you can specify it inside the `experiment.yaml`:
 ```yaml
@@ -138,7 +139,7 @@ task:
 Full experiment file: [examples/usage/1_single_task.yaml](examples/usage/1_single_task.yaml)
 
 ```bash
-python experiment_runner.py examples/usage/1_single_task.yaml
+python -m pytorch_fob.experiment_runner examples/usage/1_single_task.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-1/) to see the results.
@@ -177,7 +178,7 @@ AdamW is used 4 (= 2 x 2) times, AdamCPR is used 14 (= 2 x 7) times, for a total
 Full experiment file: [examples/usage/2_comparing_optimizers.yaml](examples/usage/2_comparing_optimizers.yaml)
 
 ```bash
-python experiment_runner.py examples/usage/2_comparing_optimizers.yaml
+python -m pytorch_fob.experiment_runner examples/usage/2_comparing_optimizers.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-2/) to see the 18 run folders.
@@ -206,7 +207,7 @@ Every task will be run on every seed. By default, the benchmark uses determinist
 Full experiment file: [examples/usage/3_benchmark_optimizers.yaml](examples/usage/3_benchmark_optimizers.yaml)
 
 ```bash
-python experiment_runner.py examples/usage/3_benchmark_optimizers.yaml
+python -m pytorch_fob.experiment_runner examples/usage/3_benchmark_optimizers.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-3/) to see the results.
@@ -247,7 +248,7 @@ optimizer:
 Full experiment file: [examples/usage/4_multiple_task_versions.yaml](examples/usage/4_multiple_task_versions.yaml)
 
 ```bash
-python experiment_runner.py examples/usage/4_multiple_task_versions.yaml
+python -m pytorch_fob.experiment_runner examples/usage/4_multiple_task_versions.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-4/) to see the results.
@@ -279,7 +280,7 @@ Full experiment file: [examples/usage/5_slurm.yaml](examples/usage/5_slurm.yaml)
 Running this command without slurm will crash, but save the individual slurm scripts into [`path/to/sbatch_scripts`](examples/usage/outputs/experiment-5/sbatch_scripts) for us to look at. 
 
 ```bash
-python experiment_runner.py examples/usage/5_slurm.yaml
+python -m pytorch_fob.experiment_runner examples/usage/5_slurm.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-5/) to see the results.

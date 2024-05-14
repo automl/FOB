@@ -4,10 +4,10 @@ from torch.nn.functional import interpolate
 from mmseg.evaluation.metrics import IoUMetric
 from mmengine.logging import MMLogger
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
-from tasks import TaskModel
-from engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
-from engine.configs import TaskConfig
-from optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.engine.parameter_groups import GroupedModel, ParameterGroup, wd_group_named_parameters, merge_parameter_splits
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
 from .segformer_contiguous import SegformerForSemanticSegmentationContiguous
 
 

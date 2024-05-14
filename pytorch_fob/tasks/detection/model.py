@@ -1,9 +1,9 @@
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 from pycocotools.coco import COCO
-from tasks import TaskModel
-from optimizers import Optimizer
-from engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.engine.configs import TaskConfig
 from .coco_eval import CocoEvaluator
 
 

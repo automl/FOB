@@ -1,7 +1,7 @@
 from torch.utils import data
 from lightning.pytorch.demos.boring_classes import RandomDataset
-from engine.configs import TaskConfig
-from tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
 
 
 class TemplateDataModule(TaskDataModule):

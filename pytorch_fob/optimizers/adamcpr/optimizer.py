@@ -9,9 +9,9 @@ from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pytorch_cpr import CPR, cpr_group_named_parameters
-from engine.configs import OptimizerConfig
-from engine.utils import log_info
-from engine.parameter_groups import GroupedModel, intersect_parameter_dicts
+from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.engine.utils import log_info
+from pytorch_fob.engine.parameter_groups import GroupedModel, intersect_parameter_dicts
 
 
 def warmup_steps(total_steps: int, warmup_factor: float) -> int:

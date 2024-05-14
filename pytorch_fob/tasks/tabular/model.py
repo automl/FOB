@@ -1,10 +1,10 @@
 import torch
 from sklearn.metrics import r2_score, mean_squared_error
 from rtdl_revisiting_models import FTTransformer, _CLSEmbedding, LinearEmbeddings, CategoricalEmbeddings
-from engine.configs import TaskConfig
-from engine.parameter_groups import GroupedModel, ParameterGroup, group_named_parameters
-from tasks import TaskModel
-from optimizers import Optimizer
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.parameter_groups import GroupedModel, ParameterGroup, group_named_parameters
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.optimizers import Optimizer
 
 
 class GroupedFTTransformer(GroupedModel):

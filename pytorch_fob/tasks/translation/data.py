@@ -6,9 +6,9 @@ import datasets
 from transformers import T5Tokenizer
 from transformers import DataCollatorForSeq2Seq
 
-from tasks import TaskDataModule
-from engine.configs import TaskConfig
-from engine.utils import log_info
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import log_info
 
 MAX_TOKENS_PER_SENTENCE = 128
 

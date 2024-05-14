@@ -1,8 +1,8 @@
-from engine.configs import TaskConfig
-from optimizers import Optimizer
-from tasks import TaskModel, TaskDataModule
-from tasks.segmentation.data import SegmentationDataModule
-from tasks.segmentation.model import SegmentationModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks.segmentation.data import SegmentationDataModule
+from pytorch_fob.tasks.segmentation.model import SegmentationModel
 
 
 def get_datamodule(config: TaskConfig) -> TaskDataModule:

@@ -3,11 +3,11 @@ from torch.nn import Module
 from transformers import AutoModelForSeq2SeqLM, T5Config
 from sacrebleu.metrics import BLEU
 from sacrebleu.metrics.bleu import BLEUScore
-from engine.parameter_groups import GroupedModel
-from engine.configs import TaskConfig
-from engine.utils import some, log_warn
-from optimizers import Optimizer
-from tasks import TaskModel
+from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import some, log_warn
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
 from tasks.translation.data \
     import WMTDataModule, MAX_TOKENS_PER_SENTENCE
 

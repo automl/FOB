@@ -8,9 +8,9 @@ from torchvision.transforms import v2
 from torchvision import datasets, tv_tensors
 from pycocotools.coco import COCO
 from tqdm import tqdm
-from tasks import TaskDataModule
-from engine.configs import TaskConfig
-from engine.utils import log_info
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import log_info
 
 
 class COCODataModule(TaskDataModule):

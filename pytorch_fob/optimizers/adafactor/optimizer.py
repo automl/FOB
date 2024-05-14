@@ -8,9 +8,9 @@ from torch.optim.optimizer import Optimizer
 
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, PolynomialLR, SequentialLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-from engine.configs import OptimizerConfig
-from engine.utils import log_info
-from engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.engine.utils import log_info
+from pytorch_fob.engine.parameter_groups import GroupedModel
 
 Eps2 = tuple[float, float]
 ParamGroup = dict[str, Any]

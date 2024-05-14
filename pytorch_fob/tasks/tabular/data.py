@@ -7,8 +7,8 @@ from torch.utils.data import Dataset
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import QuantileTransformer, StandardScaler
-from tasks import TaskDataModule
-from engine.utils import log_debug
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.utils import log_debug
 
 
 class TabularDataset(Dataset):

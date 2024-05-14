@@ -5,13 +5,13 @@ from lightning import LightningModule, LightningDataModule
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from torch import nn
 from torch.utils.data import DataLoader
-from optimizers import Optimizer
-from engine.configs import TaskConfig
-from engine.parameter_groups import GroupedModel
+from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.parameter_groups import GroupedModel
 
 
 def import_task(name: str):
-    return importlib.import_module(f"tasks.{name}.task")
+    return importlib.import_module(f"pytorch_fob.tasks.{name}.task")
 
 
 def task_path(name: str) -> Path:

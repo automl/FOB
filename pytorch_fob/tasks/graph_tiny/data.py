@@ -1,8 +1,8 @@
 import torch_geometric.loader as geom_loader
 from torch_geometric.datasets import Planetoid
 from torch_geometric.transforms import NormalizeFeatures
-from tasks import TaskDataModule
-from engine.configs import TaskConfig
+from pytorch_fob.tasks import TaskDataModule
+from pytorch_fob.engine.configs import TaskConfig
 
 
 class CoraDataModule(TaskDataModule):

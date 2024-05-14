@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import seaborn as sns
 import pandas as pd
-from engine.parser import YAMLParser
-from engine.utils import AttributeDict, convert_type_inside_dict, log_warn, log_info, log_debug
-from evaluation import evaluation_path
+from pytorch_fob.engine.parser import YAMLParser
+from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_warn, log_info, log_debug
+from pytorch_fob.evaluation import evaluation_path
 
 
 def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):

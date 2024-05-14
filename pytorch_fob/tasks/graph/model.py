@@ -1,11 +1,11 @@
 import torch
 from ogb.graphproppred import Evaluator
 
-from tasks import TaskModel
-from tasks.graph.snap.gnn import GNN
-from engine.configs import TaskConfig
-from engine.utils import log_warn
-from optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
+from pytorch_fob.tasks.graph.snap.gnn import GNN
+from pytorch_fob.engine.configs import TaskConfig
+from pytorch_fob.engine.utils import log_warn
+from pytorch_fob.optimizers import Optimizer
 
 
 class OGBGModel(TaskModel):
