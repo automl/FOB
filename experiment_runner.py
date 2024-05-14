@@ -1,10 +1,10 @@
 from pathlib import Path
 import argparse
 import logging
-from engine.utils import log_info
+from pytorch_fob.engine.utils import log_info
 
-from engine.engine import Engine
-from engine.utils import begin_timeout
+from pytorch_fob.engine.engine import Engine
+from pytorch_fob.engine.utils import begin_timeout
 
 
 def main(args: argparse.Namespace, extra_args: list[str]):
