@@ -6,10 +6,11 @@ Run all commands from the root of the FOB repository.
 conda create -n fob-hpo python=3.10 -y
 conda activate fob-hpo
 pip install -r requirements.txt
+pip install -e .
 pip install -r examples/smac/requirements.txt
 ```
 
 ## Example
 ```bash
-python hpo_with_smac.py
+python examples/smac/hpo_with_smac.py
 ```

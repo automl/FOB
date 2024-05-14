@@ -11,7 +11,7 @@ from ConfigSpace import (
     EqualsCondition,
     Categorical
 )
-from engine.engine import Engine
+from pytorch_fob import Engine
 
 
 def config_space() -> ConfigurationSpace:
