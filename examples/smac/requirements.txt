@@ -1,0 +1,2 @@
+configspace==0.6.1
+smac>=2.0.0
