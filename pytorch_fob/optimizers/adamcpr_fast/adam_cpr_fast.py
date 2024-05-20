@@ -93,10 +93,10 @@ def group_parameters_for_cpr_optimizer(model, bias_weight_decay=False,
 
     return param_groups
 
-__all__ = ['AdamCPR', 'adamcpr']
+__all__ = ['AdamCPRfast', 'adamcpr']
 
 
-class AdamCPR(Optimizer):
+class AdamCPRfast(Optimizer):
     def __init__(self,
                  params,
                  lr: Union[float, Tensor] = 1e-3,
@@ -949,5 +949,5 @@ def _multi_tensor_adam(params: List[Tensor],
                         square_params = torch._foreach_pow(device_params, 2)
                         new_kappas = [torch.where(param_abs < 1, 0.5 * square_param, param_abs - 0.5).mean() for param_abs, square_params in zip(abs_params, square_params)]
                         torch._foreach_add_(device_kappas, new_kappas)
-                    else:
-                        raise NotImplementedError(f"Unsupported kappa_init_method: {kappa_init_method}")
+                else:
+                    raise NotImplementedError(f"Unsupported kappa_init_method: {kappa_init_method}")
