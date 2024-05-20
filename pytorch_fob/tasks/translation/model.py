@@ -8,7 +8,7 @@ from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.engine.utils import some, log_warn
 from pytorch_fob.optimizers import Optimizer
 from pytorch_fob.tasks import TaskModel
-from tasks.translation.data \
+from pytorch_fob.tasks.translation.data \
     import WMTDataModule, MAX_TOKENS_PER_SENTENCE
 
 
