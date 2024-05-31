@@ -1,8 +1,8 @@
 from pathlib import Path
 import argparse
-import logging
 
 from pytorch_fob.engine.engine import Engine
+from pytorch_fob.engine.utils import set_loglevel
 
 
 def main(args: argparse.Namespace, extra_args: list[str]):
@@ -21,14 +21,5 @@ if __name__ == "__main__":
     parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
                         help="Set the log level")
     args, extra_args = parser.parse_known_args()
-    pytorch_logger = logging.getLogger("lightning.pytorch")
-    match args.log_level:
-        case "debug":
-            pytorch_logger.setLevel(logging.DEBUG)
-        case "info":
-            pytorch_logger.setLevel(logging.INFO)
-        case "warn":
-            pytorch_logger.setLevel(logging.WARNING)
-        case "silent":
-            pytorch_logger.setLevel(logging.CRITICAL)
+    set_loglevel(args.log_level)
     main(args, extra_args)

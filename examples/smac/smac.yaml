@@ -1,0 +1,9 @@
+task:
+  classification_small
+engine:
+  test: false
+  validate: true
+  plot: false
+  data_dir: ./examples/smac/data
+  output_dir: ./examples/smac/outputs/fob
+  silent: true

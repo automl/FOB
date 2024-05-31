@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Type
 import json
@@ -5,6 +6,19 @@ import math
 import signal
 import torch
 from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, rank_zero_debug, log
+
+
+def set_loglevel(level: str):
+    pytorch_logger = logging.getLogger("lightning.pytorch")
+    match level:
+        case "debug":
+            pytorch_logger.setLevel(logging.DEBUG)
+        case "info":
+            pytorch_logger.setLevel(logging.INFO)
+        case "warn":
+            pytorch_logger.setLevel(logging.WARNING)
+        case "silent":
+            pytorch_logger.setLevel(logging.CRITICAL)
 
 
 @rank_zero_only
