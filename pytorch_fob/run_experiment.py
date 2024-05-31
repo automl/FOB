@@ -1,10 +1,8 @@
 from pathlib import Path
 import argparse
 import logging
-from pytorch_fob.engine.utils import log_info
 
 from pytorch_fob.engine.engine import Engine
-from pytorch_fob.engine.utils import begin_timeout
 
 
 def main(args: argparse.Namespace, extra_args: list[str]):
@@ -13,10 +11,6 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     engine.run_experiment()
     engine.plot()
 
-    if args.send_timeout:
-        log_info("submission_runner.py finished! Setting timeout of 10 seconds, as tqdm sometimes is stuck\n")
-        begin_timeout()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -24,8 +18,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("experiment_file", type=Path,
                         help="The yaml file specifying the experiment.")
-    parser.add_argument("--send_timeout", action="store_true",
-                        help="send a timeout after finishing this script (if you have problems with tqdm being stuck)")
     parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
                         help="Set the log level")
     args, extra_args = parser.parse_known_args()

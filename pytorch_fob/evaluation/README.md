@@ -25,7 +25,7 @@ Here we want to focus on the plotting. For instructions on how to run experiment
 
 ### Plotting the experiment
 
-By default, calling the `experiment_runner.py` will plot the experiment after training and testing. To disable, set `engine.plot=false`.  
+By default, calling the `run_experiment.py` will plot the experiment after training and testing. To disable, set `engine.plot=false`.  
 To plot your experiment afterwards, call the `evaluate_experiment.py` with the same experiment yaml. To adjust how to plot, change the values under the `evaluation` key of the experiment. Take a look at the [evaluation/default.yaml](default.yaml) to see which settings are available. Some of these keys are explained in the examples below to give the reader a first impression. Note that some default parameters are set in the respective tasks (e.g. in [tasks/mnist/default.yaml](../tasks/mnist/default.yaml)).
 
 ### Example use cases
@@ -124,7 +124,7 @@ Estimated disk usage for the data: ~65M
 
 The 2 tasks will be run on 2x2 hyperparameter on 2 different seeds per optimizer for a total of 32 runs.
 
-```python -m pytorch_fob.experiment_runner examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
+```python -m pytorch_fob.run_experiment examples/plotting/3_mnist-and-tabular_adamw-vs-sgd.yaml```
 
 After training finished you should find 32 run directories in [examples/plotting/outputs](../examples/plotting/outputs)
 

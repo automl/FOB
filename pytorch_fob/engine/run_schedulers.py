@@ -8,7 +8,7 @@ from pytorch_fob.engine.slurm import Slurm
 from pytorch_fob.engine.utils import log_info, log_warn, seconds_to_str, some, str_to_seconds
 
 
-FOB_RUN_SCRIPT = "pytorch_fob.experiment_runner"
+FOB_RUN_SCRIPT = "pytorch_fob.run_experiment"
 FOB_EVAL_SCRIPT = "pytorch_fob.evaluate_experiment"
 
 
