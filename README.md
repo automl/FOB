@@ -286,3 +286,10 @@ python -m pytorch_fob.experiment_runner examples/usage/5_slurm.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-5/) to see the results.
+
+## License
+This repository is licensed under the Apache License 2.0.
+
+However, please be aware that the repository includes various models and datasets, each of which may have its own licensing terms. It is the responsibility of the users to ensure that they comply with the specific licenses of these models and datasets. 
+
+By using this repository, you agree to respect and comply with all relevant licenses associated with the models and datasets. The Apache License 2.0 applies only to the original content and code provided in this repository.
