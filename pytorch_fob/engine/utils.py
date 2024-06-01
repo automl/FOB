@@ -197,6 +197,16 @@ def concatenate_dict_keys(
     return result
 
 
+def sort_dict_recursively(d: dict) -> dict:
+    sorted_dict = {}
+    for k, v in sorted(d.items()):
+        if isinstance(v, dict):
+            sorted_dict[k] = sort_dict_recursively(v)
+        else:
+            sorted_dict[k] = v
+    return sorted_dict
+
+
 class EndlessList(list):
     """
     Returns first element if out of bounds. Otherwise same as list.

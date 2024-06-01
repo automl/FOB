@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from typing import Any, Callable, Iterable, Iterator, Literal, Optional
 from pathlib import Path
 from matplotlib.figure import Figure
@@ -8,7 +9,7 @@ from pytorch_fob.engine.grid_search import grid_search
 from pytorch_fob.engine.parser import YAMLParser
 from pytorch_fob.engine.run import Run
 from pytorch_fob.engine.run_schedulers import sequential, slurm_array, slurm_jobs
-from pytorch_fob.engine.utils import log_debug, log_info, log_warn, some
+from pytorch_fob.engine.utils import log_debug, log_info, log_warn, some, sort_dict_recursively
 from pytorch_fob.evaluation import evaluation_path
 from pytorch_fob.evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from pytorch_fob.optimizers import optimizer_path, optimizer_names
@@ -68,7 +69,8 @@ class Engine():
             [self.optimizer_key, self.task_key],
             [optimizer_names(), task_names()]
         )
-        self._experiment = dict(searchspace)
+        searchspace = sort_dict_recursively(searchspace)
+        self._experiment = deepcopy(searchspace)
         # exclude plotting from gridsearch
         if self.eval_key in searchspace:
             eval_config = searchspace.pop(self.eval_key)
