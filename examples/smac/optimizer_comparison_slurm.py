@@ -53,7 +53,7 @@ def get_target_fn(extra_args, experiment_file):
 
 
 def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, outdir: Path,
-             cores: int, walltime: str, devices: int, partition: str):
+             cores: int, max_time_per_job: str, devices: int, partition: str):
     configspace = config_space(optimizer_name)
     n_workers: int = args.n_workers
     scenario = Scenario(
@@ -68,20 +68,23 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         n_workers=n_workers, # TODO: https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py
     )
     cluster = SLURMCluster(
+        # More tips on this here: https://jobqueue.dask.org/en/latest/advanced-tips-and-tricks.html#how-to-handle-job-queueing-system-walltime-killing-workers
         # This is the partition of our slurm cluster.
         queue=partition,
         cores=cores,
         memory=f"{cores*2} GB",
         # Walltime limit for each worker. Ensure that your function evaluations
         # do not exceed this limit.
-        # More tips on this here: https://jobqueue.dask.org/en/latest/advanced-tips-and-tricks.html#how-to-handle-job-queueing-system-walltime-killing-workers
-        walltime=walltime,
+        walltime=max_time_per_job,
+        job_extra_directives=[f"--gres=gpu:{devices}", f"--time={max_time_per_job}"],
         processes=1, # TODO: maybe number devices?
         log_directory=outdir / "smac" / "smac_dask_slurm",
-        worker_extra_args=["--gres", f"gpu:{devices}"],
+        worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
-    cluster.scale(jobs=n_workers)
-    client = Client(address=cluster)
+    cluster.scale(n_workers)
+    cluster.adapt(minimum_jobs=0, maximum_jobs=n_workers)
+    print("cluster logs:", cluster.get_logs())
+    client = cluster.get_client()
     smac = SMAC4MF(
         target_function=target_fn,
         scenario=scenario,
@@ -112,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
                         help="Set the log level")
     parser.add_argument("--n_workers", type=int, default=4,
-                        help="Number of parallel SMAC runs")
+                        help="maximum number of parallel SMAC runs")
     parser.add_argument("--seed", type=int, default=42,
                         help="seed for SMAC")
     parser.add_argument("--n_trials", type=int, default=200,
@@ -131,11 +134,11 @@ if __name__ == "__main__":
     max_epochs = run.task.max_epochs
     optimizer_name = run.optimizer.name
     cores = run.engine.workers * run.engine.devices
-    walltime = sbatch_time(run.engine.sbatch_args["time"], run.engine.sbatch_time_factor)
+    max_time_per_job = sbatch_time(run.engine.sbatch_args["time"], run.engine.sbatch_time_factor)
     devices = run.engine.devices
     outdir = run.engine.output_dir
     partition = run.engine.sbatch_args["partition"]
     del engine
     incumbent = run_smac(get_target_fn(extra_args, experiment_file), args, optimizer_name, max_epochs, outdir,
-                         cores, walltime, devices, partition)
+                         cores, max_time_per_job, devices, partition)
     print(incumbent)
