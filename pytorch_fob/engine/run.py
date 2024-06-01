@@ -271,7 +271,7 @@ class Run():
         run_dir = ",".join(f"{k}={str(v)}" for k, v in sorted(diffs.items())) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            log_warn(f"folder name {run_dir} is too long, using {hashdir} instead.")
+            log_info(f"folder name {run_dir} is too long, using {hashdir} instead.")
             run_dir = hashdir
         self.run_dir = base / run_dir
         self.checkpoint_dir = self.run_dir / "checkpoints"

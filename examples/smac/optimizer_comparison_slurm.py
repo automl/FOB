@@ -3,6 +3,7 @@ import argparse
 import json
 import time
 import subprocess
+import sys
 from argparse import Namespace
 from smac.facade.multi_fidelity_facade import MultiFidelityFacade as SMAC4MF
 from smac.intensifier.hyperband import Hyperband
@@ -96,7 +97,7 @@ def get_target_fn(extra_args, experiment_file):
             return float("inf")
         (run.run_dir / "scores.json").unlink()  # delete score so crashed runs later will not yield a score
         result = 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
-        print("got result:", result)
+        print(f"got result: {result}", file=sys.stderr)
         return result
     return train
 
@@ -141,7 +142,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("experiment_file", type=Path,
                         help="The yaml file specifying the experiment.")
-    parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "error", "silent"], default="info",
+    parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "error", "silent"], default="warn",
                         help="Set the log level")
     parser.add_argument("--n_workers", type=int, default=4,
                         help="maximum number of parallel SMAC runs")
