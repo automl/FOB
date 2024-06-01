@@ -82,8 +82,10 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
     cluster.scale(n_workers)
-    cluster.adapt(minimum_jobs=0, maximum_jobs=n_workers)
+    cluster.adapt(minimum=0, maximum=n_workers, minimum_jobs=0, maximum_jobs=n_workers)
+    print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
+    print("cluster status:", cluster.status)
     client = cluster.get_client()
     smac = SMAC4MF(
         target_function=target_fn,
