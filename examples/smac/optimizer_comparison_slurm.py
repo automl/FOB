@@ -21,7 +21,7 @@ from pytorch_fob.engine.utils import set_loglevel, seconds_to_str, str_to_second
 
 
 smac_logger = get_logger(smac.runner.dask_runner.__name__)
-def patched_submit_trial(cluster: SLURMCluster):
+def patched_submit_trial(cluster: SLURMCluster, n_worker: int):
     def submit_trial(self, trial_info, **dask_data_to_scatter) -> None:
         """This function submits a configuration embedded in a ``trial_info`` object, and uses one of
         the workers to produce a result locally to each worker.
@@ -49,20 +49,10 @@ def patched_submit_trial(cluster: SLURMCluster):
             this argument is very useful.
         """
         # Check for resources or block till one is available
-        if self.count_available_workers() <= 0:
+        if len(self._pending_trials) >= n_worker:
             smac_logger.debug("No worker available. Waiting for one to be available...")
             wait(self._pending_trials, return_when="FIRST_COMPLETED")
             self._process_pending_trials()
-
-        # Check again to make sure that there are resources
-        if self.count_available_workers() <= 0:
-            smac_logger.warning("No workers are available. Waiting for new workers...")
-            cluster.wait_for_workers(1)
-            if self.count_available_workers() <= 0:
-                raise RuntimeError(
-                    "Tried to execute a job, but no worker was ever available."
-                    "This likely means that a worker crashed or no workers were properly configured."
-                )
 
         # At this point we can submit the job
         trial = self._client.submit(self._single_worker.run_wrapper, trial_info=trial_info, **dask_data_to_scatter)
@@ -134,7 +124,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         log_directory=outdir / "smac" / "smac_dask_slurm",
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
-    cluster.adapt(minimum=0, maximum=n_workers)
+    cluster.scale(jobs=n_workers)
     print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
     print("cluster status:", cluster.status)
@@ -152,7 +142,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         dask_client=client,
     )
     # dirty patch
-    smac._runner.submit_trial = types.MethodType(patched_submit_trial(cluster), smac._runner)  # type: ignore
+    smac._runner.submit_trial = types.MethodType(patched_submit_trial(cluster, n_workers), smac._runner)
     incumbent = smac.optimize()
     return incumbent
 
