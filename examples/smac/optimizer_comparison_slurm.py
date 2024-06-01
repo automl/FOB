@@ -1,7 +1,8 @@
 from pathlib import Path
 import argparse
-import types
+import json
 import time
+import subprocess
 from argparse import Namespace
 from smac.facade.multi_fidelity_facade import MultiFidelityFacade as SMAC4MF
 from smac.intensifier.hyperband import Hyperband
@@ -13,64 +14,40 @@ from ConfigSpace import (
     Integer,
     Constant
 )
-from dask.distributed import wait
-from smac.utils.logging import get_logger
-import smac.runner.dask_runner
-from dask_jobqueue.slurm import SLURMCluster
 from pytorch_fob import Engine
 from pytorch_fob.engine.utils import set_loglevel, seconds_to_str, str_to_seconds
 
+def job_finshed(job_id: int) -> bool:
+    result = subprocess.run(['squeue', '--job', str(job_id)], stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, text=True, check=False)
+    if result.returncode != 0:
+        # Job not in queue: probably finished
+        return True
+    # Parse the output
+    output = result.stdout.strip()
+    if output:
+        lines = output.split('\n')
+        if len(lines) > 1:
+            # The first line is the header, the second line contains the job status
+            status_line = lines[1].split()
+            status = status_line[4]  # The fifth column is the job status
+            running = status == "PD" or status == "R" or status == "CG" or status == "RS" or status == "RV" or status == "RS"
+            finished = status == "CD" or status == "F" or status == "TO" or status == "CA" or status == "NF" or status == "SE" or status == "OOM"
+            assert running ^ finished
+            return finished
+        else:
+            # Job not in queue: probably finished
+            return True
+    else:
+        # should output something
+        raise Exception("problem with squeue command")
 
-smac_logger = get_logger(smac.runner.dask_runner.__name__)
-def patched_submit_trial(cluster: SLURMCluster, n_worker: int):
-    def submit_trial(self, trial_info, **dask_data_to_scatter) -> None:
-        """This function submits a configuration embedded in a ``trial_info`` object, and uses one of
-        the workers to produce a result locally to each worker.
 
-        The execution of a configuration follows this procedure:
-
-        #. The SMBO/intensifier generates a `TrialInfo`.
-        #. SMBO calls `submit_trial` so that a worker launches the `trial_info`.
-        #. `submit_trial` internally calls ``self.run()``. It does so via a call to `run_wrapper` which contains common
-            code that any `run` method will otherwise have to implement.
-
-        All results will be only available locally to each worker, so the main node needs to collect them.
-
-        Parameters
-        ----------
-        trial_info : TrialInfo
-            An object containing the configuration launched.
-
-        dask_data_to_scatter: dict[str, Any]
-            When a user scatters data from their local process to the distributed network,
-            this data is distributed in a round-robin fashion grouping by number of cores.
-            Roughly speaking, we can keep this data in memory and then we do not have to (de-)serialize the data
-            every time we would like to execute a target function with a big dataset.
-            For example, when your target function has a big dataset shared across all the target function,
-            this argument is very useful.
-        """
-        self._client.wait_for_workers(n_workers=1)
-
-        # Check for resources or block till one is available
-        if self.count_available_workers() <= 0:
-            smac_logger.debug("No worker available. Waiting for one to be available...")
-            wait(self._pending_trials, return_when="FIRST_COMPLETED")
-            self._process_pending_trials()
-
-        # Check again to make sure that there are resources
-        if self.count_available_workers() <= 0:
-            smac_logger.warning("No workers are available. This could mean workers crashed. Waiting for new workers...")
-            time.sleep(self._patience)
-            if self.count_available_workers() <= 0:
-                raise RuntimeError(
-                    "Tried to execute a job, but no worker was ever available."
-                    "This likely means that a worker crashed or no workers were properly configured."
-                )
-
-        # At this point we can submit the job
-        trial = self._client.submit(self._single_worker.run_wrapper, trial_info=trial_info, **dask_data_to_scatter)
-        self._pending_trials.append(trial)
-    return submit_trial
+def wait_for_job(job_id: int):
+    """Block thread until SLURM job is finished"""
+    time.sleep(5)
+    while not job_finshed(job_id):
+        time.sleep(5)
 
 
 def config_space(optimizer_name: str) -> ConfigurationSpace:
@@ -99,17 +76,30 @@ def get_target_fn(extra_args, experiment_file):
         arglist += [
             f"engine.restrict_train_epochs={round_budget}",
             f"engine.seed={seed}",
+            "engine.run_scheduler=slurm_jobs",
+            "engine.test=false",
+            "engine.validate=true",
+            "engine.plot=false"
         ]
         engine = Engine()
         engine.parse_experiment_from_file(experiment_file, extra_args=arglist)
+        job_ids = engine.run_experiment()
+        assert job_ids is list and len(job_ids) == 1
+        job_id = job_ids[0]
         run = next(engine.runs())  # only get one run
-        score = run.start()
+        wait_for_job(job_id)
+        try:
+            with open(run.run_dir / "scores.json", "r", encoding="utf8") as f:
+                score = json.load(f)
+        except FileNotFoundError:
+            print("could not load scores, returning inf")
+            return float("inf")
+        (run.run_dir / "scores.json").unlink()  # delete score so crashed runs later will not yield a score
         return 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
     return train
 
 
-def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, outdir: Path,
-             cores: int, max_time_per_job: str, devices: int, partition: str):
+def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, outdir: Path):
     configspace = config_space(optimizer_name)
     n_workers: int = args.n_workers
     scenario = Scenario(
@@ -121,27 +111,8 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         n_trials=args.n_trials,
         max_budget=max_epochs,
         min_budget=args.min_budget,
-        n_workers=n_workers, # https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py
+        n_workers=n_workers, # https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py does not work
     )
-    cluster = SLURMCluster(
-        # More tips on this here: https://jobqueue.dask.org/en/latest/advanced-tips-and-tricks.html#how-to-handle-job-queueing-system-walltime-killing-workers
-        # This is the partition of our slurm cluster.
-        queue=partition,
-        cores=cores,
-        memory=f"{cores*2} GiB",
-        # Walltime limit for each worker. Ensure that your function evaluations
-        # do not exceed this limit.
-        walltime=sbatch_time(max_time_per_job, 1.1),
-        job_extra_directives=[f"--gres=gpu:{devices}"],
-        processes=1, # TODO: maybe number devices?
-        log_directory=outdir / "smac" / "smac_dask_slurm",
-        worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
-    )
-    cluster.adapt(maximum_jobs=n_workers)
-    print("cluster job script:", cluster.job_script())
-    print("cluster logs:", cluster.get_logs())
-    print("cluster status:", cluster.status)
-    client = cluster.get_client()
     smac = SMAC4MF(
         target_function=target_fn,
         scenario=scenario,
@@ -152,10 +123,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
             eta=args.eta,
         ),
         overwrite=True,
-        dask_client=client,
     )
-    # dirty patch
-    smac._runner.submit_trial = types.MethodType(patched_submit_trial(cluster, n_workers), smac._runner)
     incumbent = smac.optimize()
     return incumbent
 
@@ -192,12 +160,7 @@ if __name__ == "__main__":
     run = next(engine.runs())
     max_epochs = run.task.max_epochs
     optimizer_name = run.optimizer.name
-    cores = run.engine.workers * run.engine.devices
-    max_time_per_job = sbatch_time(run.engine.sbatch_args["time"], run.engine.sbatch_time_factor)
-    devices = run.engine.devices
     outdir = run.engine.output_dir
-    partition = run.engine.sbatch_args["partition"]
     del engine
-    incumbent = run_smac(get_target_fn(extra_args, experiment_file), args, optimizer_name, max_epochs, outdir,
-                         cores, max_time_per_job, devices, partition)
+    incumbent = run_smac(get_target_fn(extra_args, experiment_file), args, optimizer_name, max_epochs, outdir)
     print(incumbent)

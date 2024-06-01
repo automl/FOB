@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, Iterable, Iterator, Literal
+from typing import Any, Callable, Iterable, Iterator, Literal, Optional
 from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
@@ -34,7 +34,7 @@ class Engine():
         self.default_file_name = "default.yaml"
         self.parser = YAMLParser()
 
-    def run_experiment(self):
+    def run_experiment(self) -> Optional[list[int]]:
         assert len(self._runs) > 0, "No runs in experiment, make sure to call 'parse_experiment' first."
         scheduler = self._runs[0][self.engine_key]["run_scheduler"]
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
@@ -47,11 +47,11 @@ class Engine():
             run = self._make_run(n)
             run.start()
         elif scheduler == "slurm_array":
+            self._block_plotting = True
             slurm_array(list(self.runs()), self._experiment)
-            self._block_plotting = True
         elif scheduler == "slurm_jobs":
-            slurm_jobs(list(self.runs()), self._experiment)
             self._block_plotting = True
+            return slurm_jobs(list(self.runs()), self._experiment)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 

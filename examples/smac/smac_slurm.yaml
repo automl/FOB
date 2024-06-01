@@ -1,9 +1,7 @@
 task: classification_small
-optimizer: adamw_baseline
+optimizer:
+  name: adamw_baseline
 engine:
-  test: false
-  validate: true
-  plot: false
   data_dir: your_data_dir
   output_dir: your_output_dir
   silent: true

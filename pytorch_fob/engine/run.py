@@ -74,6 +74,7 @@ class Run():
                 scores["test_best"] = self._test(tester, model, data_module, Path(best_path))
             else:
                 log_info("No best checkpoint found, skipping test.")
+        write_results(scores, self.run_dir / "scores.json")
         return scores
 
     def _train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
