@@ -1,6 +1,7 @@
 from pathlib import Path
 import argparse
 import types
+import time
 from argparse import Namespace
 from smac.facade.multi_fidelity_facade import MultiFidelityFacade as SMAC4MF
 from smac.intensifier.hyperband import Hyperband
@@ -48,11 +49,23 @@ def patched_submit_trial(cluster: SLURMCluster, n_worker: int):
             For example, when your target function has a big dataset shared across all the target function,
             this argument is very useful.
         """
+        self._client.wait_for_workers(n_workers=1)
+
         # Check for resources or block till one is available
-        if len(self._pending_trials) >= n_worker:
+        if self.count_available_workers() <= 0:
             smac_logger.debug("No worker available. Waiting for one to be available...")
             wait(self._pending_trials, return_when="FIRST_COMPLETED")
             self._process_pending_trials()
+
+        # Check again to make sure that there are resources
+        if self.count_available_workers() <= 0:
+            smac_logger.warning("No workers are available. This could mean workers crashed. Waiting for new workers...")
+            time.sleep(self._patience)
+            if self.count_available_workers() <= 0:
+                raise RuntimeError(
+                    "Tried to execute a job, but no worker was ever available."
+                    "This likely means that a worker crashed or no workers were properly configured."
+                )
 
         # At this point we can submit the job
         trial = self._client.submit(self._single_worker.run_wrapper, trial_info=trial_info, **dask_data_to_scatter)
@@ -108,7 +121,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         n_trials=args.n_trials,
         max_budget=max_epochs,
         min_budget=args.min_budget,
-        n_workers=n_workers, # TODO: https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py
+        n_workers=n_workers, # https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py
     )
     cluster = SLURMCluster(
         # More tips on this here: https://jobqueue.dask.org/en/latest/advanced-tips-and-tricks.html#how-to-handle-job-queueing-system-walltime-killing-workers
@@ -124,7 +137,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         log_directory=outdir / "smac" / "smac_dask_slurm",
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
-    cluster.scale(jobs=n_workers)
+    cluster.adapt(maximum_jobs=n_workers)
     print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
     print("cluster status:", cluster.status)
