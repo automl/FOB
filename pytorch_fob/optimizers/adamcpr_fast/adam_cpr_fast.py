@@ -94,10 +94,10 @@ def group_parameters_for_cpr_optimizer(model, bias_weight_decay=False,
     return param_groups
 
 
-__all__ = ['AdamCPR', 'adamcpr']
+__all__ = ['AdamCPRfast', 'adamcpr']
 
 
-class AdamCPR(Optimizer):
+class AdamCPRfast(Optimizer):
     def __init__(self,
                  params,
                  lr: Union[float, Tensor] = 1e-3,
