@@ -95,7 +95,9 @@ def get_target_fn(extra_args, experiment_file):
             print("could not load scores, returning inf")
             return float("inf")
         (run.run_dir / "scores.json").unlink()  # delete score so crashed runs later will not yield a score
-        return 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
+        result = 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
+        print("got result:", result)
+        return result
     return train
 
 
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("experiment_file", type=Path,
                         help="The yaml file specifying the experiment.")
-    parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
+    parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "error", "silent"], default="info",
                         help="Set the log level")
     parser.add_argument("--n_workers", type=int, default=4,
                         help="maximum number of parallel SMAC runs")

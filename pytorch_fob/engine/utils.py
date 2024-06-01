@@ -17,6 +17,8 @@ def set_loglevel(level: str):
             pytorch_logger.setLevel(logging.INFO)
         case "warn":
             pytorch_logger.setLevel(logging.WARNING)
+        case "error":
+            pytorch_logger.setLevel(logging.ERROR)
         case "silent":
             pytorch_logger.setLevel(logging.CRITICAL)
 

@@ -8,3 +8,4 @@ engine:
   sbatch_time_factor: 1.4 # adapt to your cluster
   sbatch_args:
     partition: your_gpu_partition
+  sbatch_script_template: examples/usage/sbatch_template.sh
