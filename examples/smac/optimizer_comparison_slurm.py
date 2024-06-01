@@ -125,7 +125,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         # This is the partition of our slurm cluster.
         queue=partition,
         cores=cores,
-        memory=f"{cores*2} GB",
+        memory=f"{cores*2} GiB",
         # Walltime limit for each worker. Ensure that your function evaluations
         # do not exceed this limit.
         walltime=sbatch_time(max_time_per_job, 1.1),
@@ -134,7 +134,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         log_directory=outdir / "smac" / "smac_dask_slurm",
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
-    cluster.scale(jobs=n_workers)
+    cluster.adapt(minimum=0, maximum=n_workers)
     print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
     print("cluster status:", cluster.status)
