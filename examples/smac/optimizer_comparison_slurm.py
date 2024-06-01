@@ -11,10 +11,62 @@ from ConfigSpace import (
     Integer,
     Constant
 )
-from dask.distributed import Client
+from dask.distributed import wait
+from smac.utils.logging import get_logger
+import smac.runner.dask_runner
 from dask_jobqueue.slurm import SLURMCluster
 from pytorch_fob import Engine
 from pytorch_fob.engine.utils import set_loglevel, seconds_to_str, str_to_seconds
+
+
+smac_logger = get_logger(smac.runner.dask_runner.__name__)
+def patched_submit_trial(cluster: SLURMCluster):
+    def submit_trial(self, trial_info, **dask_data_to_scatter) -> None:
+        """This function submits a configuration embedded in a ``trial_info`` object, and uses one of
+        the workers to produce a result locally to each worker.
+
+        The execution of a configuration follows this procedure:
+
+        #. The SMBO/intensifier generates a `TrialInfo`.
+        #. SMBO calls `submit_trial` so that a worker launches the `trial_info`.
+        #. `submit_trial` internally calls ``self.run()``. It does so via a call to `run_wrapper` which contains common
+            code that any `run` method will otherwise have to implement.
+
+        All results will be only available locally to each worker, so the main node needs to collect them.
+
+        Parameters
+        ----------
+        trial_info : TrialInfo
+            An object containing the configuration launched.
+
+        dask_data_to_scatter: dict[str, Any]
+            When a user scatters data from their local process to the distributed network,
+            this data is distributed in a round-robin fashion grouping by number of cores.
+            Roughly speaking, we can keep this data in memory and then we do not have to (de-)serialize the data
+            every time we would like to execute a target function with a big dataset.
+            For example, when your target function has a big dataset shared across all the target function,
+            this argument is very useful.
+        """
+        # Check for resources or block till one is available
+        if self.count_available_workers() <= 0:
+            smac_logger.debug("No worker available. Waiting for one to be available...")
+            wait(self._pending_trials, return_when="FIRST_COMPLETED")
+            self._process_pending_trials()
+
+        # Check again to make sure that there are resources
+        if self.count_available_workers() <= 0:
+            smac_logger.warning("No workers are available. Waiting for new workers...")
+            cluster.wait_for_workers(1)
+            if self.count_available_workers() <= 0:
+                raise RuntimeError(
+                    "Tried to execute a job, but no worker was ever available."
+                    "This likely means that a worker crashed or no workers were properly configured."
+                )
+
+        # At this point we can submit the job
+        trial = self._client.submit(self._single_worker.run_wrapper, trial_info=trial_info, **dask_data_to_scatter)
+        self._pending_trials.append(trial)
+    return submit_trial
 
 
 def config_space(optimizer_name: str) -> ConfigurationSpace:
@@ -82,8 +134,6 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
     cluster.scale(jobs=n_workers)
-    print("waiting for cluster to schedule at least 1 job...")
-    cluster.wait_for_workers(1, 60*10)
     print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
     print("cluster status:", cluster.status)
@@ -100,6 +150,8 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         overwrite=True,
         dask_client=client,
     )
+    # dirty patch
+    smac._runner.submit_trial = patched_submit_trial(cluster)  # type: ignore
     incumbent = smac.optimize()
     return incumbent
 
