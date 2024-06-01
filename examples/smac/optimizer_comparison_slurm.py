@@ -76,13 +76,15 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         # Walltime limit for each worker. Ensure that your function evaluations
         # do not exceed this limit.
         walltime=max_time_per_job,
-        job_extra_directives=[f"--gres=gpu:{devices}", f"--time={max_time_per_job}"],
+        job_extra_directives=[f"--gres=gpu:{devices}"],
         processes=1, # TODO: maybe number devices?
         log_directory=outdir / "smac" / "smac_dask_slurm",
         worker_extra_args=["--lifetime", str(str_to_seconds(max_time_per_job))],
     )
-    cluster.scale(n_workers)
+    cluster.scale(n_workers, jobs=n_workers)
     cluster.adapt(minimum=0, maximum=n_workers, minimum_jobs=0, maximum_jobs=n_workers)
+    # print("waiting for cluster to schedule at least 1 job...")
+    # cluster.wait_for_workers(1, 60*10)
     print("cluster job script:", cluster.job_script())
     print("cluster logs:", cluster.get_logs())
     print("cluster status:", cluster.status)
@@ -99,6 +101,8 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         overwrite=True,
         dask_client=client,
     )
+    # dirty patch
+    smac._runner.count_available_workers = lambda: n_workers
     incumbent = smac.optimize()
     return incumbent
 
