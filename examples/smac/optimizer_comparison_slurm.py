@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import types
 from argparse import Namespace
 from smac.facade.multi_fidelity_facade import MultiFidelityFacade as SMAC4MF
 from smac.intensifier.hyperband import Hyperband
@@ -151,7 +152,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
         dask_client=client,
     )
     # dirty patch
-    smac._runner.submit_trial = patched_submit_trial(cluster)  # type: ignore
+    smac._runner.submit_trial = types.MethodType(patched_submit_trial(cluster), smac._runner)  # type: ignore
     incumbent = smac.optimize()
     return incumbent
 
