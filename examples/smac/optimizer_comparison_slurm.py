@@ -84,7 +84,7 @@ def get_target_fn(extra_args, experiment_file):
         engine = Engine()
         engine.parse_experiment_from_file(experiment_file, extra_args=arglist)
         job_ids = engine.run_experiment()
-        assert job_ids is list and len(job_ids) == 1
+        assert isinstance(job_ids, list) and len(job_ids) == 1
         job_id = job_ids[0]
         run = next(engine.runs())  # only get one run
         wait_for_job(job_id)
