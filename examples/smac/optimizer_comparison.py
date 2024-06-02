@@ -60,19 +60,18 @@ def run_smac(target_fn, optimizer_name: str, max_epochs: int, outdir: Path):
         n_trials=250,
         max_budget=max_epochs,
         min_budget=5,
-        n_workers=1, # TODO: https://github.com/automl/SMAC3/blob/main/examples/1_basics/7_parallelization_cluster.py
+        n_workers=1,
     )
     smac = SMAC4MF(
         target_function=target_fn,
         scenario=scenario,
-        initial_design=SMAC4MF.get_initial_design(scenario=scenario, n_configs=2),
+        initial_design=SMAC4MF.get_initial_design(scenario=scenario),
         intensifier=Hyperband(
             scenario=scenario,
             incumbent_selection="highest_budget",
             eta=3,
         ),
         overwrite=True,
-        dask_client=None, # TODO
     )
     incumbent = smac.optimize()
     return incumbent
