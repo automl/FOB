@@ -49,10 +49,10 @@ def get_target_fn(extra_args, experiment_file):
     return train
 
 
-def run_smac(target_fn, optimizer_name: str, max_epochs: int, outdir: Path):
+def run_smac(target_fn, optimizer_name: str, task_name: str, max_epochs: int, outdir: Path):
     configspace = config_space(optimizer_name)
     scenario = Scenario(
-        name=f"FOB_HPO_{optimizer_name}",
+        name=f"FOB_HPO_{task_name}_{optimizer_name}",
         configspace=configspace,
         deterministic=True,
         output_directory=outdir / "smac",
@@ -94,7 +94,8 @@ if __name__ == "__main__":
     run = next(engine.runs())
     max_epochs = run.task.max_epochs
     optimizer_name = run.optimizer.name
+    task_name = run.task.name
     outdir = run.engine.output_dir
     del engine
-    incumbent = run_smac(get_target_fn(extra_args, experiment_file), optimizer_name, max_epochs, outdir)
+    incumbent = run_smac(get_target_fn(extra_args, experiment_file), optimizer_name, task_name, max_epochs, outdir)
     print(incumbent)
