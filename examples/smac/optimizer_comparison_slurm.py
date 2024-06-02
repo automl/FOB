@@ -70,7 +70,7 @@ def config_space(optimizer_name: str) -> ConfigurationSpace:
     return cs
 
 
-def get_target_fn(extra_args, experiment_file):
+def get_target_fn(extra_args, experiment_file, score_name: str):
     def train(config: Configuration, seed: int, budget: float) -> float:
         round_budget = round(budget)
         arglist = extra_args + [f"{k}={v}" for k, v in config.get_dictionary().items()]
@@ -96,7 +96,7 @@ def get_target_fn(extra_args, experiment_file):
             print("could not load scores, returning inf")
             return float("inf")
         (run.run_dir / "scores.json").unlink()  # delete score so crashed runs later will not yield a score
-        result = 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
+        result = 1 - sum(map(lambda x: x[score_name], score["validation"])) / len(score["validation"])
         print(f"got result: {result}", file=sys.stderr)
         return result
     return train
@@ -154,6 +154,8 @@ if __name__ == "__main__":
                         help="minimum budget for SMAC")
     parser.add_argument("--eta", type=int, default=3,
                         help="eta for Hyperband")
+    parser.add_argument("--score", type=str, default="val_acc",
+                        help="validations score to maximize")
     args, extra_args = parser.parse_known_args()
     set_loglevel(args.log_level)
     experiment_file = args.experiment_file
@@ -165,6 +167,7 @@ if __name__ == "__main__":
     optimizer_name = run.optimizer.name
     task_name = run.task.name
     outdir = run.engine.output_dir
+    score_name = args.score
     del engine
-    incumbent = run_smac(get_target_fn(extra_args, experiment_file), args, optimizer_name, task_name, max_epochs, outdir)
+    incumbent = run_smac(get_target_fn(extra_args, experiment_file, score_name), args, optimizer_name, task_name, max_epochs, outdir)
     print(incumbent)
