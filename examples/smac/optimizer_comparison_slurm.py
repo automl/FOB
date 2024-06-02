@@ -119,7 +119,7 @@ def run_smac(target_fn, args: Namespace, optimizer_name: str, max_epochs: int, o
     smac = SMAC4MF(
         target_function=target_fn,
         scenario=scenario,
-        initial_design=SMAC4MF.get_initial_design(scenario=scenario, n_configs=2),
+        initial_design=SMAC4MF.get_initial_design(scenario=scenario),
         intensifier=Hyperband(
             scenario=scenario,
             incumbent_selection="highest_budget",
