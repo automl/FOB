@@ -86,6 +86,8 @@ def get_target_fn(extra_args, experiment_file, slurm=False):
             "engine.validate=true",
             "engine.plot=false"
         ]
+        if slurm:
+            arglist += ["engine.run_scheduler=slurm_jobs"]
         engine = Engine()
         engine.parse_experiment_from_file(experiment_file, extra_args=arglist)
         run = next(engine.runs())  # only get one run
