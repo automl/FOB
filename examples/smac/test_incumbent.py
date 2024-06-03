@@ -40,10 +40,10 @@ def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
         #         )
         #    ]
 
-        for _ in data:
+        for dp in data:
             # we assume that the same seed is used for all runs with this ID
-            if data[0] == intensifier_id:
-                seed = data[2]
+            if dp[0] == intensifier_id:
+                seed = dp[2]
                 config["engine.seed"] = seed
                 break
 
