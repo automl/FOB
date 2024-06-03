@@ -17,6 +17,9 @@ from pytorch_fob import Engine
 from pytorch_fob.engine.run import Run
 from pytorch_fob.engine.utils import set_loglevel
 
+RETRY_COUNT = 20
+RETRY_SLEEP = 20
+JOB_STATUS_UPDATE_SLEEP = 10
 
 def job_finshed(job_id: int) -> bool:
     result = subprocess.run(['squeue', '--job', str(job_id)], stdout=subprocess.PIPE,
@@ -48,9 +51,9 @@ def job_finshed(job_id: int) -> bool:
 
 def wait_for_job(job_id: int):
     """Block thread until SLURM job is finished"""
-    time.sleep(5)
+    time.sleep(JOB_STATUS_UPDATE_SLEEP)
     while not job_finshed(job_id):
-        time.sleep(5)
+        time.sleep(JOB_STATUS_UPDATE_SLEEP)
 
 
 def config_space(optimizer_name: str) -> ConfigurationSpace:
@@ -87,7 +90,20 @@ def get_target_fn(extra_args, experiment_file, slurm=False):
         engine.parse_experiment_from_file(experiment_file, extra_args=arglist)
         run = next(engine.runs())  # only get one run
         if slurm:
-            job_ids = engine.run_experiment()
+            submitted = False
+            for _ in range(RETRY_COUNT):
+                try:
+                    job_ids = engine.run_experiment()
+                    submitted = True
+                except subprocess.CalledProcessError:
+                    # this happens if SLURM has problems
+                    print("error submitting job waiting and retrying...")
+                    time.sleep(RETRY_SLEEP)
+                if submitted:
+                    break
+            if not submitted:
+                print("could not submit run, returning inf")
+                return float("inf")
             assert isinstance(job_ids, list) and len(job_ids) == 1
             job_id = job_ids[0]
             wait_for_job(job_id)
