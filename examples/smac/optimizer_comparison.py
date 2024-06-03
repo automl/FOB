@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import subprocess
 import time
+import sys
 from smac.facade.multi_fidelity_facade import MultiFidelityFacade as SMAC4MF
 from smac.intensifier.hyperband import Hyperband
 from smac.scenario import Scenario
@@ -17,9 +18,9 @@ from pytorch_fob import Engine
 from pytorch_fob.engine.run import Run
 from pytorch_fob.engine.utils import set_loglevel
 
-RETRY_COUNT = 20
-RETRY_SLEEP = 20
-JOB_STATUS_UPDATE_SLEEP = 10
+RETRY_COUNT = 6*60
+RETRY_SLEEP = 10
+JOB_STATUS_UPDATE_SLEEP = 5
 
 def job_finshed(job_id: int) -> bool:
     result = subprocess.run(['squeue', '--job', str(job_id)], stdout=subprocess.PIPE,
@@ -99,13 +100,12 @@ def get_target_fn(extra_args, experiment_file, slurm=False):
                     submitted = True
                 except subprocess.CalledProcessError:
                     # this happens if SLURM has problems
-                    print("error submitting job waiting and retrying...")
                     time.sleep(RETRY_SLEEP)
                 if submitted:
                     break
             if not submitted:
-                print("could not submit run, returning inf")
-                return float("inf")
+                print("could not submit run, exiting program...", file=sys.stderr)
+                sys.exit(1)
             assert isinstance(job_ids, list) and len(job_ids) == 1
             job_id = job_ids[0]
             wait_for_job(job_id)
