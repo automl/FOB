@@ -11,6 +11,7 @@ from ConfigSpace import (
     Constant
 )
 from pytorch_fob import Engine
+from pytorch_fob.engine.run import Run
 from pytorch_fob.engine.utils import set_loglevel
 
 
@@ -45,27 +46,29 @@ def get_target_fn(extra_args, experiment_file):
         engine.parse_experiment_from_file(experiment_file, extra_args=arglist)
         run = next(engine.runs())  # only get one run
         score = run.start()
-        return 1 - sum(map(lambda x: x["val_acc"], score["validation"])) / len(score["validation"])
+        mean_score = sum(map(lambda x: x[run.task.target_metric], score["validation"])) / len(score["validation"])
+        return mean_score if run.task.target_metric_mode == "min" else 1 - mean_score
     return train
 
 
-def run_smac(target_fn, optimizer_name: str, task_name: str, max_epochs: int, outdir: Path):
+def run_smac(target_fn, args: argparse.Namespace, run: Run):
+    optimizer_name = run.optimizer.name
     configspace = config_space(optimizer_name)
     scenario = Scenario(
-        name=f"FOB_HPO_{task_name}_{optimizer_name}",
+        name=f"FOB_HPO_{run.task.name}_{optimizer_name}",
         configspace=configspace,
         deterministic=True,
-        output_directory=outdir / "smac",
-        seed=42,
-        n_trials=250,
-        max_budget=max_epochs,
-        min_budget=5,
+        output_directory=run.engine.output_dir / "smac",
+        seed=args.seed,
+        n_trials=args.n_trials,
+        max_budget=run.task.max_epochs,
+        min_budget=args.min_budget,
         n_workers=1,
     )
     smac = SMAC4MF(
         target_function=target_fn,
         scenario=scenario,
-        initial_design=SMAC4MF.get_initial_design(scenario=scenario),
+        initial_design=SMAC4MF.get_initial_design(scenario=scenario, max_ratio=0.1),
         intensifier=Hyperband(
             scenario=scenario,
             incumbent_selection="highest_budget",
@@ -85,6 +88,12 @@ if __name__ == "__main__":
                         help="The yaml file specifying the experiment.")
     parser.add_argument("--log_level", type=str, choices=["debug", "info", "warn", "silent"], default="info",
                         help="Set the log level")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="seed for SMAC")
+    parser.add_argument("--n_trials", type=int, default=250,
+                        help="n_trials for SMAC")
+    parser.add_argument("--min_budget", type=int, default=5,
+                        help="minimum budget for SMAC")
     args, extra_args = parser.parse_known_args()
     set_loglevel(args.log_level)
     experiment_file = args.experiment_file
@@ -92,10 +101,6 @@ if __name__ == "__main__":
     engine.parse_experiment_from_file(experiment_file, extra_args=extra_args)
     engine.prepare_data()
     run = next(engine.runs())
-    max_epochs = run.task.max_epochs
-    optimizer_name = run.optimizer.name
-    task_name = run.task.name
-    outdir = run.engine.output_dir
     del engine
-    incumbent = run_smac(get_target_fn(extra_args, experiment_file), optimizer_name, task_name, max_epochs, outdir)
+    incumbent = run_smac(get_target_fn(extra_args, experiment_file), args, run)
     print(incumbent)
