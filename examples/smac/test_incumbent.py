@@ -5,6 +5,7 @@ import argparse
 from pytorch_fob.engine.engine import Engine
 
 def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
+    """the seed is extracted from the runhistory and addes as *engine.seed* to the config"""
     with open(intensifier_file, "r", encoding="utf8") as f:
         content = json.load(f)
         # get the best id and the trajectory
@@ -20,6 +21,31 @@ def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
         content = json.load(f)
         configs = content["configs"]
         config = configs[str(intensifier_id)]
+
+        data = content["data"]
+        # data of runhistory is saved like this
+        # https://automl.github.io/SMAC3/main/_modules/smac/runhistory/runhistory.html#RunHistory
+        # [
+        #         (
+        #             int(k.config_id),
+        #             str(k.instance) if k.instance is not None else None,
+        #             int(k.seed) if k.seed is not None else None,
+        #             float(k.budget) if k.budget is not None else None,
+        #             v.cost,
+        #             v.time,
+        #             v.status,
+        #             v.starttime,
+        #             v.endtime,
+        #             v.additional_info,
+        #         )
+        #    ]
+
+        for _ in data:
+            # we assume that the same seed is used for all runs with this ID
+            if data[0] == intensifier_id:
+                seed = data[2]
+                config["engine.seed"] = seed
+                break
 
     return config
 
