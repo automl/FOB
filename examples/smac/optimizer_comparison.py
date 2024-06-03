@@ -155,7 +155,7 @@ if __name__ == "__main__":
     parser.add_argument("--eta", type=int, default=3,
                         help="eta for Hyperband")
     args, extra_args = parser.parse_known_args()
-    if args.slurm and args.n_workers > 1:
+    if (not args.slurm) and args.n_workers > 1:
         raise ValueError("when not using SLURM only one worker is supported")
     set_loglevel(args.log_level)
     experiment_file = args.experiment_file
