@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 import argparse
 
+from pytorch_fob.engine.engine import Engine
+
 def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
     with open(intensifier_file, "r", encoding="utf8") as f:
         content = json.load(f)
@@ -14,11 +16,8 @@ def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
         incumbent_info = trajectory[-1]
         assert incumbent_info["config_ids"][0] == intensifier_id
 
-        trial = incumbent_info["trial"]
-
     with open(runhistory_file, "r", encoding="utf8") as f:
         content = json.load(f)
-        data = content["data"]
         configs = content["configs"]
         config = configs[str(intensifier_id)]
 
@@ -28,20 +27,17 @@ def get_config(intensifier_file: Path, runhistory_file: Path) -> dict:
 def config_to_fob_input(config: dict):
     arglist = [f"{k}={v}" for k, v in config.items()]
     # maybe add something like this as arg?
-    #arglist += [
-    #    "engine.test=true",
-    #    "engine.validate=false",
-    #    "engine.output_dir=./examples/smac/outputs/fob",
-    #    "engine.data_dir=./examples/smac/data",
-    #]
+    arglist += [
+       "engine.test=true",
+       "engine.plot=false",
+       "engine.resume=true"
+    ]
     return arglist
 
 
-def main(args: argparse.Namespace):
-    
-    intensifier_file = args.directory / "intensifier.json"
-    runhistory_file = args.directory / "runhistory.json"
-    configspace_file = args.directory / "configspace.json"
+def main(args: argparse.Namespace, extra_args: list[str]):
+    intensifier_file = args.smac_directory / "intensifier.json"
+    runhistory_file = args.smac_directory / "runhistory.json"
 
     config = get_config(intensifier_file, runhistory_file)
     print(config)
@@ -51,11 +47,17 @@ def main(args: argparse.Namespace):
     fob_input = config_to_fob_input(config)
     print(fob_input)
 
+    engine = Engine()
+    engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args + fob_input)
+    engine.run_experiment()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="gets the config of the best incumbent"
     )
-    parser.add_argument("directory", type=Path,
+    parser.add_argument("experiment_file", type=Path,
+                        help="The yaml file specifying the experiment.")
+    parser.add_argument("smac_directory", type=Path,
                         help="The directory that hold the intensifier.json and runhistory.json")
     args, extra_args = parser.parse_known_args()
-    main(args)
+    main(args, extra_args)
