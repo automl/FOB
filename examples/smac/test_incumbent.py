@@ -74,7 +74,7 @@ def main(args: argparse.Namespace, extra_args: list[str]):
     print(fob_input)
 
     engine = Engine()
-    engine.parse_experiment_from_file(args.experiment_file, extra_args=extra_args + fob_input)
+    engine.parse_experiment_from_file(args.experiment_file, extra_args=fob_input+extra_args)
     engine.run_experiment()
 
 if __name__ == "__main__":
