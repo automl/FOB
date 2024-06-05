@@ -47,7 +47,10 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         kappa_init_param = int(lr_warmup_steps * config.kappa_init_param)
         kappa_init_method = "warm_start"
     else:
-        kappa_init_param = config.kappa_init_param
+        if config.kappa_init_method == "inflection_point":
+            kappa_init_param = lr_warmup_steps
+        else:
+            kappa_init_param = config.kappa_init_param
         kappa_init_method = config.kappa_init_method
 
     optimizer = AdamCPRfast(

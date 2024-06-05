@@ -93,6 +93,7 @@ def group_parameters_for_cpr_optimizer(model, bias_weight_decay=False,
 
     return param_groups
 
+
 __all__ = ['AdamCPRfast', 'adamcpr']
 
 
@@ -131,12 +132,12 @@ class AdamCPRfast(Optimizer):
         self.reg_function = reg_function
         self.kappa_init_method = kappa_init_method
 
-        if self.kappa_init_method not in ['warm_start', 'uniform', 'dependent', 'grad_1_peak', 'grad_2_peak']:
+        if self.kappa_init_method not in ['warm_start', 'uniform', 'dependent', 'inflection_point']:
             raise ValueError(f"Invalid kappa_init_method: {kappa_init_method}")
         if self.kappa_init_method == "warm_start":
             self.warm_start = kappa_init_param
-        elif self.kappa_init_method == 'grad_1_peak' or self.kappa_init_method == 'grad_2_peak':
-            self.warm_start = 0
+        elif self.kappa_init_method == 'inflection_point':
+            self.warm_start = int(kappa_init_param // 10)
         else:
             self.warm_start = 0
             self.kappa_init_param = kappa_init_param
@@ -218,7 +219,7 @@ class AdamCPRfast(Optimizer):
                         state["kappa"] = torch.tensor([self.kappa_init_param], dtype=torch.float, device=p.device)
                     elif self.kappa_init_method == 'warm_start':
                         state["kappa"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
-                    elif self.kappa_init_method == 'grad_1_peak' or self.kappa_init_method == 'grad_2_peak':
+                    elif self.kappa_init_method == 'inflection_point':
                         state["kappa"] = torch.tensor([1000], dtype=torch.float, device=p.device)
                     elif self.kappa_init_method == 'dependent':
                         if self.reg_function == 'std':
@@ -530,8 +531,6 @@ def _single_tensor_adam(params: List[Tensor],
         # update step
         step_t += 1
 
-
-
         if torch.is_complex(param):
             grad = torch.view_as_real(grad)
             exp_avg = torch.view_as_real(exp_avg)
@@ -618,18 +617,14 @@ def _single_tensor_adam(params: List[Tensor],
                     kappa.add_(huber_loss.mean())
 
 
-            if (kappa_init_method == 'grad_1_peak' or kappa_init_method == 'grad_2_peak') and kappa == 1000:
+            if (kappa_init_method == 'inflection_point') and kappa == 1000:
 
                 current_l2m = param.square().mean()
                 current_reg_gradient = current_l2m - prev_reg
                 current_reg_second_derivative = current_reg_gradient - prev_reg_gradient
 
                 # Peak detection for gradient
-                if kappa_init_method == 'grad_1_peak' and step > 1 and prev_gradient > current_reg_gradient:
-                    kappa.mul_(0).add_(current_l2m)
-
-                # Peak detection for second derivative
-                if kappa_init_method == 'grad_2_peak' and step > 2 and prev_reg_second_derivative > current_reg_second_derivative:
+                if kappa_init_method == 'inflection_point' and step > 1 and prev_gradient > current_reg_gradient:
                     kappa.mul_(0).add_(current_l2m)
 
                 # Update previous values for next iteration
@@ -789,7 +784,7 @@ def _multi_tensor_adam(params: List[Tensor],
             torch._foreach_addcdiv_(device_params, device_exp_avgs, exp_avg_sq_sqrt, step_size)
 
         if weight_decay == 1.0:
-            if kappa_init_method == 'grad_1_peak' or kappa_init_method == 'grad_2_peak':
+            if kappa_init_method == 'inflection_point':
 
                 if reg_function == 'l2':
                     square_params = torch._foreach_pow(device_params, 2)
@@ -811,38 +806,26 @@ def _multi_tensor_adam(params: List[Tensor],
                 else:
                     raise ValueError(f"Unsupported regularization function for grad peak init: {reg_function}")
 
-                iteration = 50
+                iteration = warm_start
 
-                if any([device_kappa == 1000 for device_kappa in device_kappas]) and device_state_steps[
-                    0] % iteration == 0:
+                if any([device_kappa == 1000 for device_kappa in device_kappas]) and device_state_steps[0] % iteration == 0:
 
                     square_params = torch._foreach_pow(device_params, 2)
 
                     current_l2ss = [square_param.sum() for square_param in square_params]
                     if device_state_steps[0] > iteration:
                         current_gradients = torch._foreach_sub(current_l2ss, prev_regs)
-                    if device_state_steps[0] > iteration * 2:
-                        current_reg_second_derivatives = torch._foreach_sub(current_gradients, prev_reg_gradients)
 
-                    if device_state_steps[0] > iteration * 3:
-                        if kappa_init_method == 'grad_1_peak' and device_state_steps[0] > 1:
+                    if device_state_steps[0] > iteration*3:
+                        if kappa_init_method == 'inflection_point' and device_state_steps[0] > 1:
                             for i in range(len(device_params)):
                                 if prev_reg_gradients[i] > current_gradients[i] and device_kappas[i] == 1000:
-                                    current_l2ms = [square_param.mean() for square_param in square_params]
-                                    device_kappas[i].copy_(current_l2ms[i])
-
-                        if kappa_init_method == 'grad_2_peak' and device_state_steps[0] > 2:
-                            for i in range(len(device_params)):
-                                if prev_reg_second_derivatives[i] > current_reg_second_derivatives[i] and device_kappas[i] == 1000:
                                     current_l2ms = [square_param.mean() for square_param in square_params]
                                     device_kappas[i].copy_(current_l2ms[i])
 
                     torch._foreach_copy_(prev_regs, current_l2ss)
                     if device_state_steps[0] > iteration:
                         torch._foreach_copy_(prev_reg_gradients, current_gradients)
-                    if device_state_steps[0] > iteration * 2:
-                        torch._foreach_copy_(prev_reg_second_derivatives, current_reg_second_derivatives)
-
 
             else:
                 if warm_start < device_state_steps[0]:
@@ -949,5 +932,3 @@ def _multi_tensor_adam(params: List[Tensor],
                         square_params = torch._foreach_pow(device_params, 2)
                         new_kappas = [torch.where(param_abs < 1, 0.5 * square_param, param_abs - 0.5).mean() for param_abs, square_params in zip(abs_params, square_params)]
                         torch._foreach_add_(device_kappas, new_kappas)
-                else:
-                    raise NotImplementedError(f"Unsupported kappa_init_method: {kappa_init_method}")

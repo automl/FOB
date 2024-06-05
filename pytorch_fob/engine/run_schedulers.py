@@ -8,7 +8,7 @@ from pytorch_fob.engine.slurm import Slurm
 from pytorch_fob.engine.utils import log_info, log_warn, seconds_to_str, some, str_to_seconds
 
 
-FOB_RUN_SCRIPT = "pytorch_fob.experiment_runner"
+FOB_RUN_SCRIPT = "pytorch_fob.run_experiment"
 FOB_EVAL_SCRIPT = "pytorch_fob.evaluate_experiment"
 
 
@@ -140,7 +140,7 @@ def slurm_array(runs: list[Run], experiment: dict[str, Any]) -> None:
         run_plotting_job(experiment_file, args, log_dir, [job_id], template=run.engine.sbatch_script_template)
 
 
-def slurm_jobs(runs: list[Run], experiment: dict[str, Any]) -> None:
+def slurm_jobs(runs: list[Run], experiment: dict[str, Any]) -> list[int]:
     job_ids = []
     experiment_file = Path()
     for i, run in enumerate(runs, start=1):
@@ -157,6 +157,7 @@ def slurm_jobs(runs: list[Run], experiment: dict[str, Any]) -> None:
         equal_req = ["slurm_log_dir", "sbatch_script_template"]
         argcheck_allequal_engine(runs, equal_req, reason="'engine.plot=true' with 'engine.run_scheduler=slurm_jobs'")
         run_plotting_job(experiment_file, args, log_dir, job_ids, template=runs[0].engine.sbatch_script_template)
+    return job_ids
 
 
 def sequential(runs: Iterable[Run], n_runs: int, experiment: dict[str, Any]):

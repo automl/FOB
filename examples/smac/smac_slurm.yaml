@@ -1,0 +1,11 @@
+task: classification_small
+optimizer:
+  name: adamw_baseline
+engine:
+  data_dir: your_data_dir
+  output_dir: your_output_dir
+  silent: true
+  sbatch_time_factor: 1.4 # adapt to your cluster
+  sbatch_args:
+    partition: your_gpu_partition
+  sbatch_script_template: examples/usage/sbatch_template.sh

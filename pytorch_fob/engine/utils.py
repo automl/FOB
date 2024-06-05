@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Type
 import json
@@ -5,6 +6,21 @@ import math
 import signal
 import torch
 from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, rank_zero_debug, log
+
+
+def set_loglevel(level: str):
+    pytorch_logger = logging.getLogger("lightning.pytorch")
+    match level:
+        case "debug":
+            pytorch_logger.setLevel(logging.DEBUG)
+        case "info":
+            pytorch_logger.setLevel(logging.INFO)
+        case "warn":
+            pytorch_logger.setLevel(logging.WARNING)
+        case "error":
+            pytorch_logger.setLevel(logging.ERROR)
+        case "silent":
+            pytorch_logger.setLevel(logging.CRITICAL)
 
 
 @rank_zero_only
@@ -179,6 +195,16 @@ def concatenate_dict_keys(
         else:
             result[new_key] = v
     return result
+
+
+def sort_dict_recursively(d: dict) -> dict:
+    sorted_dict = {}
+    for k, v in sorted(d.items()):
+        if isinstance(v, dict):
+            sorted_dict[k] = sort_dict_recursively(v)
+        else:
+            sorted_dict[k] = v
+    return sorted_dict
 
 
 class EndlessList(list):

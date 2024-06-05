@@ -1,0 +1,4 @@
+task:
+  name: mnist
+engine:
+  output_dir: neps_example

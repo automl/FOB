@@ -96,7 +96,7 @@ python -m pytorch_fob.dataset_setup experiment.yaml
 
 Then you run the experiment:
 ```bash
-python -m pytorch_fob.experiment_runner experiment.yaml
+python -m pytorch_fob.run_experiment experiment.yaml
 ```
 This runs all tasks with all optimizers and hyperparameter specified inside `experiment.yaml` using grid-search.
 You can either supply one value or a list of values for each entry. Grid-search combines each possible combination.  
@@ -141,7 +141,7 @@ task:
 Full experiment file: [examples/usage/1_single_task.yaml](examples/usage/1_single_task.yaml)
 
 ```bash
-python -m pytorch_fob.experiment_runner examples/usage/1_single_task.yaml
+python -m pytorch_fob.run_experiment examples/usage/1_single_task.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-1/) to see the results.
@@ -180,7 +180,7 @@ AdamW is used 4 (= 2 x 2) times, AdamCPR is used 14 (= 2 x 7) times, for a total
 Full experiment file: [examples/usage/2_comparing_optimizers.yaml](examples/usage/2_comparing_optimizers.yaml)
 
 ```bash
-python -m pytorch_fob.experiment_runner examples/usage/2_comparing_optimizers.yaml
+python -m pytorch_fob.run_experiment examples/usage/2_comparing_optimizers.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-2/) to see the 18 run folders.
@@ -209,7 +209,7 @@ Every task will be run on every seed. By default, the benchmark uses determinist
 Full experiment file: [examples/usage/3_benchmark_optimizers.yaml](examples/usage/3_benchmark_optimizers.yaml)
 
 ```bash
-python -m pytorch_fob.experiment_runner examples/usage/3_benchmark_optimizers.yaml
+python -m pytorch_fob.run_experiment examples/usage/3_benchmark_optimizers.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-3/) to see the results.
@@ -250,7 +250,7 @@ optimizer:
 Full experiment file: [examples/usage/4_multiple_task_versions.yaml](examples/usage/4_multiple_task_versions.yaml)
 
 ```bash
-python -m pytorch_fob.experiment_runner examples/usage/4_multiple_task_versions.yaml
+python -m pytorch_fob.run_experiment examples/usage/4_multiple_task_versions.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-4/) to see the results.
@@ -282,7 +282,14 @@ Full experiment file: [examples/usage/5_slurm.yaml](examples/usage/5_slurm.yaml)
 Running this command without slurm will crash, but save the individual slurm scripts into [`path/to/sbatch_scripts`](examples/usage/outputs/experiment-5/sbatch_scripts) for us to look at. 
 
 ```bash
-python -m pytorch_fob.experiment_runner examples/usage/5_slurm.yaml
+python -m pytorch_fob.run_experiment examples/usage/5_slurm.yaml
 ```
 
 Take a look at the [output directory](examples/usage/outputs/experiment-5/) to see the results.
+
+## License
+This repository is licensed under the Apache License 2.0.
+
+However, please be aware that the repository includes various models and datasets, each of which may have its own licensing terms. It is the responsibility of the users to ensure that they comply with the specific licenses of these models and datasets. 
+
+By using this repository, you agree to respect and comply with all relevant licenses associated with the models and datasets. The Apache License 2.0 applies only to the original content and code provided in this repository.

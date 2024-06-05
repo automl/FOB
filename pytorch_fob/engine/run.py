@@ -74,6 +74,7 @@ class Run():
                 scores["test_best"] = self._test(tester, model, data_module, Path(best_path))
             else:
                 log_info("No best checkpoint found, skipping test.")
+        write_results(scores, self.run_dir / "scores.json")
         return scores
 
     def _train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
@@ -185,6 +186,19 @@ class Run():
             return list(filter(lambda x: x.suffix == ".ckpt", self.checkpoint_dir.iterdir()))
         return []
 
+    def ensure_max_steps(self):
+        """
+        Ensures that `self.task.max_steps` is calculated and set correctly.
+        """
+        if self.task.max_steps is None:
+            max_steps = self._calc_max_steps()
+            self._config[self.task_key]["max_steps"] = max_steps
+            if self._default_config[self.task_key]["max_steps"] is None:
+                self._default_config[self.task_key]["max_steps"] = max_steps
+            self._generate_configs()
+            log_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
+            f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
+
     def _ensure_resume_path(self):
         """
         Ensures that `self.engine.resume` is either a valid Path or None.
@@ -203,19 +217,6 @@ class Run():
             self._generate_configs()
         else:
             raise TypeError(f"Unsupportet type for 'resume', got {type(self.engine.resume)=}.")
-
-    def _ensure_max_steps(self):
-        """
-        Ensures that `self.task.max_steps` is calculated and set correctly.
-        """
-        if self.task.max_steps is None:
-            max_steps = self._calc_max_steps()
-            self._config[self.task_key]["max_steps"] = max_steps
-            if self._default_config[self.task_key]["max_steps"] is None:
-                self._default_config[self.task_key]["max_steps"] = max_steps
-            self._generate_configs()
-            log_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
-            f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
 
     def _calc_max_steps(self) -> int:
         dm = self.get_datamodule()
@@ -270,7 +271,7 @@ class Run():
         run_dir = ",".join(f"{k}={str(v)}" for k, v in sorted(diffs.items())) if diffs else "default"
         if len(run_dir) > 254:  # max file name length
             hashdir = hashlib.md5(run_dir.encode()).hexdigest()
-            log_warn(f"folder name {run_dir} is too long, using {hashdir} instead.")
+            log_info(f"folder name {run_dir} is too long, using {hashdir} instead.")
             run_dir = hashdir
         self.run_dir = base / run_dir
         self.checkpoint_dir = self.run_dir / "checkpoints"

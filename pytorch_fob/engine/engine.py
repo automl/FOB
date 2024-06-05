@@ -1,5 +1,6 @@
 import json
-from typing import Any, Callable, Iterable, Iterator, Literal
+from copy import deepcopy
+from typing import Any, Callable, Iterable, Iterator, Literal, Optional
 from pathlib import Path
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, json_normalize
@@ -8,7 +9,7 @@ from pytorch_fob.engine.grid_search import grid_search
 from pytorch_fob.engine.parser import YAMLParser
 from pytorch_fob.engine.run import Run
 from pytorch_fob.engine.run_schedulers import sequential, slurm_array, slurm_jobs
-from pytorch_fob.engine.utils import log_debug, log_info, log_warn, some
+from pytorch_fob.engine.utils import log_debug, log_info, log_warn, some, sort_dict_recursively
 from pytorch_fob.evaluation import evaluation_path
 from pytorch_fob.evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
 from pytorch_fob.optimizers import optimizer_path, optimizer_names
@@ -34,7 +35,7 @@ class Engine():
         self.default_file_name = "default.yaml"
         self.parser = YAMLParser()
 
-    def run_experiment(self):
+    def run_experiment(self) -> Optional[list[int]]:
         assert len(self._runs) > 0, "No runs in experiment, make sure to call 'parse_experiment' first."
         scheduler = self._runs[0][self.engine_key]["run_scheduler"]
         assert all(map(lambda x: x[self.engine_key]["run_scheduler"] == scheduler, self._runs)), \
@@ -47,11 +48,11 @@ class Engine():
             run = self._make_run(n)
             run.start()
         elif scheduler == "slurm_array":
+            self._block_plotting = True
             slurm_array(list(self.runs()), self._experiment)
-            self._block_plotting = True
         elif scheduler == "slurm_jobs":
-            slurm_jobs(list(self.runs()), self._experiment)
             self._block_plotting = True
+            return slurm_jobs(list(self.runs()), self._experiment)
         else:
             raise ValueError(f"Unsupported run_scheduler: {scheduler=}.")
 
@@ -68,7 +69,8 @@ class Engine():
             [self.optimizer_key, self.task_key],
             [optimizer_names(), task_names()]
         )
-        self._experiment = dict(searchspace)
+        searchspace = sort_dict_recursively(searchspace)
+        self._experiment = deepcopy(searchspace)
         # exclude plotting from gridsearch
         if self.eval_key in searchspace:
             eval_config = searchspace.pop(self.eval_key)

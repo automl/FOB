@@ -1,5 +1,6 @@
 nvidia-smi  # show gpu info
-conda activate fob
+
+# maybe activate conda enviroment
 
 __FOB_COMMAND__
 
