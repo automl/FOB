@@ -12,5 +12,5 @@ pip install -r examples/smac/requirements.txt
 
 ## Example
 ```bash
-python examples/smac/hpo_with_smac.py
+python examples/smac/optimizer_comparison.py
 ```
