@@ -47,7 +47,7 @@ class Run():
         scores: dict[str, _EVALUATE_OUTPUT] = {}
         if any([self.engine.train, self.engine.test]):
             self._ensure_resume_path()
-            self._ensure_max_steps()
+            self.ensure_max_steps()
             torch.set_float32_matmul_precision('high')
             seed_everything(self.engine.seed, workers=True)
             model, data_module = self.get_task()
