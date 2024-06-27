@@ -1,5 +1,5 @@
 import torch
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score, root_mean_squared_error
 from rtdl_revisiting_models import FTTransformer, _CLSEmbedding, LinearEmbeddings, CategoricalEmbeddings
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.engine.parameter_groups import GroupedModel, ParameterGroup, group_named_parameters
@@ -80,7 +80,7 @@ class TabularModel(TaskModel):
         preds = preds.detach().cpu().float().numpy()
         targets = targets.detach().cpu().float().numpy()
         metrics = {
-            "rmse": mean_squared_error(targets, preds, squared=False),
+            "rmse": root_mean_squared_error(targets, preds),
             "r2_score": r2_score(targets, preds)
         }
         for k, v in metrics.items():
