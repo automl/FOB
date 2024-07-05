@@ -6,6 +6,7 @@ from typing import Any, Type
 import torch
 from torch.optim.lr_scheduler import LinearLR, LRScheduler, SequentialLR
 
+from pytorch_fob.engine.configs import OptimizerConfig
 from pytorch_fob.engine.utils import log_info
 from pytorch_fob.optimizers.lr_schedulers.schedulers import IncreasingCosineAnnealingLR
 
@@ -13,6 +14,25 @@ from pytorch_fob.optimizers.lr_schedulers.schedulers import IncreasingCosineAnne
 def warmup_split(max_steps: int, warmup_factor: float) -> tuple[int, int]:
     warmup_steps = int(math.ceil(max_steps * warmup_factor))
     return warmup_steps, max(max_steps - warmup_steps, 1)
+
+
+def warmup_split_from_config(config: OptimizerConfig) -> tuple[int, int]:
+    if config.lr_scheduler.warmup_steps is not None:
+        warmup_steps = config.lr_scheduler.warmup_steps
+        return warmup_steps, config.max_steps - warmup_steps
+    elif config.lr_scheduler.warmup_factor is not None:
+        return warmup_split(config.max_steps, config.lr_scheduler.warmup_factor)
+    else:
+        raise ValueError("Either 'warmup_steps' or 'warmup_factor' should be specified.")
+
+
+def decay_steps_from_config(config: OptimizerConfig) -> int:
+    if config.lr_scheduler.decay_steps is not None:
+        return config.lr_scheduler.decay_steps
+    elif config.lr_scheduler.decay_factor is not None:
+        return int(math.ceil(config.max_steps * config.lr_scheduler.decay_factor))
+    else:
+        raise ValueError("Either 'decay_steps' or 'decay_factor' should be specified.")
 
 
 def linear_warmup(
@@ -36,7 +56,7 @@ def linear_warmup(
         SequentialLR | LRScheduler: The sequential LR scheduler combining the warmup and the actual scheduler.
 
     """
-    return warmup(optimizer, max_steps, warmup_steps, scheduler, scheduler_kwargs, warmup_strategy="linear")
+    return _warmup(optimizer, max_steps, warmup_steps, scheduler, scheduler_kwargs, warmup_strategy="linear")
 
 
 def cosine_warmup(
@@ -60,10 +80,10 @@ def cosine_warmup(
         SequentialLR | LRScheduler: The sequential LR scheduler combining the warmup and the actual scheduler.
 
     """
-    return warmup(optimizer, max_steps, warmup_steps, scheduler, scheduler_kwargs, warmup_strategy="increasing_cosine")
+    return _warmup(optimizer, max_steps, warmup_steps, scheduler, scheduler_kwargs, warmup_strategy="cosine")
 
 
-def warmup(
+def _warmup(
     optimizer: torch.optim.Optimizer,
     max_steps: int,
     warmup_steps: int,
@@ -79,11 +99,14 @@ def warmup(
     if warmup_strategy == "linear":
         warmup_scheduler = LinearLR(
             optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
-    elif warmup_strategy == "increasing_cosine":
+    elif warmup_strategy == "cosine":
         warmup_scheduler = IncreasingCosineAnnealingLR(
             optimizer, T_max=warmup_steps)
     else:
         raise ValueError(f"Unknown warmup strategy: {warmup_strategy}")
     actual_scheduler = scheduler(optimizer, **scheduler_kwargs)
     return SequentialLR(
-        optimizer, schedulers=[warmup_scheduler, actual_scheduler], milestones=[warmup_steps])
+        optimizer,
+        schedulers=[warmup_scheduler, actual_scheduler],
+        milestones=[warmup_steps],
+    )
