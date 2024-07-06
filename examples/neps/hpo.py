@@ -57,7 +57,9 @@ def search_space(run: Run) -> dict:
 def create_exmperiment(run: Run, config: dict) -> dict:
     new_config = run.get_config().copy()
     for k, v in config.items():
-        if k != "epochs":
+        if k == "one_minus_beta1":
+            new_config["optimizer"]["beta1"] = 1 - v
+        elif k != "epochs":
             new_config["optimizer"][k] = v
     return new_config
 

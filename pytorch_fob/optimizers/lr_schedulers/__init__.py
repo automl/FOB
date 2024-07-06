@@ -1,12 +1,18 @@
+from pathlib import Path
 import torch
-from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, PolynomialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, PolynomialLR, StepLR
 from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.engine.utils import log_warn
 from .warmup import cosine_warmup, decay_steps_from_config, linear_warmup, \
                     warmup_split, warmup_split_from_config, _warmup
 from .schedulers import wsd_scheduler
 
-__all__ = ["cosine_warmup", "get_lr_scheduler", "linear_warmup",
+__all__ = ["cosine_warmup", "get_lr_scheduler", "linear_warmup", "lr_schedulers_path",
            "warmup_split", "warmup_split_from_config", "wsd_scheduler"]
+
+
+def lr_schedulers_path() -> Path:
+    return Path(__file__).resolve().parent
 
 
 def get_lr_scheduler(optimizer: torch.optim.Optimizer, config: OptimizerConfig) -> LRScheduler:
@@ -43,6 +49,16 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer, config: OptimizerConfig) 
             eta_min_factor=config.lr_scheduler.eta_min_factor,
             warmup_strategy=config.lr_scheduler.warmup_strategy,
             decay_strategy=config.lr_scheduler.decay_strategy,
+        )
+    elif config.lr_scheduler.scheduler == "stepwise":
+        if config.lr_scheduler.lr_interval != "epoch":
+            log_warn(
+                f"Using stepwise scheduler with interval {config.lr_scheduler.lr_interval}. Make sure to set the step size accordingly."
+            )
+        base_scheduler = StepLR
+        scheduler_kwargs = dict(
+            step_size=config.lr_scheduler.step_size,
+            gamma=config.lr_scheduler.gamma,
         )
     else:
         raise ValueError(f"Unknown scheduler: {config.lr_scheduler.scheduler}")

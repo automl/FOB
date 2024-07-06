@@ -79,7 +79,10 @@ def config_space(optimizer_name: str) -> ConfigurationSpace:
 def get_target_fn(extra_args, experiment_file, slurm=False):
     def train(config: Configuration, seed: int, budget: float) -> float:
         round_budget = round(budget)
-        arglist = extra_args + [f"{k}={v}" for k, v in config.get_dictionary().items()]
+        config_dict = config.get_dictionary()
+        if "optimizer.one_minus_beta1" in config_dict:
+            config_dict["optimizer.beta1"] = 1 - config_dict["optimizer.one_minus_beta1"]
+        arglist = extra_args + [f"{k}={v}" for k, v in config_dict.items()]
         arglist += [
             f"engine.restrict_train_epochs={round_budget}",
             f"engine.seed={seed}",

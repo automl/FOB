@@ -35,7 +35,10 @@ def config_space() -> ConfigurationSpace:
     return cs
 
 def train_mnist(config: Configuration, seed: int, budget: float) -> float:
-    arglist = [f"{k}={v}" for k, v in config.get_dictionary().items()]
+    config_dict = config.get_dictionary()
+    if "optimizer.one_minus_beta1" in config_dict:
+        config_dict["optimizer.beta1"] = 1 - config_dict["optimizer.one_minus_beta1"]
+    arglist = [f"{k}={v}" for k, v in config_dict.items()]
     arglist += [
         f"engine.restrict_train_epochs={math.ceil(budget)}",
         "engine.test=false",

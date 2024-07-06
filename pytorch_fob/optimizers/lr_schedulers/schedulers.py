@@ -69,6 +69,14 @@ class IncreasingCosineAnnealingLR(LRScheduler):
         for base_lr in self.base_lrs]
 
 
+class _ConstantLR(LRScheduler):
+    def __init__(self, optimizer, last_epoch=-1, verbose=False):
+        super().__init__(optimizer, last_epoch, verbose)
+
+    def get_lr(self):
+        return [group['lr'] for group in self.optimizer.param_groups]
+
+
 def wsd_scheduler(
     optimizer: torch.optim.Optimizer,
     max_steps: int,
@@ -118,11 +126,8 @@ def wsd_scheduler(
             raise ValueError(f"Unknown decay strategy: {decay_strategy}")
     else:
         decay_scheduler = None
-    consant_steps = max_steps - warmup_steps - decay_steps
-    if consant_steps > 0:
-        constant_scheduler = ConstantLR(optimizer, total_iters=consant_steps, factor=1.0)
-    else:
-        constant_scheduler = None
+    constant_steps = max_steps - warmup_steps - decay_steps
+    constant_scheduler = _ConstantLR(optimizer) if constant_steps > 0 else None
     schedulers = [s for s in [warmup_scheduler, constant_scheduler, decay_scheduler] if s is not None]
     if len(schedulers) == 1:
         return schedulers[0]

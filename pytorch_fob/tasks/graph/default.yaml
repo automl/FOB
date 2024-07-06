@@ -20,7 +20,8 @@ engine:
 optimizer:
   name: adamw_baseline
   weight_decay: 0
-  eta_min_factor: 1  # reference implementation used no lr scheduling
+  lr_scheduler:
+    eta_min_factor: 1.0  # reference implementation used no lr scheduling
 evaluation:
   plot:
     metric: test_rocauc

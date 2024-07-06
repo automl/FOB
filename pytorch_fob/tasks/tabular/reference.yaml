@@ -22,7 +22,8 @@ optimizer:
   name: adamw_baseline
   learning_rate: 1.e-4
   weight_decay: 1.e-5
-  eta_min_factor: 1.0  # reference implementation used no lr scheduling
+  lr_scheduler:
+    eta_min_factor: 1.0  # reference implementation used no lr scheduling
 evaluation:
   plot:
     metric: test_rmse

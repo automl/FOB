@@ -1,8 +1,8 @@
 from torch.optim import SGD
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
 from pytorch_fob.engine.parameter_groups import GroupedModel
 from pytorch_fob.engine.configs import OptimizerConfig
+from pytorch_fob.optimizers.lr_schedulers import get_lr_scheduler
 
 
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
@@ -15,15 +15,11 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         weight_decay=weight_decay,
         nesterov=config.nesterov
     )
-    scheduler = CosineAnnealingLR(
-        optimizer,
-        T_max=config.max_steps,
-        eta_min=config.eta_min_factor * lr
-    )
+    scheduler = get_lr_scheduler(optimizer, config)
     return {
         "optimizer": optimizer,
         "lr_scheduler": {
             "scheduler": scheduler,
-            "interval": config.lr_interval
+            "interval": config.lr_scheduler.interval
         }
     }

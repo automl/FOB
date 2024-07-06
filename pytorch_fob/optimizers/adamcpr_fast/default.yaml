@@ -1,13 +1,10 @@
 optimizer:
   name: adamcpr
   learning_rate: 1.e-3
-  one_minus_beta1: 0.1
+  beta1: 0.9
   beta2: 0.999
   epsilon: 1.e-8
-  warmup_factor: 0.01
-  eta_min_factor: 0.01
   kappa_init_param: 1.0
   kappa_init_method: warm_start_factor
   reg_function: l2
   kappa_update: 1.0
-  lr_interval: step
