@@ -9,7 +9,7 @@ from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.utilities.types import _EVALUATE_OUTPUT
 import torch
 import yaml
-from pytorch_fob.engine.callbacks import LogParamsAndGrads, PrintEpochWithTime, RestrictTrainEpochs
+from pytorch_fob.engine.callbacks import LogTrainingStats, PrintEpochWithTime, RestrictTrainEpochs
 from pytorch_fob.engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from pytorch_fob.engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
 from pytorch_fob.optimizers.optimizers import Optimizer
@@ -165,6 +165,7 @@ class Run():
     def get_tester(self) -> Trainer:
         return Trainer(
             devices=1,
+            logger=False,
             enable_progress_bar=(not self.engine.silent),
             deterministic=self.engine.deterministic,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
@@ -245,12 +246,17 @@ class Run():
                 check_finite=self.engine.check_finite,
                 log_rank_zero_only=True
             )
-        self._callbacks["lr_monitor"] = LearningRateMonitor(logging_interval=self.optimizer.lr_interval)
-        self._callbacks["extra"] = LogParamsAndGrads(
+        self._callbacks["lr_monitor"] = LearningRateMonitor(
+            logging_interval=self.optimizer.lr_interval,
+            log_momentum=self.engine.log_extra,
+            log_weight_decay=self.engine.log_extra
+        )
+        self._callbacks["extra"] = LogTrainingStats(
             log_gradient=self.engine.log_extra,
             log_params=self.engine.log_extra,
             log_quantiles=self.engine.log_extra,
-            log_every_n_steps=100  # maybe add arg for this?
+            log_momentum=self.engine.log_extra,
+            log_every_n_steps=100
         )
         self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
         if self.engine.restrict_train_epochs is not None:

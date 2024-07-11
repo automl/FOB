@@ -78,17 +78,29 @@ class PrintEpochWithTime(Callback):
             self.time["val_end"] = time.time()
 
 
-class LogParamsAndGrads(Callback):
-    def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_every_n_steps: int):
+def add_metrics_to_stats(stats: dict[str, float], prefix: str, name: str, v: torch.Tensor):
+    stats[f"{prefix}/{name}/mean"] = v.mean().item()
+    stats[f"{prefix}/{name}/abs_mean"] = v.abs().mean().item()
+    stats[f"{prefix}/{name}/std"] = v.std().item()
+    stats[f"{prefix}/{name}/abs_std"] = v.abs().std().item()
+    stats[f"{prefix}/{name}/min"] = v.min().item()
+    stats[f"{prefix}/{name}/max"] = v.max().item()
+    stats[f"{prefix}/{name}/l2_mean"] = (v**2).mean().item()
+    stats[f"{prefix}/{name}/l2_sum"] = (v**2).sum().item()
+
+
+class LogTrainingStats(Callback):
+    def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_momentum: bool, log_every_n_steps: int):
         super().__init__()
         self.log_gradient = log_gradient
         self.log_params = log_params
         self.log_quantiles = log_quantiles
+        self.log_momentum = log_momentum
         self.log_every_n_steps = log_every_n_steps
 
-    def on_before_optimizer_step(self, trainer: pl.Trainer, pl_module: pl.LightningModule, optimizer):
+    def on_before_optimizer_step(self, trainer: pl.Trainer, pl_module: pl.LightningModule, optimizer: torch.optim.Optimizer):
 
-        if trainer.global_step % self.log_every_n_steps == 0 and (self.log_params or self.log_gradient):
+        if trainer.global_step % self.log_every_n_steps == 0 and (self.log_params or self.log_gradient or self.log_momentum):
 
             q = torch.arange(.25, 1, .25).round(decimals=2).to(trainer.model.device)
             stats = {}
@@ -104,13 +116,7 @@ class LogParamsAndGrads(Callback):
 
                         stats[f"param/{k}/mean"] = v_detached.mean().item()
                         if v_detached.shape[0] > 1:
-                            stats[f"param/{k}/std"] = v_detached.std().item()
-                            stats[f"param/{k}/min"] = v_detached.min().item()
-                            stats[f"param/{k}/max"] = v_detached.max().item()
-                            stats[f"param/{k}/abs_mean"] = v_detached.abs().mean().item()
-                            stats[f"param/{k}/abs_std"] = v_detached.abs().std().item()
-                            stats[f"param/{k}/l2m"] = (v_detached**2).mean().item()
-                            stats[f"param/{k}/l2s"] = (v_detached**2).sum().item()
+                            add_metrics_to_stats(stats, "param", k, v_detached)
 
                             if self.log_quantiles and v_detached.size().numel() < 10000000:
                                 deciles = torch.quantile(v_detached.float(), q, interpolation='linear')
@@ -144,18 +150,28 @@ class LogParamsAndGrads(Callback):
 
                         stats[f"grad/{k}/mean"] = grad_data.mean().item()
                         if len(grad_data.shape) > 1 or grad_data.shape[0] > 1:
-                            stats[f"grad/{k}/std"] = grad_data.std().item()
-                            stats[f"grad/{k}/min"] = grad_data.min().item()
-                            stats[f"grad/{k}/max"] = grad_data.max().item()
-                            stats[f"grad/{k}/abs_mean"] = grad_data.abs().mean().item()
-                            stats[f"grad/{k}/mean"] = grad_data.mean().item()
-                            stats[f"grad/{k}/abs_std"] = grad_data.abs().std().item()
-                            stats[f"grad/{k}/std"] = grad_data.std().item()
+                            add_metrics_to_stats(stats, "grad", k, grad_data)
 
                             if self.log_quantiles and grad_data.size().numel() < 10000000:
                                 deciles = torch.quantile(grad_data.float(), q, interpolation='linear')
                                 for q_idx, d_val in enumerate(deciles):
                                     stats[f"grad/{k}/quantile-{q[q_idx]}"] = d_val.item()
+
+            if self.log_momentum:
+                for param_group in optimizer.param_groups:
+                    for name, param in zip(param_group['names'], param_group['params']):
+                        if param in optimizer.state:
+                            state = optimizer.state[param]
+                            if 'exp_avg' in state:
+                                moment1 = state['exp_avg']
+                            elif 'momentum_buffer' in state:
+                                moment1 = state['momentum_buffer']
+                            else:
+                                moment1 = None
+                            if moment1 is not None:
+                                add_metrics_to_stats(stats, "1st_order_momentum", name, moment1)
+                            if 'exp_avg_sq' in state:
+                                add_metrics_to_stats(stats, "2nd_order_momentum", name, state['exp_avg_sq'])
 
             if trainer.loggers is not None and trainer.global_rank == 0:
                 for logger in trainer.loggers:
