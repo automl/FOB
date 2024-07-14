@@ -159,7 +159,8 @@ class Run():
             gradient_clip_val=self.engine.gradient_clip_val,
             gradient_clip_algorithm=self.engine.gradient_clip_alg,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
-            accelerator=self.engine.accelerator
+            accelerator=self.engine.accelerator,
+            log_every_n_steps=self.engine.logging_inteval
         )
 
     def get_tester(self) -> Trainer:
@@ -251,13 +252,10 @@ class Run():
             log_momentum=self.engine.log_extra,
             log_weight_decay=self.engine.log_extra
         )
-        self._callbacks["extra"] = LogTrainingStats(
-            log_gradient=self.engine.log_extra,
-            log_params=self.engine.log_extra,
-            log_quantiles=self.engine.log_extra,
-            log_momentum=self.engine.log_extra,
-            log_every_n_steps=100
-        )
+        if self.engine.log_extra:
+            self._callbacks["extra"] = LogTrainingStats(
+                log_every_n_steps=self.engine.logging_inteval
+            )
         self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
         if self.engine.restrict_train_epochs is not None:
             self._callbacks["restrict_train_epochs"] = RestrictTrainEpochs(self.engine.restrict_train_epochs)

@@ -10,6 +10,7 @@ engine:
   gradient_clip_alg: norm    # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
   gradient_clip_val: null    # DEFAULT: don't clip gradients, expects value in [0, 1]
   log_extra: false           # Activate logging of gradients and more.
+  logging_interval: 50       # Number of steps between each logging step.
   optimize_memory: false     # Use nondeterministic, but memory-efficient algorithms for self-attention
   output_dir: ./experiments  # Where you want to store the results
   plot: true                 # Whether to plot the results.

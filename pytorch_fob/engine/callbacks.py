@@ -90,38 +90,51 @@ def add_metrics_to_stats(stats: dict[str, float], prefix: str, name: str, v: tor
 
 
 class LogTrainingStats(Callback):
-    def __init__(self, log_gradient: bool, log_params: bool, log_quantiles: bool, log_momentum: bool, log_every_n_steps: int):
+    def __init__(
+            self,
+            log_gradient: bool = True,
+            log_params: bool = True,
+            log_quantiles: bool = False,
+            log_momentum: bool = True,
+            log_lrs: bool = True,
+            log_every_n_steps: int = 50
+        ):
         super().__init__()
         self.log_gradient = log_gradient
         self.log_params = log_params
         self.log_quantiles = log_quantiles
         self.log_momentum = log_momentum
+        self.log_lrs = log_lrs
         self.log_every_n_steps = log_every_n_steps
 
-    def on_before_optimizer_step(self, trainer: pl.Trainer, pl_module: pl.LightningModule, optimizer: torch.optim.Optimizer):
+    @rank_zero_only
+    def on_before_optimizer_step(
+            self, trainer: pl.Trainer,
+            pl_module: pl.LightningModule, 
+            optimizer: torch.optim.Optimizer
+        ):
 
-        if trainer.global_step % self.log_every_n_steps == 0 and (self.log_params or self.log_gradient or self.log_momentum):
+        if trainer.global_step % self.log_every_n_steps == 0:
 
             q = torch.arange(.25, 1, .25).round(decimals=2).to(trainer.model.device)
             stats = {}
             for k, v in pl_module.named_parameters():
                 if self.log_params:
-                    if trainer.global_rank == 0:
-                        v_detached = v.detach()
+                    v_detached = v.detach()
 
-                        if torch.isnan(v_detached).sum() > 0:
-                            log_warn(f"# NaN in param {k}")
-                        if torch.isinf(v_detached).sum() > 0:
-                            log_warn(f"# Inf in param {k}")
+                    if torch.isnan(v_detached).sum() > 0:
+                        log_warn(f"# NaN in param {k}")
+                    if torch.isinf(v_detached).sum() > 0:
+                        log_warn(f"# Inf in param {k}")
 
-                        stats[f"param/{k}/mean"] = v_detached.mean().item()
-                        if v_detached.shape[0] > 1:
-                            add_metrics_to_stats(stats, "param", k, v_detached)
+                    stats[f"param/{k}/mean"] = v_detached.mean().item()
+                    if v_detached.shape[0] > 1:
+                        add_metrics_to_stats(stats, "param", k, v_detached)
 
-                            if self.log_quantiles and v_detached.size().numel() < 10000000:
-                                deciles = torch.quantile(v_detached.float(), q, interpolation='linear')
-                                for q_idx, d_val in enumerate(deciles):
-                                    stats[f"param/{k}/quantile-{q[q_idx]}"] = d_val.item()
+                        if self.log_quantiles and v_detached.size().numel() < 10000000:
+                            deciles = torch.quantile(v_detached.float(), q, interpolation='linear')
+                            for q_idx, d_val in enumerate(deciles):
+                                stats[f"param/{k}/quantile-{q[q_idx]}"] = d_val.item()
 
                 if self.log_gradient and v.requires_grad:
 
@@ -130,7 +143,7 @@ class LogTrainingStats(Callback):
                     else:
                         grad_data = v.grad
 
-                    if grad_data is not None and trainer.global_rank == 0:
+                    if grad_data is not None:
                         if torch.isnan(grad_data).sum() > 0:
                             log_warn(f"# NaN in grad {k}")
                         if torch.isinf(grad_data).sum() > 0:
@@ -157,7 +170,7 @@ class LogTrainingStats(Callback):
                                 for q_idx, d_val in enumerate(deciles):
                                     stats[f"grad/{k}/quantile-{q[q_idx]}"] = d_val.item()
 
-            if self.log_momentum:
+            if self.log_momentum or self.log_lrs:
                 for param_group in optimizer.param_groups:
                     for name, param in zip(param_group['names'], param_group['params']):
                         if param in optimizer.state:
@@ -168,11 +181,13 @@ class LogTrainingStats(Callback):
                                 moment1 = state['momentum_buffer']
                             else:
                                 moment1 = None
-                            if moment1 is not None:
+                            if moment1 is not None and self.log_momentum:
                                 add_metrics_to_stats(stats, "1st_order_momentum", name, moment1)
-                            if 'exp_avg_sq' in state:
+                            if 'exp_avg_sq' in state and self.log_momentum:
                                 add_metrics_to_stats(stats, "2nd_order_momentum", name, state['exp_avg_sq'])
+                            if self.log_lrs and 'lr' in state:
+                                stats[f"param/{name}/lr"] = state['lr'].item()
 
-            if trainer.loggers is not None and trainer.global_rank == 0:
+            if trainer.loggers is not None:
                 for logger in trainer.loggers:
                     logger.log_metrics(stats, step=trainer.global_step)
