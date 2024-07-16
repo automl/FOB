@@ -1,4 +1,3 @@
-# Warmup + AdamW + CosineAnnealing
 optimizer:
   name: lion
   learning_rate: 1.e-4

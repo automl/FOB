@@ -4,7 +4,7 @@ Additional LR schedulers
 import math
 import warnings
 import torch
-from torch.optim.lr_scheduler import ConstantLR, LinearLR, LRScheduler, SequentialLR
+from torch.optim.lr_scheduler import LinearLR, LRScheduler, SequentialLR
 
 
 class _CosineAnnealingLR(LRScheduler):
@@ -69,7 +69,7 @@ class IncreasingCosineAnnealingLR(LRScheduler):
         for base_lr in self.base_lrs]
 
 
-class _ConstantLR(LRScheduler):
+class IdentityLR(LRScheduler):
     def __init__(self, optimizer, last_epoch=-1, verbose=False):
         super().__init__(optimizer, last_epoch, verbose)
 
@@ -127,7 +127,7 @@ def wsd_scheduler(
     else:
         decay_scheduler = None
     constant_steps = max_steps - warmup_steps - decay_steps
-    constant_scheduler = _ConstantLR(optimizer) if constant_steps > 0 else None
+    constant_scheduler = IdentityLR(optimizer) if constant_steps > 0 else None
     schedulers = [s for s in [warmup_scheduler, constant_scheduler, decay_scheduler] if s is not None]
     if len(schedulers) == 1:
         return schedulers[0]

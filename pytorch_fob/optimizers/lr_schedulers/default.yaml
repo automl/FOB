@@ -1,7 +1,7 @@
 # defaults for lr schedulers
 optimizer:
   lr_scheduler:
-    scheduler: cosine        # can be either 'cosine', 'poly', 'stepwise' or 'wsd'
+    scheduler: cosine        # can be either 'cosine', 'exponential', 'identity', 'poly', 'stepwise', 'wsd' or none
     eta_min_factor: 0.01     # the minimum learning rate of the lr scheduler given as a factor of the base learning rate
     interval: step           # Whether to update the learning rate every step or every epoch. Options: 'step', 'epoch'
     warmup_factor: 0.01      # factor of the total steps used for warmup
@@ -14,4 +14,4 @@ optimizer:
     decay_factor: 0.1        # only used if lr_scheduler == 'wsd'
     decay_steps: null        # only used if lr_scheduler == 'wsd', overrides decay_factor
     step_size: 10            # only used if lr_scheduler == 'stepwise'
-    gamma: 0.1               # only used if lr_scheduler == 'stepwise'
+    gamma: 0.1               # only used if lr_scheduler == 'stepwise' or 'exponential'

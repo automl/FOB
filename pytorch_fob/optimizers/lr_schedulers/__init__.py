@@ -1,13 +1,13 @@
 from pathlib import Path
 import torch
-from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, PolynomialLR, StepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, ExponentialLR, LRScheduler, PolynomialLR, StepLR
 from pytorch_fob.engine.configs import OptimizerConfig
 from pytorch_fob.engine.utils import log_warn
 from .warmup import cosine_warmup, decay_steps_from_config, linear_warmup, \
                     warmup_split, warmup_split_from_config, _warmup
-from .schedulers import wsd_scheduler
+from .schedulers import wsd_scheduler, IdentityLR
 
-__all__ = ["cosine_warmup", "get_lr_scheduler", "linear_warmup", "lr_schedulers_path",
+__all__ = ["cosine_warmup", "get_lr_scheduler", "IdentityLR", "linear_warmup", "lr_schedulers_path",
            "warmup_split", "warmup_split_from_config", "wsd_scheduler"]
 
 
@@ -27,6 +27,9 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer, config: OptimizerConfig) 
         LRScheduler: The learning rate scheduler based on the specified configuration.
     """
     warmup_steps, scheduler_steps = warmup_split_from_config(config)
+    if config.lr_scheduler.warmup_steps is None or config.lr_scheduler.scheduler == "identity":
+        base_scheduler = IdentityLR
+        scheduler_kwargs = dict()
     if config.lr_scheduler.scheduler == "cosine":
         base_scheduler = CosineAnnealingLR
         scheduler_kwargs = dict(
@@ -58,6 +61,11 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer, config: OptimizerConfig) 
         base_scheduler = StepLR
         scheduler_kwargs = dict(
             step_size=config.lr_scheduler.step_size,
+            gamma=config.lr_scheduler.gamma,
+        )
+    elif config.lr_scheduler.scheduler == "exponential":
+        base_scheduler = ExponentialLR
+        scheduler_kwargs = dict(
             gamma=config.lr_scheduler.gamma,
         )
     else:
