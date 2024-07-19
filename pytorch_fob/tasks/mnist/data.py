@@ -1,16 +1,18 @@
+import torch
 from torch.utils.data import random_split
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from pytorch_fob.engine.configs import TaskConfig
+
 from pytorch_fob.tasks import TaskDataModule
 
 
 class MNISTDataModule(TaskDataModule):
-    def __init__(self, config: TaskConfig):
-        super().__init__(config)
+    def __init__(self, data_dir, seed=None):
+        super().__init__(data_dir)
         # split can also be a fraction self.train_val_split
         # [55000, 5000] is taken from https://lightning.ai/docs/pytorch/stable/data/datamodule.html
         self.train_val_split = [55000, 5000]
+        self.seed = seed
 
         # TODO: check values
         # https://lightning.ai/docs/pytorch/stable/data/datamodule.html
@@ -29,9 +31,14 @@ class MNISTDataModule(TaskDataModule):
         """
         # Assign train/val datasets for use in dataloaders
         if stage == "fit":
+            generator = torch.Generator()
+            if self.seed is not None:
+                generator = generator.manual_seed(self.seed)
             mnist_full = MNIST(str(self.data_dir), train=True, transform=self.transform)
             # TODO (Zachi) confirm seed everything makes this reproducable:
-            self.data_train, self.data_val = random_split(mnist_full, self.train_val_split)
+            self.data_train, self.data_val = random_split(
+                mnist_full, self.train_val_split, generator=generator
+            )
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test":
