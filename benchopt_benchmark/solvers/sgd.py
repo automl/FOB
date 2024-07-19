@@ -26,7 +26,7 @@ class Solver(BaseSolver):
         'weight_decay': [1e-4],
         'momentum': [0.9],
         'nesterov': [True],
-        'max_steps': [200],
+        'max_epochs': [200],
         'eta_min_factor': [0.1],
         'lr_interval': ['step'],
         'batch_size': [64]
@@ -53,8 +53,8 @@ class Solver(BaseSolver):
                     eta_min_factor=self.eta_min_factor,
                 ),
                 benchopt=dict(
-                    max_steps=self.max_steps,
-                    max_epochs=30,
+                    max_epochs=self.max_epochs,
+                    max_steps=200,
                 ),
             )
         )
@@ -68,7 +68,7 @@ class Solver(BaseSolver):
         #         trainer.should_stop = not cb()
 
         self.trainer = Trainer(
-            max_epochs=3,
+            max_epochs=self.max_epochs,
             # callbacks=[BenchoptCallback()]
         )
         self.trainer.fit(self.model, self.data_module)

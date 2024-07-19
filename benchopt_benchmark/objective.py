@@ -19,11 +19,12 @@ class Objective(BaseObjective):
     def evaluate_result(self, trainer: Trainer):
         score_train = trainer.validate(self.model, datamodule=self.data_module)
         score_val = trainer.validate(self.model, datamodule=self.data_module)
+        # TODO - Need to load the best checkpoint
         score_test = trainer.test(self.model, datamodule=self.data_module)
         return dict(
             **{f'train_{k}': v for k, v in score_train[0].items()},
             **{f'val_{k}': v for k, v in score_val[0].items()},
-            **{f'test_{k}': v for k, v in score_test[0].items()},
+            **{f'test_last_{k}': v for k, v in score_test[0].items()},
             value=score_val[0]['val_loss'],
         )
 
