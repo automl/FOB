@@ -162,7 +162,7 @@ def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[st
             default_value = default[key]
             if default_value == value:
                 continue
-            if isinstance(value, dict):
+            if isinstance(value, dict) and isinstance(default_value, dict):
                 diff[key] = dict_differences(value, default_value)
             else:
                 diff[key] = value

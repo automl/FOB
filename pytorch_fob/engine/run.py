@@ -248,13 +248,12 @@ class Run():
                 log_rank_zero_only=True
             )
         self._callbacks["lr_monitor"] = LearningRateMonitor(
-            logging_interval=self.optimizer.lr_interval,
-            log_momentum=self.engine.log_extra,
-            log_weight_decay=self.engine.log_extra
+            logging_interval=self.optimizer.lr_interval
         )
         if self.engine.log_extra:
             self._callbacks["extra"] = LogTrainingStats(
-                log_every_n_steps=self.engine.logging_inteval
+                log_every_n_steps=self.engine.logging_inteval,
+                **(self.engine.log_extra if isinstance(self.engine.log_extra, dict) else {})
             )
         self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
         if self.engine.restrict_train_epochs is not None:
