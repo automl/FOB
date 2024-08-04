@@ -1,8 +1,11 @@
 import importlib
-from typing import Any
+import time
+from typing import Any, Callable, Optional
 from pathlib import Path
 from lightning import LightningModule, LightningDataModule
+from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from pytorch_fob.optimizers import Optimizer
@@ -30,17 +33,31 @@ class TaskModel(LightningModule):
             optimizer: Optimizer,
             config: TaskConfig,
             **kwargs: Any
-            ) -> None:
+    ) -> None:
         super().__init__(**kwargs)
         self.config = config
         self.optimizer = optimizer
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
+        self.optimizer_times_ms = []
 
     def forward(self, *args, **kwargs):
         return self.model.forward(*args, **kwargs)
 
     def configure_optimizers(self) -> OptimizerLRScheduler:
         return self.optimizer.configure_optimizers(self.model)
+
+    def optimizer_step(
+        self,
+        epoch: int,
+        batch_idx: int,
+        optimizer: torch.optim.Optimizer | LightningOptimizer,
+        optimizer_closure: Optional[Callable[[], Any]] = None,
+    ) -> None:
+        start = time.time_ns()
+        optimizer.step(closure=optimizer_closure)  # type: ignore
+        end = time.time_ns()
+        duration_ms = (end - start) / 1e6
+        self.optimizer_times_ms.append(duration_ms)
 
 
 class TaskDataModule(LightningDataModule):

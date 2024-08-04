@@ -38,6 +38,33 @@ class RestrictTrainEpochs(Callback):
         self.skip_first = True
 
 
+class OptimizerTime(Callback):
+    def __init__(self):
+        super().__init__()
+        self.total_mean_optimizer_step_time_ms: float = 0.0
+        self.total_epochs: int = 0
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        epoch_mean = sum(pl_module.optimizer_times_ms) / len(pl_module.optimizer_times_ms)
+        pl_module.log('mean_optimizer_step_time_ms', epoch_mean, on_step=False, on_epoch=True)
+
+        # Update the running mean
+        self.total_epochs += 1
+        self.total_mean_optimizer_step_time_ms = (
+            (self.total_mean_optimizer_step_time_ms * (self.total_epochs - 1)) + epoch_mean
+        ) / self.total_epochs
+
+        # Reset the optimizer step times for the next epoch
+        pl_module.optimizer_times_ms = []  # type: ignore
+
+    def state_dict(self) -> dict[str, float | int]:
+        return {"running_mean": self.total_mean_optimizer_step_time_ms, "total_epochs": self.total_epochs}
+
+    def load_state_dict(self, state_dict: dict[str, float | int]):
+        self.total_mean_optimizer_step_time_ms = state_dict["running_mean"]
+        self.total_epochs = state_dict["total_epochs"]  # type: ignore
+
+
 class PrintEpochWithTime(Callback):
     def __init__(self, active: bool = True):
         super().__init__()

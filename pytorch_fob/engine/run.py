@@ -9,7 +9,7 @@ from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
 from lightning.pytorch.utilities.types import _EVALUATE_OUTPUT
 import torch
 import yaml
-from pytorch_fob.engine.callbacks import LogTrainingStats, PrintEpochWithTime, RestrictTrainEpochs
+from pytorch_fob.engine.callbacks import LogTrainingStats, OptimizerTime, PrintEpochWithTime, RestrictTrainEpochs
 from pytorch_fob.engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
 from pytorch_fob.engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
 from pytorch_fob.optimizers.optimizers import Optimizer
@@ -54,6 +54,7 @@ class Run():
         if self.engine.train:
             trainer = self.get_trainer()
             self._train(trainer, model, data_module)
+            scores["mean_optimizer_time_ms"] = self._callbacks["optimizer_time"].total_mean_optimizer_step_time_ms
         if self.engine.validate:
             scores["validation"] = self._validate(trainer, model, data_module)
         if self.engine.test:
@@ -227,6 +228,7 @@ class Run():
         return calculate_steps(self.task.max_epochs, train_samples, self.engine.devices, self.task.batch_size)
 
     def _init_callbacks(self):
+        self._callbacks["optimizer_time"] = OptimizerTime()
         self._callbacks["best_model_checkpoint"] = ModelCheckpoint(
             dirpath=self.checkpoint_dir,
             filename="best-{epoch}-{step}",
