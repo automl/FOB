@@ -46,7 +46,7 @@ class OptimizerTime(Callback):
 
     def on_train_epoch_end(self, trainer, pl_module):
         epoch_mean = sum(pl_module.optimizer_times_ms) / len(pl_module.optimizer_times_ms)
-        pl_module.log('mean_optimizer_step_time_ms', epoch_mean, on_step=False, on_epoch=True)
+        pl_module.log('mean_optimizer_step_time_ms', epoch_mean, on_step=False, on_epoch=True, sync_dist=True)
 
         # Update the running mean
         self.total_epochs += 1
@@ -122,9 +122,13 @@ class LogTrainingStats(Callback):
             log_gradient: bool = True,
             log_params: bool = True,
             log_quantiles: bool = False,
-            log_momentum: bool = True,
+            log_momentum: bool = False,
             log_lrs: bool = True,
-            log_every_n_steps: int = 50
+            log_every_n_steps: int = 50,
+            change_log_interval_every_n_steps: Optional[int] = None,
+            log_interval_factor: float = 2.0,
+            min_log_interval: int = 1,
+            max_log_interval: Optional[int] = None
         ):
         super().__init__()
         self.log_gradient = log_gradient
@@ -133,6 +137,20 @@ class LogTrainingStats(Callback):
         self.log_momentum = log_momentum
         self.log_lrs = log_lrs
         self.log_every_n_steps = log_every_n_steps
+        self.change_log_interval_every_n_steps = change_log_interval_every_n_steps
+        self.log_interval_factor = log_interval_factor
+        self.min_log_interval = min_log_interval
+        self.max_log_interval = max_log_interval
+
+    def _check_and_adjust_log_interval(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
+        if self.change_log_interval_every_n_steps is not None:
+            if trainer.global_step > 0 and trainer.global_step % self.change_log_interval_every_n_steps == 0:
+                self.log_every_n_steps = math.ceil(self.log_every_n_steps * self.log_interval_factor)
+                self.log_every_n_steps = max(self.log_every_n_steps, self.min_log_interval)
+                if self.max_log_interval is not None:
+                    self.log_every_n_steps = min(self.log_every_n_steps, self.max_log_interval)
+        pl_module.log("logging_interval", self.log_every_n_steps)
+        return trainer.global_step % self.log_every_n_steps == 0
 
     @rank_zero_only
     def on_before_optimizer_step(
@@ -141,7 +159,7 @@ class LogTrainingStats(Callback):
             optimizer: torch.optim.Optimizer
         ):
 
-        if trainer.global_step % self.log_every_n_steps == 0:
+        if self._check_and_adjust_log_interval(trainer, pl_module):
 
             q = torch.arange(.25, 1, .25).round(decimals=2).to(trainer.model.device)
             stats = {}
