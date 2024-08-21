@@ -151,11 +151,12 @@ def convert_type_inside_dict(d: dict, src: Type, tgt: Type) -> dict:
 
 def dict_differences(custom: dict[str, Any], default: dict[str, Any]) -> dict[str, Any]:
     """
+    Recursively returns a dictionary with the items in `custom` that are different or missing from `default`.
+
     Example:
     >>> dict_differences({"hi": 3, "bla": {"a": 2, "b": 2}}, {"hi": 2, "bla": {"a": 1, "b": 2}})
     {'hi': 3, 'bla': {'a': 2}}
     """
-    assert set(default.keys()).issubset(set(custom.keys()))
     diff: dict[str, Any] = {}
     for key, value in custom.items():
         if key in default:
