@@ -48,6 +48,8 @@ class OptimizerTime(Callback):
         self.total_epochs: int = 0
 
     def on_train_epoch_end(self, trainer, pl_module):
+        if len(pl_module.optimizer_times_ms) == 0:
+            return
         epoch_mean = sum(pl_module.optimizer_times_ms) / len(pl_module.optimizer_times_ms)
         pl_module.log("mean_optimizer_step_time_ms", epoch_mean, on_step=False, on_epoch=True, sync_dist=True)
 
@@ -106,7 +108,9 @@ class PrintEpochWithTime(Callback):
             self.time["val_end"] = time.time()
 
 
-def metric_fn(metric: str, v: torch.Tensor):
+def metric_fn(metric: str, v: torch.Tensor, override: Optional[float] = None) -> float:
+    if override is not None:
+        return override
     match metric:
         case "mean":
             return v.mean().item()
@@ -140,9 +144,10 @@ def add_metrics_to_stats(
     name: str,
     v: torch.Tensor,
     metrics: Iterable[str],
+    override: Optional[float] = None,
 ):
     for metric in metrics:
-        stats[f"{prefix}/{name}/{metric}"] = metric_fn(metric, v)
+        stats[f"{prefix}/{name}/{metric}"] = metric_fn(metric, v, override=override)
 
 
 class LogTrainingStats(Callback):
@@ -158,7 +163,7 @@ class LogTrainingStats(Callback):
         log_interval_factor: float = 2.0,
         min_log_interval: int = 1,
         max_log_interval: Optional[int] = None,
-        metrics: Iterable[str] = ("mean", "abs_mean", "std", "abs_std", "min", "max", "l1", "l2"),
+        metrics: Iterable[str] = ("mean", "abs_mean", "std", "abs_std", "min", "max", "l1", "l2", "sq_mean"),
     ):
         super().__init__()
         self.log_gradient = log_gradient
@@ -186,86 +191,81 @@ class LogTrainingStats(Callback):
     @rank_zero_only
     def on_before_optimizer_step(self, trainer: Trainer, pl_module: LightningModule, optimizer: torch.optim.Optimizer):
         if self._check_and_adjust_log_interval(trainer, pl_module):
-            q = torch.arange(0.25, 1, 0.25).round(decimals=2).to(trainer.model.device)
             stats = {}
-            for k, v in pl_module.named_parameters():
-                if self.log_params or self.log_lrs:
-                    v_detached = v.detach()
+            q = torch.arange(0.25, 1, 0.25).round(decimals=2).to(trainer.model.device)
+            for param_group in optimizer.param_groups:
+                for name, param in zip(param_group["names"], param_group["params"]):
+                    if self.log_params or self.log_lrs:
+                        v_detached = param.detach()
 
-                if self.log_params:
-                    if torch.isnan(v_detached).sum() > 0:
-                        log_warn(f"# NaN in param {k}")
-                    if torch.isinf(v_detached).sum() > 0:
-                        log_warn(f"# Inf in param {k}")
+                    if self.log_params:
+                        if torch.isnan(v_detached).sum() > 0:
+                            log_warn(f"# NaN in param {name}")
+                        if torch.isinf(v_detached).sum() > 0:
+                            log_warn(f"# Inf in param {name}")
 
-                    stats[f"param/{k}/mean"] = v_detached.mean().item()
-                    if v_detached.shape[0] > 1:
-                        add_metrics_to_stats(stats, "param", k, v_detached, self.metrics)
+                        add_metrics_to_stats(stats, "param", name, v_detached, self.metrics)
 
                         if self.log_quantiles and v_detached.size().numel() < 10000000:
                             deciles = torch.quantile(v_detached.float(), q, interpolation="linear")
                             for q_idx, d_val in enumerate(deciles):
-                                stats[f"param/{k}/quantile-{q[q_idx]}"] = d_val.item()
+                                stats[f"param/{name}/quantile-{q[q_idx]}"] = d_val.item()
 
-                if (self.log_gradient or self.log_lrs) and v.requires_grad:
-                    if trainer.num_devices > 1:
-                        grad_data = deepspeed.utils.safe_get_full_grad(v)
+                    if (self.log_gradient or self.log_lrs) and param.requires_grad:
+                        if trainer.num_devices > 1:
+                            grad_data = deepspeed.utils.safe_get_full_grad(param)
+                        else:
+                            grad_data = param.grad
                     else:
-                        grad_data = v.grad
+                        grad_data = None
 
                     if grad_data is not None:
                         if torch.isnan(grad_data).sum() > 0:
-                            log_warn(f"# NaN in grad {k}")
+                            log_warn(f"# NaN in grad {name}")
                         if torch.isinf(grad_data).sum() > 0:
-                            log_warn(f"# Inf in grad {k}")
+                            log_warn(f"# Inf in grad {name}")
 
                         if self.log_gradient:
                             if torch.isnan(grad_data).sum() > 0 or torch.isinf(grad_data).sum() > 0:
-                                stats[f"grad/{k}/mean"] = -10
-                                if len(grad_data.shape) > 1 or grad_data.shape[0] > 1:
-                                    stats[f"grad/{k}/std"] = -10
-                                    stats[f"grad/{k}/min"] = -10
-                                    stats[f"grad/{k}/max"] = -10
-                                    stats[f"grad/{k}/abs_mean"] = -10
-                                    stats[f"grad/{k}/abs_std"] = -10
-                                    if self.log_quantiles and grad_data.size().numel() < 10000000:
-                                        for q_idx, _ in enumerate(q):
-                                            stats[f"param/{k}/quantile-{q[q_idx]}"] = -10
+                                add_metrics_to_stats(stats, "grad", name, grad_data, self.metrics, override=-10.0)
+                                if self.log_quantiles and grad_data.size().numel() < 10000000:
+                                    for q_idx, _ in enumerate(q):
+                                        stats[f"param/{name}/quantile-{q[q_idx]}"] = -10
 
-                            stats[f"grad/{k}/mean"] = grad_data.mean().item()
+                            stats[f"grad/{name}/mean"] = grad_data.mean().item()
                             if len(grad_data.shape) > 1 or grad_data.shape[0] > 1:
-                                add_metrics_to_stats(stats, "grad", k, grad_data, self.metrics)
+                                add_metrics_to_stats(stats, "grad", name, grad_data, self.metrics)
 
                                 if self.log_quantiles and grad_data.size().numel() < 10000000:
                                     deciles = torch.quantile(grad_data.float(), q, interpolation="linear")
                                     for q_idx, d_val in enumerate(deciles):
-                                        stats[f"grad/{k}/quantile-{q[q_idx]}"] = d_val.item()
+                                        stats[f"grad/{name}/quantile-{q[q_idx]}"] = d_val.item()
 
                         if self.log_lrs:
                             grad_norm = vector_norm(grad_data)
                             param_norm = vector_norm(v_detached)
                             effective_lr = (grad_norm / param_norm).item() if param_norm != 0 else 0.0
-                            stats[f"param/{k}/effective_lr"] = effective_lr
+                            stats[f"param/{name}/effective_lr"] = effective_lr
 
-            if self.log_momentum or self.log_lrs:
-                for param_group in optimizer.param_groups:
-                    for name, param in zip(param_group["names"], param_group["params"]):
+                    if self.log_momentum or self.log_lrs:
                         if param in optimizer.state:
                             state = optimizer.state[param]
-                            if "exp_avg" in state:
-                                moment1 = state["exp_avg"]
-                            elif "momentum_buffer" in state:
-                                moment1 = state["momentum_buffer"]
-                            else:
-                                moment1 = None
-                            if moment1 is not None and self.log_momentum:
-                                add_metrics_to_stats(stats, "1st_order_momentum", name, moment1, self.metrics)
-                            if "exp_avg_sq" in state and self.log_momentum:
-                                add_metrics_to_stats(
-                                    stats, "2nd_order_momentum", name, state["exp_avg_sq"], self.metrics
-                                )
-                            if self.log_lrs and "lr" in state:
-                                stats[f"param/{name}/lr"] = state["lr"].item()
+                        else:
+                            state = {}
+
+                    if self.log_momentum:
+                        if "exp_avg" in state:
+                            moment1 = state["exp_avg"]
+                        elif "momentum_buffer" in state:
+                            moment1 = state["momentum_buffer"]
+                        else:
+                            moment1 = None
+                        if moment1 is not None:
+                            add_metrics_to_stats(stats, "1st_order_momentum", name, moment1, self.metrics)
+                        if "exp_avg_sq" in state:
+                            add_metrics_to_stats(stats, "2nd_order_momentum", name, state["exp_avg_sq"], self.metrics)
+                    if self.log_lrs and "lr" in state:
+                        stats[f"param/{name}/lr"] = state["lr"].item()
 
             if trainer.loggers is not None:
                 for logger in trainer.loggers:
