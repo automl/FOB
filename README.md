@@ -13,20 +13,20 @@ A benchmark should state the following for each task: time taken per optimizatio
 
 We try to cover a large range of deep learning tasks in this benchmark.
 
-Instructions on how to write your own task can be found [here](tasks/README.md)
+Instructions on how to write your own task can be found [here](pytorch_fob/tasks/README.md)
 
 ### Available Tasks
 
 | Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ---- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
-| [mnist](tasks/mnist) | MNIST | MLP | Image Classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
-| [classification](tasks/classification) | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image Classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
-| [classification_small](tasks/classification_small) | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image Classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
-| [segmentation](tasks/segmentation) | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 35.6 | 5h | 4 gpu |
-| [graph](tasks/graph) | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | Graph Property Prediction | ROC-AUC | 0.77 | 20min | 1 gpu |
-| [graph_tiny](tasks/graph_tiny) | [Cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.82 | 1min | 1 gpu |
-| [tabular](tasks/tabular) | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | Tabular Regression | Test RMSE | 0.40 | 2 min | 1 gpu |
-| [translation](tasks/translation) | [WMT17(en-de)](https://machinetranslate.org/wmt17) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | Machine Translation | BLEU (sacrebleu) | 26.3 | 6h | 4 gpus |
+| [mnist](pytorch_fob/tasks/mnist) | MNIST | MLP | Image Classification | Top-1 Accuracy | 0.97 | 1 min | 1 gpu |
+| [classification](pytorch_fob/tasks/classification) | [Imagenet-64x64](https://patrykchrabaszcz.github.io/Imagenet32/) | [Wide ResNet](https://arxiv.org/pdf/1605.07146.pdf) | Image Classification | Top-1 Accuracy | 0.69 | 4h | 4 gpu |
+| [classification_small](pytorch_fob/tasks/classification_small) | [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html) | [Resnet18](https://arxiv.org/pdf/1512.03385.pdf) | Image Classification | Top-1 Accuracy | 0.77 | 10 min | 1 gpu |
+| [segmentation](pytorch_fob/tasks/segmentation) | [MIT Scene Parse](http://sceneparsing.csail.mit.edu/) | [SegFormer](https://arxiv.org/abs/2105.15203) | Semantic Segmentation | Intersection over Union (IoU) | 35.6 | 5h | 4 gpu |
+| [graph](pytorch_fob/tasks/graph) | [ogbg-molhiv](https://ogb.stanford.edu/docs/graphprop/#ogbg-mol) | [Graph Isomorphism Network (GIN)](https://arxiv.org/pdf/1810.00826.pdf) | Graph Property Prediction | ROC-AUC | 0.77 | 20min | 1 gpu |
+| [graph_tiny](pytorch_fob/tasks/graph_tiny) | [Cora](https://paperswithcode.com/sota/node-classification-on-cora) | [GCN](https://arxiv.org/abs/1609.02907) | Node Classification | Accuracy | 0.82 | 1min | 1 gpu |
+| [tabular](pytorch_fob/tasks/tabular) | [California Housing](https://www.dcc.fc.up.pt/~ltorgo/Regression/cal_housing.html) | [FT Transformer](https://arxiv.org/pdf/2106.11959.pdf) | Tabular Regression | Test RMSE | 0.40 | 2 min | 1 gpu |
+| [translation](pytorch_fob/tasks/translation) | [WMT17(en-de)](https://machinetranslate.org/wmt17) | [T5 small](https://jmlr.org/papers/volume21/20-074/20-074.pdf) | Machine Translation | BLEU (sacrebleu) | 26.3 | 6h | 4 gpus |
 
 ## Optimizer and Scheduler
 
@@ -39,7 +39,7 @@ We currently have the following optimizers:
 | adamcpr | [AdamCPR](https://arxiv.org/abs/2311.09058v2) | [Cosine Annealing](https://arxiv.org/abs/1608.03983) with linear warmup |
 | sgd_baseline | Stochastic Gradient Descent | [Cosine Annealing](https://arxiv.org/abs/1608.03983) |
 
-How to write your own can be found [here](optimizers/README.md)
+Instructions on how to add your own optimizer can be found [here](pytorch_fob/optimizers/README.md)
 
 ## Usage Instructions
 
@@ -113,7 +113,7 @@ engine:
 ```
 ## Usage Examples
 
-In the following you can find example use cases for experiments. Here we will focus on running the training and testing pipeline. For instructions on how to plot the results, refer to the [evaluation/README.md](evaluation/README.md). 
+In the following you can find example use cases for experiments. Here we will focus on running the training and testing pipeline. For instructions on how to plot the results, refer to the [evaluation/README.md](pytorch_fob/evaluation/README.md). 
 
 In these examples we will perform 'dry-runs' by setting the following parameters in the `experiment.yaml`:
 
