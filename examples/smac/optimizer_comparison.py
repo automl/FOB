@@ -63,9 +63,9 @@ def config_space(optimizer_name: str) -> ConfigurationSpace:
     cs.add_hyperparameter(Float("optimizer.learning_rate", (1.e-5, 1.e-1), log=True))
     cs.add_hyperparameter(Float("optimizer.eta_min_factor", (1.e-3, 1.e-1), log=True))
     cs.add_hyperparameter(Float("optimizer.warmup_factor", (1.e-3, 1.e-0), log=True))
-    if optimizer_name in ["adamw_baseline", "sgd_baseline"]:
+    if optimizer_name in ["adamw_baseline", "sgd_baseline", "radam", "sophia", "lion"]:
         cs.add_hyperparameter(Float("optimizer.weight_decay", (1.e-5, 1.e-0), log=True))
-    if optimizer_name in ["adamw_baseline", "adamcpr_fast"]:
+    if optimizer_name in ["adamw_baseline", "adamcpr_fast", "radam", "sophia", "lion"]:
         cs.add_hyperparameter(Float("optimizer.one_minus_beta1", (1e-2, 2e-1), log=True))
         cs.add_hyperparameter(Float("optimizer.beta2", (0.9, 0.999)))
     if optimizer_name == "sgd_baseline":
@@ -73,13 +73,20 @@ def config_space(optimizer_name: str) -> ConfigurationSpace:
     if optimizer_name == "adamcpr_fast":
         cs.add_hyperparameter(Integer("optimizer.kappa_init_param", (1, 19550), log=True))
         cs.add_hyperparameter(Constant("optimizer.kappa_init_method", "warm_start"))
+    if optimizer_name == "sophia":
+        cs.add_hyperparameter(Float("optimizer.rho", (0.01, 0.1)))
+    if optimizer_name == "lion":
+        cs.add_hyperparameter(Constant("optimizer.decoupled_weight_decay", True))
     return cs
 
 
 def get_target_fn(extra_args, experiment_file, slurm=False):
     def train(config: Configuration, seed: int, budget: float) -> float:
         round_budget = round(budget)
-        arglist = extra_args + [f"{k}={v}" for k, v in config.get_dictionary().items()]
+        config_dict = config.get_dictionary()
+        if "optimizer.one_minus_beta1" in config_dict:
+            config_dict["optimizer.beta1"] = 1 - config_dict["optimizer.one_minus_beta1"]
+        arglist = extra_args + [f"{k}={v}" for k, v in config_dict.items()]
         arglist += [
             f"engine.restrict_train_epochs={round_budget}",
             f"engine.seed={seed}",

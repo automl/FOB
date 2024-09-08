@@ -1,0 +1,7 @@
+optimizer:
+  name: lion
+  learning_rate: 1.e-4
+  beta1: 0.9
+  beta2: 0.999
+  weight_decay: 0.0
+  decoupled_weight_decay: false  # whether to use decoupled weight decay

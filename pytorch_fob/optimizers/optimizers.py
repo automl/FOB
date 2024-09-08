@@ -14,7 +14,7 @@ def optimizer_path(name: str) -> Path:
 
 
 def optimizer_names() -> list[str]:
-    EXCLUDE = ["__pycache__"]
+    EXCLUDE = ["__pycache__", "lr_schedulers"]
     return [d.name for d in Path(__file__).parent.iterdir() if d.is_dir() and d.name not in EXCLUDE]
 
 

@@ -1,0 +1,9 @@
+# RAdam based on: https://github.com/LiyuanLucasLiu/RAdam
+optimizer:
+  name: radam  # same as folder name
+  learning_rate: 1.e-3  # RAdam parameter 
+  beta1: 0.9            # RAdam parameter
+  beta2: 0.999          # RAdam parameter
+  weight_decay: 0.01    # RAdam parameter
+  epsilon: 1.e-8        # RAdam parameter
+  # for lr scheduler parameters see `lr_schedulers/default.yaml`

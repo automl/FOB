@@ -12,7 +12,7 @@ from pytorch_fob.engine.run_schedulers import sequential, slurm_array, slurm_job
 from pytorch_fob.engine.utils import log_debug, log_info, log_warn, some, sort_dict_recursively
 from pytorch_fob.evaluation import evaluation_path
 from pytorch_fob.evaluation.plot import create_figure, get_output_file_path, save_files, set_plotstyle
-from pytorch_fob.optimizers import optimizer_path, optimizer_names
+from pytorch_fob.optimizers import lr_schedulers_path, optimizer_path, optimizer_names
 from pytorch_fob.tasks import task_path, task_names
 
 
@@ -200,6 +200,7 @@ class Engine():
             # order from higher to lower in hierarchy
             runs[i] = self._fill_named_from_default(runs[i], self.task_key, task_path)
             runs[i] = self._fill_named_from_default(runs[i], self.optimizer_key, optimizer_path)
+            runs[i] = self._fill_unnamed_from_default(runs[i], lr_schedulers_path)
             runs[i] = self._fill_unnamed_from_default(runs[i], engine_path)
             runs[i] = self._fill_unnamed_from_default(runs[i], evaluation_path)
 

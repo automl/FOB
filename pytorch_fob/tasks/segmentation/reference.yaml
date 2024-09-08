@@ -6,9 +6,10 @@ optimizer:
   name: adamw_baseline
   learning_rate: 6.e-4  # using 10x higher learning rate because we decrease the lr of the backbone instead of increasing the lr of the head.
   weight_decay: 0.01
-  lr_scheduler: poly
-  lr_power: 1.0
-  warmup_steps: 1500
+  lr_scheduler:
+    scheduler: poly
+    lr_power: 1.0
+    warmup_steps: 1500
 engine:
   devices: 8
   sbatch_args:
