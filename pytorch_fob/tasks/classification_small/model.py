@@ -1,9 +1,11 @@
 import torch
 from torch import nn
+from torch.nn import init
 from torchvision.models import resnet18
-from pytorch_fob.tasks import TaskModel
+
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.optimizers import Optimizer
+from pytorch_fob.tasks import TaskModel
 
 
 class CIFAR100Model(TaskModel):
@@ -20,7 +22,11 @@ class CIFAR100Model(TaskModel):
         # pooling small images is bad
         if not config.model.maxpool:
             model.maxpool = nn.Identity()  # type:ignore
+
         super().__init__(model, optimizer, config)
+
+        # init weights
+        self._init_weights(config)
         self.loss_fn = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -54,3 +60,20 @@ class CIFAR100Model(TaskModel):
         loss = self.loss_fn(preds, labels)
         self.log(log_label, loss)
         return loss
+
+    def _init_weights(self, config: TaskConfig):
+        if config.model.init_fn is None:
+            return
+        fn_name = config.model.init_fn
+        if hasattr(init, f"{fn_name}_"):
+            init_fn = getattr(init, f"{fn_name}_")
+        elif hasattr(init, fn_name):
+            init_fn = getattr(init, fn_name)
+        else:
+            raise ValueError(f"{fn_name} is not a valid init function")
+        self._init_conv_weights(init_fn, **(config.model.init_fn_kwargs or {}))
+
+    def _init_conv_weights(self, init_fn, **kwargs):
+        for m in self.model.modules():
+            if isinstance(m, nn.Conv2d):
+                init_fn(m.weight, **kwargs)

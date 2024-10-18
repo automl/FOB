@@ -11,6 +11,8 @@ task:
     kernel_size: 3
     padding: 1
     maxpool: false
+    init_fn: null  # use a differnt init function for conv layers
+    init_fn_kwargs: {}
   train_transforms:
     random_crop:
       use: true
