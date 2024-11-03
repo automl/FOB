@@ -1,0 +1,12 @@
+# hyperparameters submitted by the authors for the algoperf benchmark
+optimizer:
+  name: adamw_schedulefree
+  learning_rate: 2.5e-3
+  beta1: 0.9
+  beta2: 0.9955159689799007
+  weight_decay: 0.08121616522670176
+  epsilon: 1.e-8
+  weight_lr_power: 2.0
+  r: 0.75
+  lr_scheduler:
+    warmup_factor: 0.2

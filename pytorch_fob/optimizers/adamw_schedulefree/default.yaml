@@ -1,0 +1,11 @@
+# default hyperparameters for adamw_schedulefree
+optimizer:
+  name: adamw_schedulefree
+  learning_rate: 2.5e-3
+  beta1: 0.9
+  beta2: 0.999
+  epsilon: 1.e-8
+  weight_decay: 0.0
+  r: 0.0
+  weight_lr_power: 2.0
+  # for lr scheduler parameters see `lr_schedulers/default.yaml`
