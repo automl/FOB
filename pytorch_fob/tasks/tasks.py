@@ -1,16 +1,18 @@
 import importlib
 import time
-from typing import Any, Callable, Optional
 from pathlib import Path
-from lightning import LightningModule, LightningDataModule
+from typing import Any, Callable, Optional
+
+import torch
+from lightning import LightningDataModule, LightningModule
 from lightning.pytorch.core.optimizer import LightningOptimizer
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
-import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from pytorch_fob.optimizers import Optimizer
+
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.optimizers import Optimizer
 
 
 def import_task(name: str):
@@ -117,3 +119,11 @@ class TaskDataModule(LightningDataModule):
             num_workers=self.workers,
             collate_fn=self.collate_fn
         )
+
+    @property
+    def train_samples(self):
+        return len(self.data_train)
+    
+    @property
+    def val_samples(self):
+        return len(self.data_val)

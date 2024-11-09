@@ -1,17 +1,33 @@
 import hashlib
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Any, Optional
 
-from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
-from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
-from lightning.pytorch.loggers import Logger, TensorBoardLogger, CSVLogger
-from lightning.pytorch.utilities.types import _EVALUATE_OUTPUT
 import torch
 import yaml
+from lightning import Callback, LightningDataModule, LightningModule, Trainer, seed_everything
+from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.loggers import CSVLogger, Logger, TensorBoardLogger
+from lightning.pytorch.utilities.types import _EVALUATE_OUTPUT
+
 from pytorch_fob.engine.callbacks import LogTrainingStats, OptimizerTime, PrintEpochWithTime, RestrictTrainEpochs
 from pytorch_fob.engine.configs import EngineConfig, EvalConfig, OptimizerConfig, TaskConfig
-from pytorch_fob.engine.utils import AttributeDict, EndlessList, calculate_steps, concatenate_dict_keys, convert_type_inside_dict, dict_differences, findfirst, path_to_str_inside_dict, precision_with_fallback, seconds_to_str, trainer_strategy, write_results, log_warn, log_info
+from pytorch_fob.engine.utils import (
+    AttributeDict,
+    EndlessList,
+    calculate_steps,
+    concatenate_dict_keys,
+    convert_type_inside_dict,
+    dict_differences,
+    findfirst,
+    log_info,
+    log_warn,
+    path_to_str_inside_dict,
+    precision_with_fallback,
+    seconds_to_str,
+    trainer_strategy,
+    write_results,
+)
 from pytorch_fob.optimizers.optimizers import Optimizer
 from pytorch_fob.tasks.tasks import TaskDataModule, TaskModel, import_task
 
@@ -161,7 +177,7 @@ class Run():
             gradient_clip_algorithm=self.engine.gradient_clip_alg,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
             accelerator=self.engine.accelerator,
-            log_every_n_steps=self.engine.logging_inteval
+            log_every_n_steps=self.engine.logging_interval
         )
 
     def get_tester(self) -> Trainer:
@@ -224,7 +240,7 @@ class Run():
     def _calc_max_steps(self) -> int:
         dm = self.get_datamodule()
         dm.setup("fit")
-        train_samples = len(dm.data_train)
+        train_samples = dm.train_samples
         return calculate_steps(self.task.max_epochs, train_samples, self.engine.devices, self.task.batch_size)
 
     def _init_callbacks(self):
@@ -253,9 +269,10 @@ class Run():
             logging_interval=self.optimizer.lr_interval
         )
         if self.engine.log_extra:
+            kwargs: dict = self.engine.log_extra if isinstance(self.engine.log_extra, dict) else {}
             self._callbacks["extra"] = LogTrainingStats(
-                log_every_n_steps=self.engine.logging_inteval,
-                **(self.engine.log_extra if isinstance(self.engine.log_extra, dict) else {})
+                log_every_n_steps=self.engine.logging_interval,
+                **kwargs
             )
         self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
         if self.engine.restrict_train_epochs is not None:
