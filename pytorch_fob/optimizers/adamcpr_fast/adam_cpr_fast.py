@@ -14,6 +14,9 @@ from torch.optim.optimizer import (
 __all__ = ["AdamCPR", "adam_cpr"]
 
 
+KAPPA_WARMUP = -1
+
+
 class AdamCPR(Optimizer):
     def __init__(
         self,
@@ -57,10 +60,11 @@ class AdamCPR(Optimizer):
         if self.kappa_init_method == "warm_start":
             self.warm_start = int(kappa_init_param)
         elif self.kappa_init_method == "inflection_point":
+            # TODO: add reg_step_size instead
             self.warm_start = int(kappa_init_param // 10)
         else:
             self.warm_start = 0
-            self.kappa_init_param = kappa_init_param
+        self.kappa_init_param = kappa_init_param
 
         self.kappa_update = kappa_update
 
@@ -146,7 +150,7 @@ class AdamCPR(Optimizer):
                     elif self.kappa_init_method == "warm_start":
                         state["kappa"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
                     elif self.kappa_init_method == "inflection_point":
-                        state["kappa"] = torch.tensor([1000], dtype=torch.float, device=p.device)
+                        state["kappa"] = torch.tensor([KAPPA_WARMUP], dtype=torch.float, device=p.device)
                     elif self.kappa_init_method == "dependent":
                         if self.reg_function == "std":
                             state["kappa"] = self.kappa_init_param * torch.std(p).detach()
@@ -422,6 +426,24 @@ def huber_update(param, lagmul, kappa, kappa_update):
 #     param.addcmul_(grad_elr, lagmul, value=-1)
 
 
+@torch.jit.script
+def set_kappa(reg_function: str, param: Tensor, kappa: Tensor):
+    if reg_function == "l2":
+        kappa.mul_(0).add_(param.square().mean())
+    elif reg_function == "std":
+        kappa.mul_(0).add_(param.std())
+    elif reg_function == "l1":
+        kappa.mul_(0).add_(param.abs().mean())
+    elif reg_function == "huber":
+        param_abs = param.abs()
+        huber_loss = torch.where(param_abs < 1, 0.5 * param.square(), param_abs - 0.5)
+        kappa.mul_(0).add_(huber_loss.mean())
+    # elif reg_function == "elr":
+    #     kappa.mul_(0).add_(grad.square().mean() / param.square().mean().add_(eps))
+    else:
+        raise ValueError(f"Unsupported regularization function: {reg_function}")
+
+
 def _single_tensor_adam(
     params: List[Tensor],
     grads: List[Tensor],
@@ -542,7 +564,7 @@ def _single_tensor_adam(
             param.addcdiv_(exp_avg, denom, value=-step_size)
 
         if weight_decay == 1.0:
-            if step > warm_start:
+            if step > warm_start and not kappa == KAPPA_WARMUP:
                 if reg_function == "l2":
                     l2_update(param, lagmul, kappa, kappa_update)
                 elif reg_function == "std":
@@ -556,29 +578,16 @@ def _single_tensor_adam(
                 else:
                     raise ValueError(f"Unsupported regularization function: {reg_function}")
             elif kappa_init_method == "warm_start" and step == warm_start:
-                if reg_function == "l2":
-                    kappa.add_(param.square().mean())
-                elif reg_function == "std":
-                    kappa.add_(param.std())
-                elif reg_function == "l1":
-                    kappa.add_(param.abs().mean())
-                elif reg_function == "huber":
-                    param_abs = param.abs()
-                    huber_loss = torch.where(param_abs < 1, 0.5 * param.square(), param_abs - 0.5)
-                    kappa.add_(huber_loss.mean())
-                # elif reg_function == 'elr':
-                #     kappa.add_(grad.square().mean() / param.square().mean().add_(eps))
-                else:
-                    raise ValueError(f"Unsupported regularization function: {reg_function}")
+                set_kappa(reg_function, param, kappa)
 
-            if (kappa_init_method == "inflection_point") and kappa == 1000:
+            elif (kappa_init_method == "inflection_point") and kappa == KAPPA_WARMUP:
                 current_l2m = param.square().mean()
                 current_reg_gradient = current_l2m - prev_reg
                 current_reg_second_derivative = current_reg_gradient - prev_reg_gradient
 
                 # Peak detection for gradient
-                if kappa_init_method == "inflection_point" and step > 1 and prev_reg_gradient > current_reg_gradient:
-                    kappa.mul_(0).add_(current_l2m)
+                if step > 1 and prev_reg_gradient > current_reg_gradient:
+                    set_kappa(reg_function, param, kappa)
 
                 # Update previous values for next iteration
                 prev_reg = current_l2m
@@ -775,12 +784,13 @@ def _multi_tensor_adam(
                         lagmul.clip_(min=0.0)
                     torch._foreach_addcmul_(device_params, device_params, device_lagmuls, -2)
                 else:
-                    raise ValueError(f"Unsupported regularization function for grad peak init: {reg_function}")
+                    raise ValueError(f"Unsupported regularization function for inflection point init: {reg_function}")
 
+                # TODO: add reg_step_size instead
                 iteration = warm_start
 
                 if (
-                    any([device_kappa == 1000 for device_kappa in device_kappas])
+                    any([device_kappa == KAPPA_WARMUP for device_kappa in device_kappas])
                     and device_state_steps[0] % iteration == 0
                 ):
                     square_params = torch._foreach_pow(device_params, 2)
@@ -792,7 +802,7 @@ def _multi_tensor_adam(
                     if device_state_steps[0] > iteration * 3:
                         if kappa_init_method == "inflection_point" and device_state_steps[0] > 1:
                             for i in range(len(device_params)):
-                                if prev_reg_gradients[i] > current_gradients[i] and device_kappas[i] == 1000:
+                                if prev_reg_gradients[i] > current_gradients[i] and device_kappas[i] == KAPPA_WARMUP:
                                     current_l2ms = [square_param.mean() for square_param in square_params]
                                     device_kappas[i].copy_(current_l2ms[i])
 
