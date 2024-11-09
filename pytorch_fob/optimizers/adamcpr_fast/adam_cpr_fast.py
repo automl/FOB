@@ -1,7 +1,7 @@
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from torch import Tensor
+from torch import Tensor, tensor
 from torch.optim.optimizer import (
     Optimizer,
     _default_to_fused_or_foreach,
@@ -301,10 +301,10 @@ def adam_cpr(
     if not torch._utils.is_compiling() and not all(isinstance(t, torch.Tensor) for t in state_steps):
         raise RuntimeError("API has changed, `state_steps` argument must contain a list of singleton tensors")
 
-    if foreach and torch.jit.is_scripting():
+    if foreach and torch.jit.is_scripting():  # type: ignore
         raise RuntimeError("torch.jit.script not supported with foreach optimizers")
 
-    if foreach and not torch.jit.is_scripting():
+    if foreach and not torch.jit.is_scripting():  # type: ignore
         func = _multi_tensor_adam
     else:
         func = _single_tensor_adam
@@ -453,7 +453,7 @@ def _single_tensor_adam(
 ):
     assert grad_scale is None and found_inf is None
 
-    if torch.jit.is_scripting():
+    if torch.jit.is_scripting():  # type: ignore
         # this assert is due to JIT being dumb and not realizing that the ops below
         # have overloads to handle both float and Tensor lrs, so we just assert it's
         # a float since most people using JIT are using floats
@@ -474,7 +474,7 @@ def _single_tensor_adam(
         # If compiling, the compiler will handle cudagraph checks, see note [torch.compile x capturable]
         if not torch._utils.is_compiling() and capturable:
             assert (param.is_cuda and step_t.is_cuda) or (
-                param.is_xla and step_t.is_xla
+                param.is_xla and step_t.is_xla  # type: ignore
             ), "If capturable=True, params and state_steps must be CUDA or XLA tensors."
 
         # update step
@@ -577,7 +577,7 @@ def _single_tensor_adam(
                 current_reg_second_derivative = current_reg_gradient - prev_reg_gradient
 
                 # Peak detection for gradient
-                if kappa_init_method == "inflection_point" and step > 1 and prev_gradient > current_reg_gradient:
+                if kappa_init_method == "inflection_point" and step > 1 and prev_reg_gradient > current_reg_gradient:
                     kappa.mul_(0).add_(current_l2m)
 
                 # Update previous values for next iteration
@@ -635,22 +635,25 @@ def _multi_tensor_adam(
 
     assert not differentiable, "_foreach ops don't support autograd"
 
-    grouped_tensors = Optimizer._group_tensors_by_device_and_dtype(
-        [
-            params,
-            grads,
-            exp_avgs,
-            exp_avg_sqs,
-            max_exp_avg_sqs,
-            lagmuls,
-            kappas,
-            kappa_updates,
-            prev_regs,
-            prev_reg_gradients,
-            prev_reg_second_derivatives,
-            state_steps,
-        ]
+    grouped_tensors: Dict[Tuple[torch.device, torch.dtype], Tuple[List[List[Tensor]], List[Tensor]]] = (
+        Optimizer._group_tensors_by_device_and_dtype(
+            [
+                params,
+                grads,
+                exp_avgs,
+                exp_avg_sqs,
+                max_exp_avg_sqs,
+                lagmuls,
+                kappas,
+                kappa_updates,
+                prev_regs,
+                prev_reg_gradients,
+                prev_reg_second_derivatives,
+                state_steps,
+            ]  # type: ignore
+        )
     )
+
     for (
         device_params,
         device_grads,
@@ -661,7 +664,7 @@ def _multi_tensor_adam(
         device_kappas,
         device_kappa_updates,
         device_prev_regs,
-        device_prev_reg_gradients,
+        device_prev_reg_gradients,  # TODO: use or remove these
         device_prev_reg_second_derivatives,
         device_state_steps,
     ), _ in grouped_tensors.values():
@@ -705,7 +708,7 @@ def _multi_tensor_adam(
             torch._foreach_neg_(bias_correction2)
 
             # foreach_div doesn't allow a scalar as the first arg
-            torch._foreach_div_(bias_correction1, lr)
+            torch._foreach_div_(bias_correction1, lr)  # type: ignore[arg-type] (lr will be tensor here due to assert in __init__)
             torch._foreach_reciprocal_(bias_correction1)
 
             torch._foreach_sqrt_(bias_correction2)
@@ -737,7 +740,7 @@ def _multi_tensor_adam(
 
             step_size = _stack_if_compiling([(lr / bc) * -1 for bc in bias_correction1])
 
-            bias_correction2_sqrt = [_dispatch_sqrt(bc) for bc in bias_correction2]
+            bias_correction2_sqrt = [tensor(_dispatch_sqrt(bc)) for bc in bias_correction2]
 
             if amsgrad:
                 # Maintains the maximum of all 2nd moment running avg. till now
@@ -821,7 +824,7 @@ def _multi_tensor_adam(
                         abs_params = torch._foreach_abs(device_params)
                         std_params, ns = [], []
                         for device_param in device_params:
-                            std_params.append(device_param.str().unsqueeze(0))
+                            std_params.append(device_param.std().unsqueeze(0))
                             ns.append(device_param.numel() - 1)
 
                         mean_params = [device_param.mean() for device_param in device_params]
