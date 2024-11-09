@@ -8,3 +8,5 @@ optimizer:
   kappa_init_method: warm_start_factor
   reg_function: l2
   kappa_update: 1.0
+  foreach: null
+  regularize_all: false

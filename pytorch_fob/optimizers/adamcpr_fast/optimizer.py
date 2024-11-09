@@ -3,12 +3,12 @@ Fast implementation of Constrained Parameter Regularization proposed in: https:/
 """
 
 from lightning.pytorch.utilities.types import OptimizerLRScheduler
+
 from pytorch_fob.engine.configs import OptimizerConfig
 from pytorch_fob.engine.parameter_groups import GroupedModel
-from pytorch_fob.optimizers.adamcpr_fast.adam_cpr_fast import AdamCPRfast
 from pytorch_fob.optimizers.lr_schedulers import get_lr_scheduler, warmup_split_from_config
 
-
+from .adam_cpr_fast import AdamCPR
 
 
 def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> OptimizerLRScheduler:
@@ -28,7 +28,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
             kappa_init_param = config.kappa_init_param
         kappa_init_method = config.kappa_init_method
 
-    optimizer = AdamCPRfast(
+    optimizer = AdamCPR(
         params=parameter_groups,
         lr=lr,
         betas=(config.beta1, config.beta2),
@@ -36,13 +36,9 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         kappa_init_param=kappa_init_param,
         kappa_init_method=kappa_init_method,
         reg_function=config.reg_function,
-        kappa_update=config.kappa_update
+        kappa_update=config.kappa_update,
+        foreach=config.foreach,
+        regularize_all=config.regularize_all,
     )
     scheduler = get_lr_scheduler(optimizer, config)
-    return {
-        "optimizer": optimizer,
-        "lr_scheduler": {
-            "scheduler": scheduler,
-            "interval": config.lr_scheduler.interval
-        }
-    }
+    return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "interval": config.lr_scheduler.interval}}
