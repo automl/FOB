@@ -17,6 +17,10 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
 
     parameter_groups = model.grouped_parameters(lr=lr, weight_decay=weight_decay)
 
+    if config.regularize_all:
+        for pg in parameter_groups:
+            pg["weight_decay"] = 1.0
+
     lr_warmup_steps, _ = warmup_split_from_config(config)
     if config.kappa_init_method == "warm_start_factor":
         kappa_init_param = int(lr_warmup_steps * config.kappa_init_param)
@@ -38,7 +42,6 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         reg_function=config.reg_function,
         kappa_update=config.kappa_update,
         foreach=config.foreach,
-        regularize_all=config.regularize_all,
     )
     scheduler = get_lr_scheduler(optimizer, config)
     return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "interval": config.lr_scheduler.interval}}
