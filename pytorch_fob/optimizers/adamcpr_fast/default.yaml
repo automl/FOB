@@ -10,3 +10,4 @@ optimizer:
   kappa_update: 1.0
   foreach: null
   regularize_all: false
+  reduce_kappa: false

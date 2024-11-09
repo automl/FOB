@@ -28,6 +28,7 @@ class AdamCPR(Optimizer):
         kappa_init_param: float = 1000,
         kappa_init_method: str = "warm_start",
         reg_function: str = "l2",
+        reduce_kappa: bool = False,
         kappa_update: float = 1.0,
         amsgrad: bool = False,
         *,
@@ -66,6 +67,7 @@ class AdamCPR(Optimizer):
         self.kappa_init_param = kappa_init_param
 
         self.kappa_update = kappa_update
+        self.reduce_kappa = reduce_kappa
 
         defaults = dict(
             lr=lr,
@@ -248,6 +250,7 @@ class AdamCPR(Optimizer):
                 weight_decay=group["weight_decay"],
                 warm_start=self.warm_start,
                 reg_function=self.reg_function,
+                reduce_kappa=self.reduce_kappa,
                 kappa_init_method=self.kappa_init_method,
                 eps=group["eps"],
                 maximize=group["maximize"],
@@ -287,6 +290,7 @@ def adam_cpr(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    reduce_kappa: bool,
     kappa_init_method: str,
     eps: float,
     maximize: bool,
@@ -332,6 +336,7 @@ def adam_cpr(
         weight_decay=weight_decay,
         warm_start=warm_start,
         reg_function=reg_function,
+        reduce_kappa=reduce_kappa,
         kappa_init_method=kappa_init_method,
         eps=eps,
         maximize=maximize,
@@ -343,7 +348,7 @@ def adam_cpr(
 
 
 @torch.jit.script
-def l2_update(param, lagmul, kappa, kappa_update):
+def l2_update(param, lagmul, kappa, kappa_update) -> Tensor:
     n = param.numel()
     sum_l2norm = param.square().sum()
 
@@ -355,9 +360,11 @@ def l2_update(param, lagmul, kappa, kappa_update):
     lagmul.add_(param_specific_lagmul_rate * constraint_value).clip_(min=0.0)
     param.addcmul_(param, lagmul, value=-2)
 
+    return sum_l2norm
+
 
 @torch.jit.script
-def l1_update(param, lagmul, kappa, kappa_update):
+def l1_update(param, lagmul, kappa, kappa_update) -> Tensor:
     n = param.numel()
     sum_l1norm = param.abs().sum()
 
@@ -369,9 +376,11 @@ def l1_update(param, lagmul, kappa, kappa_update):
     lagmul.add_(param_specific_lagmul_rate * constraint_value).clip_(min=0.0)
     param.addcmul_(param.sign(), lagmul, value=-1)
 
+    return sum_l1norm
+
 
 @torch.jit.script
-def std_update(param, lagmul, kappa, kappa_update):
+def std_update(param, lagmul, kappa, kappa_update) -> Tensor:
     n = param.numel()
     std_dev = param.std()
     constraint_value = std_dev - kappa
@@ -384,9 +393,11 @@ def std_update(param, lagmul, kappa, kappa_update):
     lagmul.add_(kappa_update * constraint_value).clip_(min=0.0)
     param.addcmul_(grad_std_dev, lagmul, value=-1)
 
+    return std_dev
+
 
 @torch.jit.script
-def huber_update(param, lagmul, kappa, kappa_update):
+def huber_update(param, lagmul, kappa, kappa_update) -> Tensor:
     n = param.numel()
 
     param_abs = param.abs()
@@ -403,6 +414,8 @@ def huber_update(param, lagmul, kappa, kappa_update):
 
     grad_huber = torch.where(huber_idx, param, param.sign())
     param.addcmul_(grad_huber, lagmul, value=-1)
+
+    return sum_huber_loss
 
 
 # @torch.jit.script
@@ -466,6 +479,7 @@ def _single_tensor_adam(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    reduce_kappa: bool,
     kappa_init_method: str,
     eps: float,
     maximize: bool,
@@ -564,6 +578,10 @@ def _single_tensor_adam(
 
         if weight_decay == 1.0:
             if step > warm_start and not kappa == KAPPA_WARMUP:
+                if reduce_kappa:
+                    old_lagmul = lagmul.clone()
+
+                # update lagmul
                 if reg_function == "l2":
                     l2_update(param, lagmul, kappa, kappa_update)
                 elif reg_function == "std":
@@ -576,6 +594,9 @@ def _single_tensor_adam(
                 #     elr_update(param, lagmul, kappa, kappa_update, grad)
                 else:
                     raise ValueError(f"Unsupported regularization function: {reg_function}")
+
+                if reduce_kappa and old_lagmul > 0 and lagmul == 0:
+                    set_kappa(reg_function, param, kappa)
             elif kappa_init_method == "warm_start" and step == warm_start:
                 set_kappa(reg_function, param, kappa)
 
@@ -621,12 +642,17 @@ def _multi_tensor_adam(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    reduce_kappa: bool,
     kappa_init_method: str,
     eps: float,
     maximize: bool,
     capturable: bool,
     differentiable: bool,
 ):
+    if reduce_kappa:
+        # TODO: implement reduce_kappa
+        raise NotImplementedError("reduce_kappa not implemented for _multi_tensor_adam, use _single_tensor_adam instead")
+
     if len(params) == 0:
         return
 
