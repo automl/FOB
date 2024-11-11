@@ -34,6 +34,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
 
     optimizer = AdamCPR(
         params=parameter_groups,
+        train_steps=config.max_steps,
         lr=lr,
         betas=(config.beta1, config.beta2),
         eps=config.epsilon,
