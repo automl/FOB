@@ -243,7 +243,6 @@ class Run():
 
     def _calc_max_steps(self) -> int:
         dm = self.get_datamodule()
-        dm.setup("fit")
         train_samples = dm.train_samples
         return calculate_steps(self.task.max_epochs, train_samples, self.engine.devices, self.task.batch_size)
 

@@ -1,6 +1,6 @@
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.optimizers import Optimizer
-from pytorch_fob.tasks import TaskModel, TaskDataModule
+from pytorch_fob.tasks import TaskDataModule, TaskModel
 from pytorch_fob.tasks.translation.data import WMTDataModule
 from pytorch_fob.tasks.translation.model import WMTModel
 

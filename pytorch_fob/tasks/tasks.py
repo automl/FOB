@@ -122,8 +122,12 @@ class TaskDataModule(LightningDataModule):
 
     @property
     def train_samples(self):
+        if not hasattr(self, "data_train"):
+            self.setup("fit")
         return len(self.data_train)
     
     @property
     def val_samples(self):
+        if not hasattr(self, "data_val"):
+            self.setup("validate")
         return len(self.data_val)
