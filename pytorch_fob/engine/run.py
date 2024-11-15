@@ -97,11 +97,15 @@ class Run():
     def _train(self, trainer: Trainer, model: LightningModule, data_module: LightningDataModule):
         start_time = time.time()
         if self.engine.accelerator == "gpu" and torch.cuda.is_available():
-            with torch.backends.cuda.sdp_kernel(
-                enable_flash=True,
-                enable_math=True,
-                enable_mem_efficient=(self.engine.optimize_memory or not self.engine.deterministic)
-            ):
+            from torch.nn.attention import SDPBackend, sdpa_kernel
+            backends = [
+                SDPBackend.CUDNN_ATTENTION,
+                SDPBackend.FLASH_ATTENTION,
+                SDPBackend.MATH,
+            ]
+            if self.engine.optimize_memory:
+                backends.append(SDPBackend.EFFICIENT_ATTENTION)
+            with sdpa_kernel(backends):
                 trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
         else:
             trainer.fit(model, datamodule=data_module, ckpt_path=self.engine.resume)  # type: ignore
