@@ -7,5 +7,8 @@ optimizer:
   kappa_init_param: 1.0
   kappa_init_method: warm_start_factor
   reg_function: l2
-  kappa_adapt: false
   kappa_update: 1.0
+  regularize_embedding: false
+  reg_by_lr: false
+  reg_step_size: 200
+  reg_ema_decay: 0.9
