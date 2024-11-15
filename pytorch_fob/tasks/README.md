@@ -23,6 +23,7 @@ We currently have the following tasks:
 
 | Name | Dataset | Model | Task | Target Metric | Baseline Score | Baseline Runtime | Hardware |
 | ------- | ----- | ----- | ---- | ------------- | -------------- | ---------------- | -------- |
+| [tinystories](pytorch_fob/tasks/tinystories) | [tinystories](https://huggingface.co/datasets/roneneldan/TinyStories) | [nanoGPT](https://github.com/karpathy/nanoGPT) | Language modellung | Perplexity | 7.58 | ~1h | 1 gpu |
 | [detection](pytorch_fob/tasks/detection) | [COCO](https://cocodataset.org) | [Faster R-CNN](https://arxiv.org/abs/1506.01497) with [MobileNet v3](https://arxiv.org/abs/1905.02244) backbone | Object detection | Average Precision (IoU) | ? | ~4h | 4 gpus |
 | rna_folding | bpRNA | RNAformer | RNA secondary structure prediction | F1 | ? | ~4h | 4 gpus |
 

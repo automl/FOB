@@ -1,30 +1,37 @@
 import json
 from typing import Callable
-from torch.utils.data import DataLoader
-from datasets import DatasetDict
-import datasets
-from transformers import T5Tokenizer
-from transformers import DataCollatorForSeq2Seq
 
-from pytorch_fob.tasks import TaskDataModule
+import datasets
+from datasets import DatasetDict
+from torch.utils.data import DataLoader
+from transformers import DataCollatorForSeq2Seq, T5Tokenizer
+
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.engine.utils import log_info
+from pytorch_fob.tasks import TaskDataModule
 
 MAX_TOKENS_PER_SENTENCE = 128
 
+
 def generate_collate_fn_train(tokenizer, src_language: str, tgt_language: str) -> Callable:
-    collator = DataCollatorForSeq2Seq(tokenizer=tokenizer,
-                                      padding=True,
-                                      label_pad_token_id=tokenizer.pad_token_id,
-                                      return_tensors="pt")
+    collator = DataCollatorForSeq2Seq(
+        tokenizer=tokenizer, padding=True, label_pad_token_id=tokenizer.pad_token_id, return_tensors="pt"
+    )
+
     def collate(batch) -> object:
         res = []
         for sample in batch:
-            res += [{"input_ids": sample[src_language],
+            res += [
+                {
+                    "input_ids": sample[src_language],
                     "attention_mask": [1.0] * len(sample[src_language]),
-                    "labels": sample[tgt_language]}]
+                    "labels": sample[tgt_language],
+                }
+            ]
         return collator(res)
+
     return collate
+
 
 def generate_collate_fn_validtest(src_language: str, tgt_language: str) -> Callable:
     def collate(batch) -> tuple[list[str], list[str]]:
@@ -34,6 +41,7 @@ def generate_collate_fn_validtest(src_language: str, tgt_language: str) -> Calla
             src_text += [sample["translation"][src_language]]
             tgt_text += [sample["translation"][tgt_language]]
         return src_text, tgt_text
+
     return collate
 
 
@@ -59,12 +67,15 @@ class WMTDataModule(TaskDataModule):
         self.tokenizer = T5Tokenizer.from_pretrained("google-t5/t5-small", cache_dir=str(self.cache_dir))
 
     def _get_dataset(self) -> DatasetDict:
-        ds = datasets.load_dataset("wmt17",
-                                   data_dir=str(self.data_dir),
-                                   language_pair=("de", "en"),
-                                   cache_dir=str(self.cache_dir), trust_remote_code=True,
-                                   num_proc=self.prepare_workers,
-                                   revision="e126783e58293db0be0c11dca4a4d2e6f4dcf0cd")
+        ds = datasets.load_dataset(
+            "wmt17",
+            data_dir=str(self.data_dir),
+            language_pair=("de", "en"),
+            cache_dir=str(self.cache_dir),
+            trust_remote_code=True,
+            num_proc=self.prepare_workers,
+            revision="e126783e58293db0be0c11dca4a4d2e6f4dcf0cd",
+        )
         return ds  # type: ignore
 
     def prepare_data(self):
@@ -76,34 +87,40 @@ class WMTDataModule(TaskDataModule):
             return
         ds = self._get_dataset()
         log_info("tokenizing data...")
+
         def transform_text(data):
             de = [example["de"] for example in data["translation"]]
             en = [example["en"] for example in data["translation"]]
-            return {"de": self.tokenizer(de)["input_ids"],
-                    "en": self.tokenizer(en)["input_ids"]}
+            return {"de": self.tokenizer(de)["input_ids"], "en": self.tokenizer(en)["input_ids"]}
+
         ds = ds.map(transform_text, batched=True)
         ds["train"] = ds["train"].remove_columns("translation")
         log_info("filtering sentences with too many tokens...")
-        ds = ds.filter(lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE and
-                                    len(data["en"]) <= MAX_TOKENS_PER_SENTENCE, num_proc=self.prepare_workers)
+        ds = ds.filter(
+            lambda data: len(data["de"]) <= MAX_TOKENS_PER_SENTENCE and len(data["en"]) <= MAX_TOKENS_PER_SENTENCE,
+            num_proc=self.prepare_workers,
+        )
         log_info("saving dataset...")
         ds.save_to_disk(self.processed_data_dir)
         log_info("saving additional information...")
         with open(self.processed_data_dir / "info.json", "w", encoding="utf8") as f:
-            json.dump({"max_tokens": MAX_TOKENS_PER_SENTENCE,
-                       "train_data_len": len(ds["train"]),
-                       "val_data_len": len(ds["validation"]),
-                       "test_data_len": len(ds["test"])}, f, indent=4)
+            json.dump(
+                {
+                    "max_tokens": MAX_TOKENS_PER_SENTENCE,
+                    "train_data_len": len(ds["train"]),
+                    "val_data_len": len(ds["validation"]),
+                    "test_data_len": len(ds["test"]),
+                },
+                f,
+                indent=4,
+            )
         log_info("wmt preprocessed")
 
     def setup(self, stage):
-        """setup is called from every process across all the nodes. Setting state here is recommended.
-        """
+        """setup is called from every process across all the nodes. Setting state here is recommended."""
         ds = datasets.load_from_disk(str(self.processed_data_dir))
 
-        data_collator = generate_collate_fn_train(self.tokenizer,
-                                                  self.source_language,
-                                                  self.target_language)
+        data_collator = generate_collate_fn_train(self.tokenizer, self.source_language, self.target_language)
 
         self.collate_fn = data_collator
 
@@ -121,6 +138,7 @@ class WMTDataModule(TaskDataModule):
 
         if stage == "predict":
             self.data_predict = ds["test"]
+
     def train_dataloader(self):
         self.check_dataset(self.data_train)
         return DataLoader(
@@ -128,25 +146,19 @@ class WMTDataModule(TaskDataModule):
             shuffle=True,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=self.collate_fn
+            collate_fn=self.collate_fn,
         )
 
     def val_dataloader(self):
         self.check_dataset(self.data_val)
         return DataLoader(
-            self.data_val,
-            batch_size=self.batch_size,
-            num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            self.data_val, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn_validtest
         )
 
     def test_dataloader(self):
         self.check_dataset(self.data_test)
         return DataLoader(
-            self.data_test,
-            batch_size=self.batch_size,
-            num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            self.data_test, batch_size=self.batch_size, num_workers=self.workers, collate_fn=self.collate_fn_validtest
         )
 
     def predict_dataloader(self):
@@ -155,5 +167,9 @@ class WMTDataModule(TaskDataModule):
             self.data_predict,
             batch_size=self.batch_size,
             num_workers=self.workers,
-            collate_fn=self.collate_fn_validtest
+            collate_fn=self.collate_fn_validtest,
         )
+
+    @property
+    def train_samples(self):
+        return self.train_data_len

@@ -1,15 +1,15 @@
 import sys
+
+from sacrebleu.metrics.bleu import BLEU, BLEUScore
 from torch.nn import Module
 from transformers import AutoModelForSeq2SeqLM, T5Config
-from sacrebleu.metrics import BLEU
-from sacrebleu.metrics.bleu import BLEUScore
-from pytorch_fob.engine.parameter_groups import GroupedModel
+
 from pytorch_fob.engine.configs import TaskConfig
-from pytorch_fob.engine.utils import some, log_warn
+from pytorch_fob.engine.parameter_groups import GroupedModel
+from pytorch_fob.engine.utils import log_warn, some
 from pytorch_fob.optimizers import Optimizer
 from pytorch_fob.tasks import TaskModel
-from pytorch_fob.tasks.translation.data \
-    import WMTDataModule, MAX_TOKENS_PER_SENTENCE
+from pytorch_fob.tasks.translation.data import MAX_TOKENS_PER_SENTENCE, WMTDataModule
 
 
 class GroupedTransformer(GroupedModel):
@@ -22,12 +22,14 @@ class GroupedTransformer(GroupedModel):
         token_inputs = tokenizer(inputs, return_tensors="pt", padding=True).to(device)
         num_beams = some(num_beams, default=self.num_beams)
         length_penalty = some(length_penalty, default=self.length_penalty)
-        output = self.model.generate(input_ids=token_inputs["input_ids"],
-                                     attention_mask=token_inputs["attention_mask"],
-                                     do_sample=False,
-                                     max_length=MAX_TOKENS_PER_SENTENCE - 2,
-                                     num_beams=num_beams,
-                                     length_penalty=length_penalty)
+        output = self.model.generate(
+            input_ids=token_inputs["input_ids"],
+            attention_mask=token_inputs["attention_mask"],
+            do_sample=False,
+            max_length=MAX_TOKENS_PER_SENTENCE - 2,
+            num_beams=num_beams,
+            length_penalty=length_penalty,
+        )
         return tokenizer.batch_decode(output, skip_special_tokens=True)
 
 
@@ -52,8 +54,9 @@ class WMTModel(TaskModel):
     def compute_bleu(self, preds: list[str], target: list[str]) -> float:
         assert len(preds) == len(target)
         try:
-            result : BLEUScore = self.bleu.corpus_score(hypotheses=[p.strip() for p in preds],
-                                                        references=[[t.strip() for t in target]])
+            result: BLEUScore = self.bleu.corpus_score(
+                hypotheses=[p.strip() for p in preds], references=[[t.strip() for t in target]]
+            )
             return result.score
         except ZeroDivisionError:
             log_warn("Error: Bleu Score computing resulted in a ZeroDivisionError", file=sys.stderr)
