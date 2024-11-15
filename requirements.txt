@@ -31,3 +31,4 @@ mmcv~=2.1.0
 lion-pytorch~=0.2.2
 git+https://github.com/LiyuanLucasLiu/RAdam
 schedulefree~=1.2.7
+tiktoken~=0.8.0
