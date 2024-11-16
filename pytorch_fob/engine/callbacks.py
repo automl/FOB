@@ -2,7 +2,6 @@ import math
 import time
 from typing import Iterable, Optional
 
-import deepspeed
 import torch
 from lightning import Callback, LightningModule, Trainer
 from lightning_utilities.core.rank_zero import rank_zero_only
@@ -212,10 +211,8 @@ class LogTrainingStats(Callback):
                                 stats[f"param/{name}/quantile-{q[q_idx]}"] = d_val.item()
 
                     if (self.log_gradient or self.log_lrs) and param.requires_grad:
-                        if trainer.num_devices > 1:
-                            grad_data = deepspeed.utils.safe_get_full_grad(param)
-                        else:
-                            grad_data = param.grad
+                        # grad already gets synchronized with ddp
+                        grad_data = param.grad
                     else:
                         grad_data = None
 
@@ -228,7 +225,7 @@ class LogTrainingStats(Callback):
                         if self.log_gradient:
                             if torch.isnan(grad_data).sum() > 0 or torch.isinf(grad_data).sum() > 0:
                                 add_metrics_to_stats(stats, "grad", name, grad_data, self.metrics, override=-10.0)
-                                if self.log_quantiles and grad_data.size().numel() < 10000000:
+                                if self.log_quantiles and grad_data.size().numel() < 10_000_000:
                                     for q_idx, _ in enumerate(q):
                                         stats[f"param/{name}/quantile-{q[q_idx]}"] = -10
 
@@ -236,7 +233,7 @@ class LogTrainingStats(Callback):
                             if len(grad_data.shape) > 1 or grad_data.shape[0] > 1:
                                 add_metrics_to_stats(stats, "grad", name, grad_data, self.metrics)
 
-                                if self.log_quantiles and grad_data.size().numel() < 10000000:
+                                if self.log_quantiles and grad_data.size().numel() < 10_000_000:
                                     deciles = torch.quantile(grad_data.float(), q, interpolation="linear")
                                     for q_idx, d_val in enumerate(deciles):
                                         stats[f"grad/{name}/quantile-{q[q_idx]}"] = d_val.item()
