@@ -42,11 +42,10 @@ class GPTModel(TaskModel):
         self.log(f"{prefix}_loss", loss, sync_dist=True)
 
         # Calculate perplexity manually
-        # Perplexity = exp(average negative log likelihood)
-        # = exp(cross entropy loss)
+        # Perplexity = exp(average negative log likelihood) = exp(cross entropy loss)
         with torch.no_grad():
             perplexity = torch.exp(loss)
-            
+
         self.log(f"{prefix}_perplexity", perplexity.item(), sync_dist=True)
 
         return loss

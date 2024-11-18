@@ -1,10 +1,9 @@
-
 import json
 
 import torch
 from datasets import DatasetDict, load_dataset, load_from_disk
 from tiktoken import get_encoding
-from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from pytorch_fob.engine.configs import TaskConfig
 from pytorch_fob.engine.utils import log_info
@@ -20,28 +19,18 @@ class TinyStoriesDataset(Dataset):
         # Return number of possible sequences
         # -1 because we need room for the target (shifted by 1)
         return len(self.tokens) - self.block_size - 1
-    
+
     def __getitem__(self, idx):
-        x = torch.tensor(self.tokens[idx:idx + self.block_size], dtype=torch.long)
-        y = torch.tensor(self.tokens[idx + 1:idx + self.block_size + 1], dtype=torch.long)
+        x = torch.tensor(self.tokens[idx : idx + self.block_size], dtype=torch.long)
+        y = torch.tensor(self.tokens[idx + 1 : idx + self.block_size + 1], dtype=torch.long)
         return x, y
-
-
-# def tokenize_function(examples, tokenizer):
-#     """Standalone tokenize function that can be pickled"""
-#     tokens = []
-#     for text in examples["text"]:
-#         if text.strip():  # Skip empty texts
-#             tokens.extend(tokenizer.encode_ordinary(text))
-#             tokens.append(tokenizer.eot_token)  # Add end of text token between texts
-#     return {"tokens": tokens}
 
 
 class TinyStoriesDataModule(TaskDataModule):
     def __init__(self, config: TaskConfig):
         super().__init__(config)
         self.block_size = config.model.block_size
-        self.steps_per_epoch = config.steps_per_epoch
+        self.samples_per_epoch = config.samples_per_epoch
         self.tokenizer = get_encoding("gpt2")
         self.processed_data_dir = self.data_dir / "processed"
         self.cache_dir = self.data_dir / "cache"
@@ -67,11 +56,7 @@ class TinyStoriesDataModule(TaskDataModule):
             return {"tokens": tokens}
 
         log_info("tokenizing data...")
-        ds = ds.map(
-            function=tokenize_function,
-            batched=True,
-            remove_columns=["text"]
-        )
+        ds = ds.map(function=tokenize_function, batched=True, remove_columns=["text"])
 
         log_info("saving processed dataset...")
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
@@ -116,7 +101,7 @@ class TinyStoriesDataModule(TaskDataModule):
             sampler=rs,
         )
         return dl
-    
+
     def val_dataloader(self):
         rs = RandomSampler(
             self.data_val,
@@ -131,10 +116,13 @@ class TinyStoriesDataModule(TaskDataModule):
             sampler=rs,
         )
         return dl
-    
+
     def test_dataloader(self):
-        sampler = SequentialSampler(
-            range(0, len(self.data_test), self.block_size)
+        sampler = RandomSampler(
+            self.data_test,
+            num_samples=self.test_samples,
+            replacement=False,
+            generator=torch.Generator().manual_seed(42),
         )
         dl = DataLoader(
             self.data_test,
@@ -144,19 +132,21 @@ class TinyStoriesDataModule(TaskDataModule):
             sampler=sampler,
         )
         return dl
-    
 
     @property
     def train_samples(self):
-        return self.steps_per_epoch.train * self.batch_size
-    
+        return self.samples_per_epoch.train
+
     @property
     def val_samples(self):
-        return self.steps_per_epoch.val * self.batch_size
+        return self.samples_per_epoch.val
+
+    @property
+    def test_samples(self):
+        return self.samples_per_epoch.test
 
     def get_vocab_size(self) -> int:
         return self.tokenizer.n_vocab
-    
+
     def _wrap_dataset(self, dataset: Dataset) -> TinyStoriesDataset:
         return TinyStoriesDataset(dataset["tokens"], self.block_size)
-
