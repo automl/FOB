@@ -1,12 +1,13 @@
 task:
   name: tinystories
   output_dir_name: tinystories
-  batch_size: 64
+  batch_size: 128
   max_epochs: 50
   max_steps: null
-  steps_per_epoch: # how many blocks to sample per epoch
-    train: 500
-    val: 50
+  samples_per_epoch: # how many blocks to sample per epoch
+    train: 100_000    # at most (473,992,006 - block_size - 1)
+    val: 5000        # at most (4,765,918 - block_size - 1)
+    test: 500_000     # at most (4,765,918 - block_size - 1)
   target_metric: val_perplexity
   target_metric_mode: min
   model:
@@ -19,7 +20,7 @@ task:
 engine:
   devices: 1
   sbatch_args:
-    time: 00:05:00
+    time: 01:30:00
 optimizer:
   name: adamw_baseline
   learning_rate: 1.e-3
@@ -30,5 +31,5 @@ evaluation:
   plot:
     metric: test_perplexity
     test_metric_mode: min
-    format: "2.1"
-    limits: [0, 100]
+    format: "0.2"
+    limits: [0, 10]
