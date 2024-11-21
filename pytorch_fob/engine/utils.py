@@ -89,10 +89,20 @@ def trainer_strategy(devices: int | list[int] | str) -> str:
     return "ddp" if ndevices > 1 else "auto"
 
 
-def gpu_suited_for_compile():
+def get_compute_capability() -> Optional[float]:
     if torch.cuda.is_available():
-        device_cap = torch.cuda.get_device_capability()
-        return device_cap in ((7, 0), (8, 0), (9, 0))
+        cc_major, cc_minor = torch.cuda.get_device_capability()
+        return float(f"{cc_major}.{cc_minor}")
+
+def gpu_suited_for_compile():
+    cc = get_compute_capability()
+    return cc is not None and cc >= 7.0
+
+
+def is_bf16_supported():
+    """This is not the same as torch.cuda.is_bf16_supported(), because in newer torch version they added fake support for bf16. This function checks if the hardware supports bf16."""
+    cc = get_compute_capability()
+    return cc is not None and cc >= 8.0
 
 
 def precision_with_fallback(precision: str) -> str:
@@ -102,7 +112,7 @@ def precision_with_fallback(precision: str) -> str:
     if not torch.cuda.is_available():
         log_warn("Warning: No CUDA available. Results can be different!")
         return precision[2:]
-    if precision.startswith("bf") and not torch.cuda.is_bf16_supported():
+    if precision.startswith("bf") and not is_bf16_supported():
         log_warn("Warning: GPU does not support bfloat16. Results can be different!")
         return precision[2:]
     return precision
