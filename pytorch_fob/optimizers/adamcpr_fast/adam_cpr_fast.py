@@ -151,7 +151,6 @@ class AdamCPR(Optimizer):
                     state["prev_reg"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
                     state["prev_reg_gradient"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
                     state["prev_reg_second_derivative"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
-                    state["lagmul"] = torch.tensor([0.0], dtype=torch.float, device=p.device)
                     state["kappa_update"] = torch.tensor([self.kappa_update], dtype=torch.float, device=p.device)
                     if self.kappa_init_method == "uniform":
                         state["kappa"] = torch.tensor([self.kappa_init_param], dtype=torch.float, device=p.device)
