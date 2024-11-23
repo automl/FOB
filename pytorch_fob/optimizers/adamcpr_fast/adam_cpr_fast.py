@@ -29,6 +29,7 @@ class AdamCPR(Optimizer):
         kappa_init_param: float = 1000,
         kappa_init_method: str = "warm_start",
         reg_function: str = "l2",
+        adacpr_method: str = "disable",
         reduce_kappa: bool | float = False,
         kappa_update: float = 1.0,
         amsgrad: bool = False,
@@ -68,6 +69,9 @@ class AdamCPR(Optimizer):
         self.kappa_init_param = kappa_init_param
 
         self.kappa_update = kappa_update
+        self.adacpr_method = adacpr_method
+        if self.adacpr_method not in ["disable", "cosine", "paper", "overcorrect"]:
+            raise ValueError(f"Invalid adacpr_method: {adacpr_method}")
         self.reduce_kappa = reduce_kappa
         if isinstance(reduce_kappa, float):
             assert train_steps is not None, "train_steps must be provided if reduce_kappa is a float"
@@ -268,6 +272,7 @@ class AdamCPR(Optimizer):
                 weight_decay=group["weight_decay"],
                 warm_start=self.warm_start,
                 reg_function=self.reg_function,
+                adacpr_method=self.adacpr_method,
                 reduce_kappa=self.reduce_kappa,
                 train_steps=self.train_steps,
                 kappa_init_method=self.kappa_init_method,
@@ -311,6 +316,7 @@ def adam_cpr(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    adacpr_method: str,
     reduce_kappa: bool | float,
     train_steps: Optional[int],
     kappa_init_method: str,
@@ -360,6 +366,7 @@ def adam_cpr(
         weight_decay=weight_decay,
         warm_start=warm_start,
         reg_function=reg_function,
+        adacpr_method=adacpr_method,
         reduce_kappa=reduce_kappa,
         train_steps=train_steps,
         kappa_init_method=kappa_init_method,
@@ -506,6 +513,7 @@ def _single_tensor_adam(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    adacpr_method: str,
     reduce_kappa: bool | float,
     train_steps: Optional[int],
     kappa_init_method: str,
@@ -607,9 +615,8 @@ def _single_tensor_adam(
             param.addcdiv_(exp_avg, denom, value=-step_size)
 
         if weight_decay == 1.0:
-            reduce_kappa_cosine = isinstance(reduce_kappa, float)
             if step > warm_start and not kappa == KAPPA_WARMUP:
-                if reduce_kappa_cosine:
+                if adacpr_method == "cosine":
                     # cosine update
                     cur_step = step - decay_step
                     T_max = train_steps - decay_step
@@ -619,7 +626,7 @@ def _single_tensor_adam(
                     if factor.isnan():  # why does this happen?
                         factor = 1
                     kappa.sub_(min_kappa).mul_(factor).add_(min_kappa)
-                elif reduce_kappa is True:
+                elif adacpr_method == "paper" or adacpr_method == "overcorrect":
                     old_lagmul = lagmul.clone()
 
                 # update lagmul
@@ -636,11 +643,17 @@ def _single_tensor_adam(
                 else:
                     raise ValueError(f"Unsupported regularization function: {reg_function}")
 
-                if reduce_kappa and not reduce_kappa_cosine and old_lagmul > 0 and lagmul == 0:
-                    set_kappa(reg_function, param, kappa)
+                if old_lagmul > 0 and lagmul == 0:
+                    if adacpr_method == "paper":
+                        set_kappa(reg_function, param, kappa)
+                    elif adacpr_method == "overcorrect":
+                        old_kappa = kappa.clone()
+                        set_kappa(reg_function, param, kappa)
+                        diff = old_kappa.sub(kappa)
+                        kappa.sub_(diff.mul(reduce_kappa - 1))
             elif kappa_init_method == "warm_start" and step == warm_start:
                 set_kappa(reg_function, param, kappa)
-                if isinstance(reduce_kappa, float):
+                if adacpr_method == "cosine":
                     set_kappa(reg_function, param, min_kappa)
                     min_kappa.mul_(reduce_kappa)
                     decay_step.copy_(step)
@@ -653,7 +666,7 @@ def _single_tensor_adam(
                 # Peak detection for gradient
                 if step > 1 and prev_reg_gradient > current_reg_gradient:
                     set_kappa(reg_function, param, kappa)
-                    if isinstance(reduce_kappa, float):
+                    if adacpr_method == "cosine":
                         set_kappa(reg_function, param, min_kappa)
                         min_kappa.mul_(reduce_kappa)
                         decay_step.copy_(step)
@@ -693,6 +706,7 @@ def _multi_tensor_adam(
     weight_decay: float,
     warm_start: int,
     reg_function: str,
+    adacpr_method: str,
     reduce_kappa: bool | float,
     train_steps: Optional[int],
     kappa_init_method: str,
@@ -701,7 +715,7 @@ def _multi_tensor_adam(
     capturable: bool,
     differentiable: bool,
 ):
-    if isinstance(reduce_kappa, float) or reduce_kappa:
+    if isinstance(reduce_kappa, float) or reduce_kappa or adacpr_method != "disable":
         # TODO: implement reduce_kappa
         raise NotImplementedError(
             "reduce_kappa not implemented for _multi_tensor_adam, use _single_tensor_adam instead"

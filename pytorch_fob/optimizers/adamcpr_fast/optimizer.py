@@ -41,6 +41,7 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
         kappa_init_param=kappa_init_param,
         kappa_init_method=kappa_init_method,
         reg_function=config.reg_function,
+        adacpr_method=config.adacpr_method,
         reduce_kappa=config.reduce_kappa,
         kappa_update=config.kappa_update,
         foreach=config.foreach,
