@@ -2,7 +2,7 @@ import hashlib
 import time
 from math import ceil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import torch
 import yaml
@@ -195,18 +195,24 @@ class Run:
 
     def get_best_checkpoint(self) -> Optional[Path]:
         model_checkpoint = self._callbacks.get("best_model_checkpoint", None)
-        if model_checkpoint is not None:
+        if model_checkpoint is None:
+            model_checkpoint = self.get_checkpoint(lambda x: x.stem.startswith("best"))
+        else:
             model_checkpoint = Path(model_checkpoint.best_model_path)
             model_checkpoint = model_checkpoint if not model_checkpoint.is_dir() else None
-        if model_checkpoint is None:
-            available_checkpoints = self.get_available_checkpoints()
-            model_checkpoint = findfirst(lambda x: x.stem.startswith("best"), available_checkpoints)
         return model_checkpoint
+
+    def get_last_checkpoint(self) -> Optional[Path]:
+        return self.get_checkpoint(lambda x: x.stem.startswith("last"))
 
     def get_available_checkpoints(self) -> list[Path]:
         if self.checkpoint_dir.exists():
             return list(filter(lambda x: x.suffix == ".ckpt", self.checkpoint_dir.iterdir()))
         return []
+
+    def get_checkpoint(self, predicate: Callable[[Path], bool]) -> Optional[Path]:
+        available_checkpoints = self.get_available_checkpoints()
+        return findfirst(predicate, available_checkpoints)
 
     def ensure_max_steps(self):
         """
@@ -243,18 +249,24 @@ class Run:
         """
         Ensures that `self.engine.resume` is either a valid Path or None.
         """
+
+        def _ensure_path(predicate: Callable[[Path], bool]):
+            resume_path = None
+            if self.engine.resume:
+                resume_path = self.get_checkpoint(predicate)
+                if resume_path is None:
+                    log_warn(
+                        f"engine.resume={self.engine.resume} but no matching checkpoint was found. Starting run from scratch."
+                    )
+            self._config[self.engine_key]["resume"] = resume_path
+            self._generate_configs()
+
         if isinstance(self.engine.resume, Path):
             pass
         elif isinstance(self.engine.resume, bool):
-            resume_path = None
-            if self.engine.resume:
-                available_checkpoints = self.get_available_checkpoints()
-                if len(available_checkpoints) < 1:
-                    log_warn("engine.resume=True but no checkpoint was found. Starting run from scratch.")
-                else:
-                    resume_path = findfirst(lambda x: x.stem == "last", available_checkpoints)
-            self._config[self.engine_key]["resume"] = resume_path
-            self._generate_configs()
+            _ensure_path(lambda x: x.stem == "last")
+        elif isinstance(self.engine.resume, int):
+            _ensure_path(lambda x: x.stem.startswith(f"extra-checkpoint-epoch={self.engine.resume}"))
         else:
             raise TypeError(f"Unsupportet type for 'resume', got {type(self.engine.resume)=}.")
 
@@ -271,9 +283,20 @@ class Run:
             monitor=self.task.target_metric,
             mode=self.task.target_metric_mode,
         )
-        self._callbacks["model_checkpoint"] = ModelCheckpoint(
-            dirpath=self.checkpoint_dir, enable_version_counter=False, every_n_epochs=1, save_last=True
+        self._callbacks["last_model_checkpoint"] = ModelCheckpoint(
+            dirpath=self.checkpoint_dir,
+            enable_version_counter=False,
+            every_n_epochs=1,
+            save_last=True,
         )
+        if self.engine.checkpoint_interval is not None:
+            self._callbacks["extra_checkpoint"] = ModelCheckpoint(
+                dirpath=self.checkpoint_dir,
+                filename="extra-checkpoint-{epoch}-{step}",
+                enable_version_counter=False,
+                every_n_epochs=self.engine.checkpoint_interval,
+                save_top_k=-1,
+            )
         if self.engine.early_stopping is not None:
             self._callbacks["early_stopping"] = EarlyStopping(
                 monitor=self.engine.early_stopping_metric,

@@ -62,6 +62,8 @@ class EngineConfig(BaseConfig):
     def __init__(self, config: dict[str, Any], task_key: str, engine_key: str) -> None:
         cfg = dict(config[engine_key])
         self.accelerator = cfg["accelerator"]
+        self.check_finite: bool = cfg["check_finite"]
+        self.checkpoint_interval: Optional[int] = cfg["checkpoint_interval"]
         self.deterministic: bool | Literal["warn"] = cfg["deterministic"]
         self.data_dir = Path(cfg["data_dir"]).resolve()
         self.detect_anomaly: bool = cfg["detect_anomaly"]
@@ -80,7 +82,7 @@ class EngineConfig(BaseConfig):
         self.precision: str = cfg["precision"]
         self.restrict_train_epochs: Optional[int] = cfg["restrict_train_epochs"]
         _resume = cfg.get("resume", False)
-        self.resume: Optional[Path] | bool = Path(_resume).resolve() if isinstance(_resume, str) else _resume
+        self.resume: Path | bool | int = Path(_resume).resolve() if isinstance(_resume, str) else _resume
         self.run_scheduler: str = cfg["run_scheduler"]
         self.seed: int = cfg["seed"]
         self.seed_mode: str = cfg["seed_mode"]
