@@ -10,7 +10,8 @@ engine:
   gradient_clip_alg: norm    # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
   gradient_clip_val: null    # DEFAULT: don't clip gradients, expects value in [0, 1]
   log_extra: false           # Activate logging of gradients and more. Can be bool or a dict with the options supported by callback `LogTrainingStats` in `pytorch_fob/engine/callbacks.py`.
-  logging_interval: 50       # Number of steps between each logging step.
+  logging_interval: null       # Number of steps between each logging step. Overrides 'logging_interval_factor'.
+  logging_interval_factor: 0.0025  # Number of steps between each logging step, relative to the total number of steps.
   optimize_memory: false     # Use nondeterministic, but memory-efficient algorithms for self-attention
   output_dir: ./experiments  # Where you want to store the results
   plot: true                 # Whether to plot the results.

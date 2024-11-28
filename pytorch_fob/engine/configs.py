@@ -11,11 +11,8 @@ class BaseConfig(AttributeDict):
 
 class NamedConfig(BaseConfig):
     def __init__(
-            self,
-            config: dict[str, Any],
-            identifier_key: str = "name",
-            outdir_key: str = "output_dir_name"
-            ) -> None:
+        self, config: dict[str, Any], identifier_key: str = "name", outdir_key: str = "output_dir_name"
+    ) -> None:
         super().__init__(config)
         self.name = config[identifier_key]
         self.output_dir_name = config.get(outdir_key, self.name)
@@ -23,13 +20,13 @@ class NamedConfig(BaseConfig):
 
 class OptimizerConfig(NamedConfig):
     def __init__(
-            self,
-            config: dict[str, Any],
-            optimizer_key: str,
-            task_key: str,
-            identifier_key: str = "name",
-            outdir_key: str = "output_dir_name"
-            ) -> None:
+        self,
+        config: dict[str, Any],
+        optimizer_key: str,
+        task_key: str,
+        identifier_key: str = "name",
+        outdir_key: str = "output_dir_name",
+    ) -> None:
         cfg = dict(config[optimizer_key])
         self.lr_interval: Literal["step", "epoch"] = cfg.get("lr_interval", "step")
         self.max_steps: int = config[task_key].get("max_steps", None)
@@ -41,13 +38,13 @@ class OptimizerConfig(NamedConfig):
 
 class TaskConfig(NamedConfig):
     def __init__(
-            self,
-            config: dict[str, Any],
-            task_key: str,
-            engine_key: str,
-            identifier_key: str = "name",
-            outdir_key: str = "output_dir_name"
-            ) -> None:
+        self,
+        config: dict[str, Any],
+        task_key: str,
+        engine_key: str,
+        identifier_key: str = "name",
+        outdir_key: str = "output_dir_name",
+    ) -> None:
         cfg = dict(config[task_key])
         self.batch_size: int = cfg["batch_size"]
         self.data_dir = Path(config[engine_key]["data_dir"]).resolve()
@@ -74,7 +71,8 @@ class EngineConfig(BaseConfig):
         self.gradient_clip_alg: str = cfg["gradient_clip_alg"]
         self.gradient_clip_val: Optional[float] = cfg["gradient_clip_val"]
         self.log_extra: bool | dict[str, bool] = cfg["log_extra"]
-        self.logging_interval: int = cfg["logging_interval"]
+        self.logging_interval: Optional[int] = cfg["logging_interval"]
+        self.logging_interval_factor: Optional[float] = cfg["logging_interval_factor"]
         self.max_steps: int = config[task_key].get("max_steps", None)
         self.optimize_memory: bool = cfg["optimize_memory"]
         self.output_dir = Path(cfg["output_dir"]).resolve()
@@ -118,7 +116,7 @@ class EngineConfig(BaseConfig):
             "gradient_clip_val",
             "optimize_memory",
             "precision",
-            "seed"
+            "seed",
         ]
         return [f"{prefix}{k}" for k in keys]
 
@@ -127,13 +125,11 @@ class EngineConfig(BaseConfig):
 
 
 class EvalConfig(BaseConfig):
-    def __init__(self, config: dict[str, Any], eval_key: str, engine_key: str, ignore_keys = None) -> None:
+    def __init__(self, config: dict[str, Any], eval_key: str, engine_key: str, ignore_keys=None) -> None:
         cfg = dict(config[eval_key])
-        self.experiment_files = AttributeDict(dict(
-            best_model = "results_best_model.json",
-            last_model = "results_final_model.json",
-            config = "config.yaml"
-        ))
+        self.experiment_files = AttributeDict(
+            dict(best_model="results_best_model.json", last_model="results_final_model.json", config="config.yaml")
+        )
         self.output_types: list[str] = wrap_list(cfg["output_types"])
         experiment_dir = Path(config[engine_key]["output_dir"]).resolve()
         self.output_dir: Path = some(maybe_abspath(cfg["output_dir"]), default=experiment_dir / "plots")

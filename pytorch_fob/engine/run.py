@@ -1,5 +1,6 @@
 import hashlib
 import time
+from math import ceil
 from pathlib import Path
 from typing import Any, Optional
 
@@ -32,17 +33,17 @@ from pytorch_fob.optimizers.optimizers import Optimizer
 from pytorch_fob.tasks.tasks import TaskDataModule, TaskModel, import_task
 
 
-class Run():
+class Run:
     def __init__(
-            self,
-            config: dict[str, Any],
-            default_config: dict[str, Any],
-            task_key: str,
-            optimizer_key: str,
-            engine_key: str,
-            eval_key: str,
-            identifier_key: str
-            ) -> None:
+        self,
+        config: dict[str, Any],
+        default_config: dict[str, Any],
+        task_key: str,
+        optimizer_key: str,
+        engine_key: str,
+        eval_key: str,
+        identifier_key: str,
+    ) -> None:
         """
         setup: download and prepare data before creating the Run
         """
@@ -56,6 +57,7 @@ class Run():
         self._generate_configs()
         self._set_outpath()
         self._callbacks = AttributeDict({})
+        self._logging_interval = None
 
     def start(self) -> dict[str, _EVALUATE_OUTPUT]:
         self.run_dir.mkdir(parents=True, exist_ok=True)
@@ -64,7 +66,7 @@ class Run():
         if any([self.engine.train, self.engine.test]):
             self._ensure_resume_path()
             self.ensure_max_steps()
-            torch.set_float32_matmul_precision('high')
+            torch.set_float32_matmul_precision("high")
             seed_everything(self.engine.seed, workers=True)
             model, data_module = self.get_task()
         if self.engine.train:
@@ -78,11 +80,11 @@ class Run():
             if self.engine.train:  # no need to load last checkpoint, model is already loaded
                 ckpt = None
             elif self.engine.resume is not None:
-                ckpt=self.engine.resume
+                ckpt = self.engine.resume
             else:
                 log_warn(
-                    "No last checkpoint found, evaluating untrained model. " + \
-                    "If this is unexpected, try to set 'engine.resume=true'."
+                    "No last checkpoint found, evaluating untrained model. "
+                    + "If this is unexpected, try to set 'engine.resume=true'."
                 )
                 ckpt = None
             scores["test_final"] = self._test(tester, model, data_module, ckpt=ckpt)  # type: ignore (see ensure_resume_path)
@@ -98,6 +100,7 @@ class Run():
         start_time = time.time()
         if self.engine.accelerator == "gpu" and torch.cuda.is_available():
             from torch.nn.attention import SDPBackend, sdpa_kernel
+
             backends = [
                 SDPBackend.CUDNN_ATTENTION,
                 SDPBackend.FLASH_ATTENTION,
@@ -117,7 +120,9 @@ class Run():
         score = trainer.validate(model, datamodule=data_module)
         return score
 
-    def _test(self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None) -> _EVALUATE_OUTPUT:
+    def _test(
+        self, tester: Trainer, model: LightningModule, data_module: LightningDataModule, ckpt: Optional[Path] = None
+    ) -> _EVALUATE_OUTPUT:
         ckpt_path = self.engine.resume if ckpt is None else ckpt
         mode = "final" if ckpt_path is None or ckpt_path.stem.startswith("last") else "best"  # type: ignore
         log_info(f"Testing {mode} checkpoint...")
@@ -157,14 +162,8 @@ class Run():
 
     def get_loggers(self) -> list[Logger]:
         return [
-            TensorBoardLogger(
-                save_dir=self.run_dir,
-                name="tb_logs"
-            ),
-            CSVLogger(
-                save_dir=self.run_dir,
-                name="csv_logs"
-            )
+            TensorBoardLogger(save_dir=self.run_dir, name="tb_logs"),
+            CSVLogger(save_dir=self.run_dir, name="csv_logs"),
         ]
 
     def get_trainer(self) -> Trainer:
@@ -181,7 +180,7 @@ class Run():
             gradient_clip_algorithm=self.engine.gradient_clip_alg,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
             accelerator=self.engine.accelerator,
-            log_every_n_steps=self.engine.logging_interval
+            log_every_n_steps=self.logging_interval,
         )
 
     def get_tester(self) -> Trainer:
@@ -191,7 +190,7 @@ class Run():
             enable_progress_bar=(not self.engine.silent),
             deterministic=self.engine.deterministic,
             precision=precision_with_fallback(self.engine.precision),  # type: ignore
-            accelerator=self.engine.accelerator
+            accelerator=self.engine.accelerator,
         )
 
     def get_best_checkpoint(self) -> Optional[Path]:
@@ -219,8 +218,26 @@ class Run():
             if self._default_config[self.task_key]["max_steps"] is None:
                 self._default_config[self.task_key]["max_steps"] = max_steps
             self._generate_configs()
-            log_info(f"'max_steps' not set explicitly, using {max_steps=} (calculated from " +
-            f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})")
+            log_info(
+                f"'max_steps' not set explicitly, using {max_steps=} (calculated from "
+                + f"max_epochs={self.task.max_epochs}, batch_size={self.task.batch_size}, devices={self.engine.devices})"
+            )
+
+    @property
+    def logging_interval(self) -> int:
+        if self._logging_interval is not None:
+            return self._logging_interval
+        elif self.engine.logging_interval is not None:
+            self._logging_interval = self.engine.logging_interval
+        elif self.engine.logging_interval_factor is not None:
+            self.ensure_max_steps()
+            self._logging_interval = ceil(self.engine.logging_interval_factor * self.task.max_steps)
+            log_info(
+                f"Using logging_interval={self._logging_interval}, calculated from max_steps={self.task.max_steps}."
+            )
+        else:
+            raise ValueError("Either 'engine.logging_interval' or 'engine.logging_interval_factor' must be set.")
+        return self._logging_interval
 
     def _ensure_resume_path(self):
         """
@@ -252,13 +269,10 @@ class Run():
             dirpath=self.checkpoint_dir,
             filename="best-{epoch}-{step}",
             monitor=self.task.target_metric,
-            mode=self.task.target_metric_mode
+            mode=self.task.target_metric_mode,
         )
         self._callbacks["model_checkpoint"] = ModelCheckpoint(
-            dirpath=self.checkpoint_dir,
-            enable_version_counter=False,
-            every_n_epochs=1,
-            save_last=True
+            dirpath=self.checkpoint_dir, enable_version_counter=False, every_n_epochs=1, save_last=True
         )
         if self.engine.early_stopping is not None:
             self._callbacks["early_stopping"] = EarlyStopping(
@@ -266,27 +280,18 @@ class Run():
                 mode=self.task.target_metric_mode,
                 patience=self.engine.early_stopping,
                 check_finite=self.engine.check_finite,
-                log_rank_zero_only=True
+                log_rank_zero_only=True,
             )
-        self._callbacks["lr_monitor"] = LearningRateMonitor(
-            logging_interval=self.optimizer.lr_interval
-        )
+        self._callbacks["lr_monitor"] = LearningRateMonitor(logging_interval=self.optimizer.lr_interval)
         if self.engine.log_extra:
             kwargs: dict = self.engine.log_extra if isinstance(self.engine.log_extra, dict) else {}
-            self._callbacks["extra"] = LogTrainingStats(
-                log_every_n_steps=self.engine.logging_interval,
-                **kwargs
-            )
+            self._callbacks["extra"] = LogTrainingStats(log_every_n_steps=self.logging_interval, **kwargs)
         self._callbacks["print_epoch"] = PrintEpochWithTime(self.engine.silent)
         if self.engine.restrict_train_epochs is not None:
             self._callbacks["restrict_train_epochs"] = RestrictTrainEpochs(self.engine.restrict_train_epochs)
-        # TODO: callback for logging time per step
 
     def outpath_exclude_keys(self) -> list[str]:
-        return [
-            self.eval_key,
-            "output_dir_name"
-        ]
+        return [self.eval_key, "output_dir_name"]
 
     def _set_outpath(self):
         base: Path = self.engine.output_dir / self.task.output_dir_name / self.optimizer.output_dir_name
@@ -309,5 +314,6 @@ class Run():
             self._config,
             eval_key=self.eval_key,
             engine_key=self.engine_key,
-            ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.") + [f"{self.optimizer_key}.output_dir_name", f"{self.task_key}.output_dir_name"]
+            ignore_keys=self.engine.outpath_irrelevant_engine_keys(prefix=f"{self.engine_key}.")
+            + [f"{self.optimizer_key}.output_dir_name", f"{self.task_key}.output_dir_name"],
         )
