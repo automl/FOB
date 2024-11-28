@@ -643,7 +643,7 @@ def _single_tensor_adam(
                 else:
                     raise ValueError(f"Unsupported regularization function: {reg_function}")
 
-                if old_lagmul > 0 and lagmul == 0:
+                if (adacpr_method == "paper" or adacpr_method == "overcorrect") and old_lagmul > 0 and lagmul == 0:
                     if adacpr_method == "paper":
                         set_kappa(reg_function, param, kappa)
                     elif adacpr_method == "overcorrect":
