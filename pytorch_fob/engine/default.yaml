@@ -1,6 +1,7 @@
 engine: 
   accelerator: gpu           # Whether to train on cpu or gpu
   check_finite: true         # Check if 'early_stopping_metric' is finite during training. Aborts training if not. Only active when 'early_stopping' is not null.
+  checkpoint_interval: null  # Number of epochs between checkpoints. Set to null to disable extra checkpoints besides best and last.
   data_dir: ./data           # Where you want to store the training data
   deterministic: warn        # 'warn' tries to use deterministic algorithms if possible, also accepts true or false.
   detect_anomaly: false      # Lightning trainer argument with same name.
@@ -10,13 +11,14 @@ engine:
   gradient_clip_alg: norm    # {value, norm} to disable gradient clipping: set 'gradient_clip_val' to null
   gradient_clip_val: null    # DEFAULT: don't clip gradients, expects value in [0, 1]
   log_extra: false           # Activate logging of gradients and more. Can be bool or a dict with the options supported by callback `LogTrainingStats` in `pytorch_fob/engine/callbacks.py`.
-  logging_interval: 50       # Number of steps between each logging step.
+  logging_interval: null       # Number of steps between each logging step. Overrides 'logging_interval_factor'.
+  logging_interval_factor: 0.0025  # Number of steps between each logging step, relative to the total number of steps.
   optimize_memory: false     # Use nondeterministic, but memory-efficient algorithms for self-attention
   output_dir: ./experiments  # Where you want to store the results
   plot: true                 # Whether to plot the results.
   precision: bf16-mixed      # Floating precision of training, see https://lightning.ai/docs/pytorch/stable/common/precision_basic.html
   restrict_train_epochs: null  # Only train for a specific number of epochs. Set to null to disable. The epochs set here are counted from start of training, so this works with 'resume'.
-  resume: true               # You can either pass the path to your checkpoint here or set to true, which loads the last checkpoint.
+  resume: true               # You can either pass the path to your checkpoint here or set to true, which loads the last checkpoint. Alternatively if you have checkpoints from setting `checkpoint_interval` in a previous run, you can specify the number of the epoch to resume from.
   run_scheduler: sequential  # How to schedule the runs of the experiment. Supported values:
                                # 'sequential': runs are performed sequentially 
                                # 'single:N' where N is the number of the run starting from 1.
