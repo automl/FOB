@@ -157,7 +157,7 @@ class LogTrainingStats(Callback):
         log_quantiles: bool = False,
         log_momentum: bool = False,
         log_lrs: bool = True,
-        log_lagmuls: bool = True,
+        log_cpr_extras: bool = True,
         log_every_n_steps: int = 50,
         change_log_interval_every_n_steps: Optional[int] = None,
         log_interval_factor: float = 2.0,
@@ -171,7 +171,7 @@ class LogTrainingStats(Callback):
         self.log_quantiles = log_quantiles
         self.log_momentum = log_momentum
         self.log_lrs = log_lrs
-        self.log_lagmuls = log_lagmuls
+        self.log_cpr_extras = log_cpr_extras
         self.log_every_n_steps = log_every_n_steps
         self.change_log_interval_every_n_steps = change_log_interval_every_n_steps
         self.log_interval_factor = log_interval_factor
@@ -266,8 +266,10 @@ class LogTrainingStats(Callback):
                     if self.log_lrs and "lr" in state:
                         stats[f"param/{name}/lr"] = state["lr"].item()
 
-                    if self.log_lagmuls and "lagmul" in state:
-                        stats[f"param/{name}/lagmul"] = state["lagmul"].item()
+                    if self.log_cpr_extras:
+                        for extra in ["lagmul", "lagmul_ema", "kappa"]:
+                            if extra in state:
+                                stats[f"param/{name}/{extra}"] = state[extra].item()
 
             if trainer.loggers is not None:
                 for logger in trainer.loggers:
