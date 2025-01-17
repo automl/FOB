@@ -9,4 +9,4 @@ optimizer:
   weight_lr_power: 2.0
   r: 0.75
   lr_scheduler:
-    warmup_factor: 0.2
+    warmup_factor: 0.02
