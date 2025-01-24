@@ -31,6 +31,10 @@ evaluation:
 
   plotstyle:
     tight_layout: True
+    # log10 on axis tick-labels, e.g. 10^0, 10^-1, 10^-2 instead of 1, 0.1, 0.01. Can be list of booleans to set for each row/column individually
+    x_axis_labels_log10: False   # log10 on x axis
+    y_axis_labels_log10: False   # log10 on y axis
+
     text:
       usetex: True               # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$ but some cluster dont have it installed# the font in the tiles of the matrix
 

@@ -151,5 +151,7 @@ class EvalConfig(BaseConfig):
         cfg["output_types"] = self.output_types
         cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
         cfg["plot"]["y_axis"] = EndlessList(wrap_list(cfg["plot"]["y_axis"]))
+        cfg["plotstyle"]["x_axis_labels_log10"] = EndlessList(wrap_list(cfg["plotstyle"]["x_axis_labels_log10"]))
+        cfg["plotstyle"]["y_axis_labels_log10"] = EndlessList(wrap_list(cfg["plotstyle"]["y_axis_labels_log10"]))
         cfg["split_groups"] = self.split_groups
         super().__init__(cfg)

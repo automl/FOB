@@ -1,14 +1,17 @@
 import json
-from pathlib import Path
-from os import PathLike
-from typing import List, Literal
 from itertools import repeat
+from os import PathLike
+from pathlib import Path
+from typing import List, Literal
+
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import seaborn as sns
+import numpy as np
 import pandas as pd
+import seaborn as sns
+from matplotlib.figure import Figure
+
 from pytorch_fob.engine.parser import YAMLParser
-from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_warn, log_info, log_debug
+from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_debug, log_info, log_warn
 from pytorch_fob.evaluation import evaluation_path
 
 
@@ -96,8 +99,21 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
+def get_ticklabels(values: np.ndarray, usetex: bool, use_log: bool) -> list[str] | Literal["auto"]:
+    def to_loglabel(x: float) -> str:
+        if usetex:
+            return f"$10^{{{x}}}$"
+        else:
+            return f"10^({x})"
+    if use_log:
+        return [to_loglabel(round(np.log10(v), 1)) for v in values]
+    else:
+        return "auto"
+
+
 def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str, idx: str, ax=None,
-                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
+                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None,
+                       xticks_log: bool = False, yticks_log: bool = False):
     """
     Creates one heatmap and puts it into the grid of subplots.
     Uses pd.pivot_table() and sns.heatmap().
@@ -155,10 +171,14 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
     # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
     cbar_ax = None
 
+    usetex = config.plotstyle.text.usetex
+
     if not config.plot.std:
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=True, fmt=fmt,
                            annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                           xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
+                           yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # BUILD STD TABLE
@@ -184,6 +204,8 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
         return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
                            annot=annot_matrix, fmt=fmt,
                            annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                           xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
+                           yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
 
 
@@ -384,7 +406,10 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
     else:
         param_name, param_value = model_param.split("=", maxsplit=1)
         if pd.api.types.is_numeric_dtype(dataframe[param_name]):
-            param_value = float(param_value)
+            try:
+                param_value = float(param_value)
+            except ValueError:
+                pass
         try:
             current_dataframe = dataframe.groupby([param_name]).get_group((param_value,))
         except KeyError:
@@ -392,10 +417,14 @@ def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: Attribut
                            "maybe the data was created with different versions of fob; skipping this row")
             log_debug(f"{param_name=}{param_value=}{dataframe.columns=}{dataframe[param_name]=}")
             return False
+    
+    # optionally convert axis-tick-labels to logscale
+    xticks_log = config.plotstyle.x_axis_labels_log10[i]
+    yticks_log = config.plotstyle.y_axis_labels_log10[j]
     current_plot = create_matrix_plot(current_dataframe, config,
-                                        cols, idx,
-                                        ax=axs[j][i],
-                                        cbar=include_cbar, vmin=vmin, vmax=vmax)
+                                      cols, idx, ax=axs[j][i],
+                                      cbar=include_cbar, vmin=vmin, vmax=vmax,
+                                      xticks_log=xticks_log, yticks_log=yticks_log)
 
     # LABELS
     # Pretty name for label "learning_rate" => "Learning Rate"
