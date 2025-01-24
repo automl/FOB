@@ -111,13 +111,17 @@ def get_ticklabels(values: np.ndarray, usetex: bool, use_log: bool) -> list[str]
         return "auto"
 
 
-def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str, idx: str, ax=None,
+def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
+                       config: AttributeDict,
+                       cols: str, idx: str, ax=None,
                        cbar: bool = True, vmin: None | int = None, vmax: None | int = None,
                        xticks_log: bool = False, yticks_log: bool = False):
     """
     Creates one heatmap and puts it into the grid of subplots.
     Uses pd.pivot_table() and sns.heatmap().
     """
+    dataframe = pt_object[0]
+    pivot_table = pt_object[1]
     df_entry = dataframe.iloc[0]
     metric_name = df_entry["evaluation.plot.metric"]
 
@@ -131,10 +135,6 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
         log_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
                        f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
         idx = "optimizer." + idx
-    # create pivot table and format the score result
-    pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx, values=metric_name,
-                                 aggfunc='mean')
 
     fmt = None
     format_string = dataframe["evaluation.plot.format"].iloc[0]
@@ -182,10 +182,7 @@ def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str
                            cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
     else:
         # BUILD STD TABLE
-        pivot_table_std = pd.pivot_table(dataframe,
-                                        columns=cols, index=idx, values=metric_name,
-                                        aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
-                                        )
+        pivot_table_std = pt_object[2]
         if float("inf") in pivot_table_std.values.flatten():
             log_warn("WARNING: Not enough data to calculate the std, skipping std in plot")
 
@@ -302,6 +299,60 @@ def find_global_vmin_vmax(dataframe_list, config):
     return vmin, vmax
 
 
+def create_pivot_tables(
+        dataframe_list: list[pd.DataFrame],
+        config: AttributeDict,
+        n_rows: list[int],
+        row_names_by_col: list[list[str]]
+    ) -> list[list[tuple[pd.DataFrame, ...]]]:
+    pivot_tables = [list() for _ in range(len(dataframe_list))]
+
+    for i in range(len(dataframe_list)):
+        row_names = row_names_by_col[i]
+        for j in range(n_rows[i]):
+            dataframe = dataframe_list[i]
+            df_entry = dataframe.iloc[0]
+            metric_name = df_entry["evaluation.plot.metric"]
+            cols = config.plot.x_axis[i]
+            idx = config.plot.y_axis[j]
+
+            # df grouping for split_groups
+            row_name = row_names[j]
+            if row_name != "default":
+                pname, pvalue = row_name.split("=", maxsplit=1)
+                if pd.api.types.is_numeric_dtype(dataframe[pname]):
+                    try:
+                        pvalue = float(pvalue)
+                    except ValueError:
+                        pass
+                try:
+                    grouped_df = dataframe.groupby([pname]).get_group((pvalue,))
+                except KeyError:
+                    log_warn(f"Was not able to groupby '{pname}'," +
+                              "maybe the data was created with different versions of FOB; skipping this row")
+                    log_debug(f"{pname=}{pvalue=}{dataframe.columns=}{dataframe[pname]=}")
+                    pivot_tables[i].append(tuple())
+                    continue
+            else:
+                grouped_df = dataframe
+
+            pivot_table = pd.pivot_table(grouped_df,
+                                         columns=cols, index=idx,
+                                         values=metric_name,
+                                         aggfunc="mean")
+
+            if config.plot.std:
+                pivot_table_agg = pd.pivot_table(grouped_df,
+                                                 columns=cols, index=idx,
+                                                 values=metric_name,
+                                                 aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False)
+                pivot_tables[i].append((grouped_df, pivot_table, pivot_table_agg))
+            else:
+                pivot_tables[i].append((grouped_df, pivot_table))
+
+    return pivot_tables
+
+
 def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     """
     Takes a list of dataframes. Each dataframe is processed into a column of heatmaps.
@@ -339,8 +390,17 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     else:
         figsize = None
 
+    # create pivot tables and extract subplot widths
+    pivot_tables = create_pivot_tables(dataframe_list, config, n_rows, row_names)
+    widths = []
+    for i in range(num_cols):
+        for j in range(n_rows[i]):
+            widths.append(len(pivot_tables[i][j][1].columns))
+    total_width = sum(widths)
+    width_ratios = list(map(lambda x: x / total_width, widths))
+
     # TODO: use seaborn FacetGrid
-    fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize)
+    fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize, width_ratios=width_ratios)
     if n_rows_max == 1:
         axs = [axs]
     if num_cols == 1:
@@ -356,23 +416,23 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
         num_nested_subfigures: int = n_rows[i]
 
         if not config.split_groups:
-            create_one_grid_element(dataframe_list, config, axs, i,
-                                    j=0,
+            create_one_grid_element(pivot_tables[i][0],
+                                    config,
+                                    axs, i, j=0,
                                     max_i=num_cols,
                                     max_j=0,
                                     vmin=vmin,
                                     vmax=vmax,
-                                    n_rows=n_rows,
                                     row_names=row_names)
         else:
             for j in range(num_nested_subfigures):
-                create_one_grid_element(dataframe_list, config, axs, i,
-                                        j,
+                create_one_grid_element(pivot_tables[i][j],
+                                        config,
+                                        axs, i, j,
                                         max_i=num_cols,
                                         max_j=num_nested_subfigures,
                                         vmin=vmin,
                                         vmax=vmax,
-                                        n_rows=n_rows,
                                         row_names=row_names)
 
     if config.plotstyle.tight_layout:
@@ -386,42 +446,30 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     return fig, axs
 
 
-def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: AttributeDict, axs,
-                            i: int, j: int, max_i: int, max_j: int, vmin, vmax, n_rows, row_names):
+def create_one_grid_element(
+        pt_object: tuple[pd.DataFrame, ...],
+        config: AttributeDict,
+        axs,
+        i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
+    ):
     """does one 'axs' element as it is called in plt"""
-    num_nested_subfigures: int = n_rows[i]
-    name_for_additional_subplots: list[str] = row_names[i]
+    if len(pt_object) == 0:
+        return False
+    current_dataframe = pt_object[0]
     num_subfigures = max_i  # from left to right
     num_nested_subfigures = max_j  # from top to bottom
-    dataframe = dataframe_list[i]
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
     # only include colorbar once
     include_cbar: bool = i == num_subfigures - 1
 
-    model_param = name_for_additional_subplots[j]
-    if model_param == "default":
-        current_dataframe = dataframe  # we do not need to do further grouping
-    else:
-        param_name, param_value = model_param.split("=", maxsplit=1)
-        if pd.api.types.is_numeric_dtype(dataframe[param_name]):
-            try:
-                param_value = float(param_value)
-            except ValueError:
-                pass
-        try:
-            current_dataframe = dataframe.groupby([param_name]).get_group((param_value,))
-        except KeyError:
-            log_warn(f"WARNING: was not able to groupby '{param_name}'," +
-                           "maybe the data was created with different versions of fob; skipping this row")
-            log_debug(f"{param_name=}{param_value=}{dataframe.columns=}{dataframe[param_name]=}")
-            return False
+    model_param = row_names[i][j]
     
     # optionally convert axis-tick-labels to logscale
     xticks_log = config.plotstyle.x_axis_labels_log10[i]
     yticks_log = config.plotstyle.y_axis_labels_log10[j]
-    current_plot = create_matrix_plot(current_dataframe, config,
+    current_plot = create_matrix_plot(pt_object, config,
                                       cols, idx, ax=axs[j][i],
                                       cbar=include_cbar, vmin=vmin, vmax=vmax,
                                       xticks_log=xticks_log, yticks_log=yticks_log)
