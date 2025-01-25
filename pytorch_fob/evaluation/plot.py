@@ -109,6 +109,18 @@ def get_ticklabels(values: np.ndarray, usetex: bool, use_log: bool) -> list[str]
         return [to_loglabel(round(np.log10(v), 1)) for v in values]
     else:
         return "auto"
+    
+
+def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, metric_name: str, vmin: float, vmax: float):
+    colormap_name = config.plotstyle.color_palette
+    low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
+    if low_is_better:
+        colormap_name += "_r"  # this will "inver" / "flip" the colorbar
+    colormap = sns.color_palette(colormap_name, as_cmap=True)
+    metric_legend = pretty_name(metric_name)
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+    plt.colorbar(sm, cax=None, ax=ax, cmap=colormap, label=metric_legend)
 
 
 def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
@@ -159,28 +171,12 @@ def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
             vmax = max(limits)
             log_debug(f"setting cbar limits to {vmin}, {vmax} ")
 
-    colormap_name = config.plotstyle.color_palette
-    low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
-    if low_is_better:
-        colormap_name += "_r"  # this will "inver" / "flip" the colorbar
-    colormap = sns.color_palette(colormap_name, as_cmap=True)
-    metric_legend = pretty_name(metric_name)
-
-    # FINETUNE POSITION
-    # left bottom width height
-    # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
-    cbar_ax = None
+    if cbar:
+        make_colorbar(dataframe, config, ax, metric_name, vmin, vmax)
 
     usetex = config.plotstyle.text.usetex
 
-    if not config.plot.std:
-        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=True, fmt=fmt,
-                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
-                           yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
-                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
-    else:
+    if config.plot.std:
         # BUILD STD TABLE
         pivot_table_std = pt_object[2]
         if float("inf") in pivot_table_std.values.flatten():
@@ -195,15 +191,17 @@ def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
                 std = pivot_table_std.loc[i, j]
                 std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""  # type: ignore
                 annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"  # type: ignore
-
+        annot = annot_matrix
         fmt = ""  # cannot format like before, as we do not only have a number
+    else:
+        annot = True
 
-        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=annot_matrix, fmt=fmt,
-                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
-                           yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
-                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
+    return sns.heatmap(pivot_table, ax=ax,
+                        annot=annot, fmt=fmt,
+                        annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                        xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
+                        yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
+                        cbar=False, vmin=vmin, vmax=vmax)
 
 
 def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config):
@@ -456,13 +454,11 @@ def create_one_grid_element(
     if len(pt_object) == 0:
         return False
     current_dataframe = pt_object[0]
-    num_subfigures = max_i  # from left to right
-    num_nested_subfigures = max_j  # from top to bottom
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
     # only include colorbar once
-    include_cbar: bool = i == num_subfigures - 1
+    include_cbar: bool = i == max_i - 1
 
     model_param = row_names[i][j]
     
@@ -481,7 +477,7 @@ def create_one_grid_element(
         current_plot.set_ylabel('', labelpad=8)
     else:
         current_plot.set_ylabel(pretty_name(current_plot.get_ylabel()))
-    if j < num_nested_subfigures - 1:
+    if j < max_j - 1:
         current_plot.set_xlabel('', labelpad=8)
     else:
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
