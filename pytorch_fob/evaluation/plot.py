@@ -486,16 +486,18 @@ def create_one_grid_element(
     else:
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
 
-    # reading optimizer and task name after grouping
-    df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
-    opti_name = df_entry['optimizer.name']
-    task_name = df_entry['task.name']
-
     # TITLE
     # title (heading) of the heatmap: <optimname> on <taskname> (+ additional info)
-    title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
-    if max_i > 1 or max_j > 1:
-        title += "" if model_param == "default" else f"\n{model_param}"
+    if config.column_titles is None:
+        # reading optimizer and task name after grouping
+        df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
+        opti_name = df_entry['optimizer.name']
+        task_name = df_entry['task.name']
+        title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
+    else:
+        title = config.column_titles[i]
+    if (max_i > 1 or max_j > 1) and model_param != "default":
+        title += f"\n{model_param}"
     current_plot.set_title(title)
 
 

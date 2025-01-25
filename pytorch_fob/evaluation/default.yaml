@@ -11,6 +11,7 @@ evaluation:
   verbose: False                 # debug prints
   column_split_key: optimizer.name  # if set, will split the dataframe and plot it in columns. Default: optimizer.name
   column_split_order: null        # sets the order in which the columns are plotted.
+  column_titles: null             # sets the title for each column
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:

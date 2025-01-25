@@ -142,6 +142,7 @@ class EvalConfig(BaseConfig):
         self.checkpoints: list[Literal["last", "best"]] = wrap_list(cfg["checkpoints"])
         self.column_split_key: Optional[str] = cfg.get("column_split_key", None)
         self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
+        self.column_titles: Optional[list[str]] = cfg.get("column_titles", None)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])
         cfg["ignore_keys"] = self.ignore_keys
