@@ -1,8 +1,9 @@
 import json
+from dataclasses import dataclass
 from itertools import repeat
 from os import PathLike
 from pathlib import Path
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,6 +14,17 @@ from matplotlib.figure import Figure
 from pytorch_fob.engine.parser import YAMLParser
 from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_debug, log_info, log_warn
 from pytorch_fob.evaluation import evaluation_path
+
+
+@dataclass
+class PivotTable:
+    grouped_df: pd.DataFrame
+    pivot_table: pd.DataFrame
+    std_table: Optional[pd.DataFrame] = None
+
+    @property
+    def empty(self) -> bool:
+        return self.pivot_table.empty
 
 
 def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
@@ -99,7 +111,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
-def get_ticklabels(values: np.ndarray, usetex: bool, use_log: bool) -> list[str] | Literal["auto"]:
+def get_ticklabels(values, usetex: bool, use_log: bool) -> list[str] | Literal["auto"]:
     def to_loglabel(x: float) -> str:
         if usetex:
             return f"$10^{{{x}}}$"
@@ -111,7 +123,7 @@ def get_ticklabels(values: np.ndarray, usetex: bool, use_log: bool) -> list[str]
         return "auto"
     
 
-def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, metric_name: str, vmin: float, vmax: float):
+def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, metric_name: str, vmin: float | None, vmax: float | None):
     colormap_name = config.plotstyle.color_palette
     low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
     if low_is_better:
@@ -123,17 +135,42 @@ def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, metric_nam
     plt.colorbar(sm, cax=None, ax=ax, cmap=colormap, label=metric_legend)
 
 
-def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
+def get_exp_dec_format(pt_object: PivotTable) -> tuple[int, int]:
+    dataframe = pt_object.grouped_df
+    format_string = dataframe["evaluation.plot.format"].iloc[0]
+    exponent, decimal_points = format_string.split(".")
+    exponent = int(exponent)
+    decimal_points = int(decimal_points)
+    return exponent, decimal_points
+
+
+def handle_formatting(pt_object: PivotTable, vmin: float | None, vmax: float | None) -> tuple[float | None, float | None]:
+    """adjust vmin, vmax and pivot tables based on the format string in the dataframe"""
+    exponent, decimal_points = get_exp_dec_format(pt_object)
+
+    # adjust vmin and vmax to match the formatting
+    if vmin is not None:
+        vmin *= (10 ** exponent)
+    if vmax is not None:
+        vmax *= (10 ** exponent)
+
+    # adjust pivot tables to match the formatting
+    pt_object.pivot_table = (pt_object.pivot_table * (10 ** exponent)).round(decimal_points)
+    if pt_object.std_table is not None:
+        pt_object.std_table = (pt_object.std_table * (10 ** exponent)).round(decimal_points)
+
+    return vmin, vmax
+
+
+def create_matrix_plot(pt_object: PivotTable,
                        config: AttributeDict,
                        cols: str, idx: str, ax=None,
-                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None,
+                       cbar: bool = True, vmin: None | float = None, vmax: None | float = None,
                        xticks_log: bool = False, yticks_log: bool = False):
     """
-    Creates one heatmap and puts it into the grid of subplots.
-    Uses pd.pivot_table() and sns.heatmap().
+    Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
     """
-    dataframe = pt_object[0]
-    pivot_table = pt_object[1]
+    dataframe = pt_object.grouped_df
     df_entry = dataframe.iloc[0]
     metric_name = df_entry["evaluation.plot.metric"]
 
@@ -148,52 +185,38 @@ def create_matrix_plot(pt_object: tuple[pd.DataFrame, ...],
                        f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
         idx = "optimizer." + idx
 
-    fmt = None
-    format_string = dataframe["evaluation.plot.format"].iloc[0]
+    # use correct formatting
+    vmin, vmax = handle_formatting(pt_object, vmin, vmax)
+    pivot_table = pt_object.pivot_table  # now adjusted to match formatting
 
-    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
-    value_exp_factor, decimal_points = format_string.split(".")
-    value_exp_factor = int(value_exp_factor)
-    decimal_points = int(decimal_points)
-    if vmin:
-        vmin *= (10 ** value_exp_factor)
-    if vmax:
-        vmax *= (10 ** value_exp_factor)
-    pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
-    fmt=f".{decimal_points}f"
-
-    # up to here limits was the min and max over all dataframes,
-    # usually we want to use user values
-    if "evaluation.plot.limits" in dataframe.columns:
-        limits = dataframe["evaluation.plot.limits"].iloc[0]
-        if limits:
-            vmin = min(limits)
-            vmax = max(limits)
-            log_debug(f"setting cbar limits to {vmin}, {vmax} ")
+    # up to here limits was the min and max over all dataframes, usually we want to use user values
+    local_limits = get_local_vmin_vmax(pt_object)
+    if local_limits is not None:
+        vmin, vmax = local_limits
 
     if cbar:
         make_colorbar(dataframe, config, ax, metric_name, vmin, vmax)
 
     usetex = config.plotstyle.text.usetex
+    _, decimals = get_exp_dec_format(pt_object)
 
-    if config.plot.std:
-        # BUILD STD TABLE
-        pivot_table_std = pt_object[2]
+    if pt_object.std_table is not None:
+        pivot_table_std = pt_object.std_table
         if float("inf") in pivot_table_std.values.flatten():
             log_warn("WARNING: Not enough data to calculate the std, skipping std in plot")
 
-        pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
-
+        # create annotation matrix
         annot_matrix = pivot_table.copy().astype("string")
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""  # type: ignore
-                annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"  # type: ignore
+                std_string = f"\n±({round(std, decimals)})" if std != float("inf") else ""  # type: ignore
+                annot_matrix.loc[i, j] = f"{round(mean, decimals)}{std_string}"  # type: ignore
         annot = annot_matrix
         fmt = ""  # cannot format like before, as we do not only have a number
     else:
+        fmt = f".{decimals}f"
         annot = True
 
     return sns.heatmap(pivot_table, ax=ax,
@@ -297,12 +320,24 @@ def find_global_vmin_vmax(dataframe_list, config):
     return vmin, vmax
 
 
+def get_local_vmin_vmax(pt_object: PivotTable) -> tuple[float, float] | None:
+    """replace vmin and vmax with custom values if specified"""
+    dataframe = pt_object.grouped_df
+    if "evaluation.plot.limits" in dataframe.columns:
+        limits = dataframe["evaluation.plot.limits"].iloc[0]
+        if limits:
+            vmin = min(limits)
+            vmax = max(limits)
+            log_debug(f"setting cbar limits to {vmin}, {vmax} ")
+            return vmin, vmax
+
+
 def create_pivot_tables(
         dataframe_list: list[pd.DataFrame],
         config: AttributeDict,
         n_rows: list[int],
         row_names_by_col: list[list[str]]
-    ) -> list[list[tuple[pd.DataFrame, ...]]]:
+    ) -> list[list[PivotTable]]:
     pivot_tables = [list() for _ in range(len(dataframe_list))]
 
     for i in range(len(dataframe_list)):
@@ -329,7 +364,7 @@ def create_pivot_tables(
                     log_warn(f"Was not able to groupby '{pname}'," +
                               "maybe the data was created with different versions of FOB; skipping this row")
                     log_debug(f"{pname=}{pvalue=}{dataframe.columns=}{dataframe[pname]=}")
-                    pivot_tables[i].append(tuple())
+                    pivot_tables[i].append(PivotTable(pd.DataFrame(), pd.DataFrame()))
                     continue
             else:
                 grouped_df = dataframe
@@ -344,9 +379,10 @@ def create_pivot_tables(
                                                  columns=cols, index=idx,
                                                  values=metric_name,
                                                  aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False)
-                pivot_tables[i].append((grouped_df, pivot_table, pivot_table_agg))
             else:
-                pivot_tables[i].append((grouped_df, pivot_table))
+                pivot_table_agg = None
+
+            pivot_tables[i].append(PivotTable(grouped_df, pivot_table, pivot_table_agg))
 
     return pivot_tables
 
@@ -393,7 +429,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     widths = []
     for i in range(num_cols):
         for j in range(n_rows[i]):
-            widths.append(len(pivot_tables[i][j][1].columns))
+            widths.append(len(pivot_tables[i][j].pivot_table.columns))
     total_width = sum(widths)
     width_ratios = list(map(lambda x: x / total_width, widths))
 
@@ -445,15 +481,15 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
 
 def create_one_grid_element(
-        pt_object: tuple[pd.DataFrame, ...],
+        pt_object: PivotTable,
         config: AttributeDict,
         axs,
         i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
     ):
     """does one 'axs' element as it is called in plt"""
-    if len(pt_object) == 0:
+    if pt_object.empty:
         return False
-    current_dataframe = pt_object[0]
+    current_dataframe = pt_object.grouped_df
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
