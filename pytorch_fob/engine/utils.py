@@ -1,11 +1,12 @@
-import logging
-from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Type
 import json
+import logging
 import math
 import signal
+from pathlib import Path
+from typing import Any, Callable, Iterable, Optional, Type
+
 import torch
-from lightning_utilities.core.rank_zero import rank_zero_only, rank_zero_info, rank_zero_debug, log
+from lightning_utilities.core.rank_zero import log, rank_zero_debug, rank_zero_info, rank_zero_only
 
 
 def set_loglevel(level: str):
@@ -80,6 +81,15 @@ def findfirst(f: Callable, xs: Iterable):
         if f(x):
             return x
     return None
+
+
+def round_to_int_if_close(x: float, ndigits: int = 1, eps: float = 1e-3) -> int | float:
+    """
+    If x is close to an integer, round to the integer. Otherwise round to ndigits. `eps` is the tolerance.
+    """
+    if abs(round(x) - x) < eps:
+        return round(x)
+    return round(x, ndigits)
 
 
 def trainer_strategy(devices: int | list[int] | str) -> str:

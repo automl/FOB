@@ -1,18 +1,25 @@
 import json
 from dataclasses import dataclass
 from itertools import repeat
+from math import log
 from os import PathLike
 from pathlib import Path
 from typing import List, Literal, Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.figure import Figure
 
 from pytorch_fob.engine.parser import YAMLParser
-from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_debug, log_info, log_warn
+from pytorch_fob.engine.utils import (
+    AttributeDict,
+    convert_type_inside_dict,
+    log_debug,
+    log_info,
+    log_warn,
+    round_to_int_if_close,
+)
 from pytorch_fob.evaluation import evaluation_path
 
 
@@ -111,17 +118,19 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
-def get_ticklabels(values, usetex: bool, use_log: bool) -> list[str] | Literal["auto"]:
-    def to_loglabel(x: float) -> str:
-        if usetex:
-            return f"$10^{{{x}}}$"
-        else:
-            return f"10^({x})"
-    if use_log:
-        return [to_loglabel(round(np.log10(v), 1)) for v in values]
+def get_ticklabels(values, usetex: bool, use_log: float | None) -> list[str] | Literal["auto"]:
+    if use_log is not None:
+        def to_loglabel(x: float) -> str:
+            base = use_log
+            exp = round_to_int_if_close(log(x, base))
+            if usetex:
+                return f"${base}^{{{exp}}}$"
+            else:
+                return f"{base}^({exp})"
+        return list(map(to_loglabel, values))
     else:
         return "auto"
-    
+
 
 def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, vmin: float | None, vmax: float | None):
     colormap_name = config.plotstyle.color_palette
@@ -167,7 +176,7 @@ def create_matrix_plot(pt_object: PivotTable,
                        config: AttributeDict,
                        cols: str, idx: str, ax=None,
                        vmin: None | float = None, vmax: None | float = None,
-                       xticks_log: bool = False, yticks_log: bool = False):
+                       xticks_log: float | None = None, yticks_log: float | None = None):
     """
     Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
     """
@@ -410,8 +419,10 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     pivot_tables = create_pivot_tables(dataframe_list, config, n_rows, row_names)
     widths = []
     for i in range(num_cols):
+        row_widths = []
         for j in range(n_rows[i]):
-            widths.append(len(pivot_tables[i][j].pivot_table.columns))
+            row_widths.append(len(pivot_tables[i][j].pivot_table.columns))
+        widths.append(max(row_widths))
     total_width = sum(widths)
     width_ratios = [0.975 * w/total_width for w in widths]
     # TODO: find better way to set width, so it is fixed for different sizes
@@ -488,8 +499,8 @@ def create_one_grid_element(
     model_param = row_names[i][j]
     
     # optionally convert axis-tick-labels to logscale
-    xticks_log = config.plotstyle.x_axis_labels_log10[i]
-    yticks_log = config.plotstyle.y_axis_labels_log10[j]
+    xticks_log = config.plotstyle.x_axis_labels_log[i]
+    yticks_log = config.plotstyle.y_axis_labels_log[j]
     current_plot = create_matrix_plot(pt_object, config,
                                       cols, idx, ax=ax,
                                       vmin=vmin, vmax=vmax,
