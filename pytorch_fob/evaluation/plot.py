@@ -9,6 +9,7 @@ from typing import List, Literal, Optional
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 
 from pytorch_fob.engine.parser import YAMLParser
@@ -72,19 +73,17 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     dfs: List[pd.DataFrame] = []
 
     for path in trial_dir_paths:
-
         config_file = path / config.experiment_files.config
         if config.last_instead_of_best:
             result_file = path / config.experiment_files.last_model
         else:
             result_file = path / config.experiment_files.best_model
-        all_files_exist = all([
-            config_file.is_file(),
-            result_file.is_file()
-        ])
+        all_files_exist = all([config_file.is_file(), result_file.is_file()])
         if not all_files_exist:
-            log_warn(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting." +
-                           f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})")
+            log_warn(
+                f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting."
+                + f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})"
+            )
             continue
 
         yaml_parser = YAMLParser()
@@ -120,6 +119,7 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
 
 def get_ticklabels(values, usetex: bool, use_log: float | None) -> list[str] | Literal["auto"]:
     if use_log is not None:
+
         def to_loglabel(x: float) -> str:
             base = use_log
             exp = round_to_int_if_close(log(x, base))
@@ -127,6 +127,7 @@ def get_ticklabels(values, usetex: bool, use_log: float | None) -> list[str] | L
                 return f"${base}^{{{exp}}}$"
             else:
                 return f"{base}^({exp})"
+
         return list(map(to_loglabel, values))
     else:
         return "auto"
@@ -140,10 +141,11 @@ def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, vmin: floa
     colormap = sns.color_palette(colormap_name, as_cmap=True)
     metric_name = dataframe.iloc[0]["evaluation.plot.metric"]
     metric_legend = pretty_name(metric_name)
-    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    norm = Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
     sm.set_array([])
     plt.colorbar(sm, cax=ax, cmap=colormap, label=metric_legend)
+
 
 def get_exp_dec_format(pt_object: PivotTable) -> tuple[int, int]:
     dataframe = pt_object.grouped_df
@@ -154,29 +156,37 @@ def get_exp_dec_format(pt_object: PivotTable) -> tuple[int, int]:
     return exponent, decimal_points
 
 
-def handle_formatting(pt_object: PivotTable, vmin: float | None, vmax: float | None) -> tuple[float | None, float | None]:
+def handle_formatting(
+    pt_object: PivotTable, vmin: float | None, vmax: float | None
+) -> tuple[float | None, float | None]:
     """adjust vmin, vmax and pivot tables based on the format string in the dataframe"""
     exponent, decimal_points = get_exp_dec_format(pt_object)
 
     # adjust vmin and vmax to match the formatting
     if vmin is not None:
-        vmin *= (10 ** exponent)
+        vmin *= 10**exponent
     if vmax is not None:
-        vmax *= (10 ** exponent)
+        vmax *= 10**exponent
 
     # adjust pivot tables to match the formatting
-    pt_object.pivot_table = (pt_object.pivot_table * (10 ** exponent)).round(decimal_points)
+    pt_object.pivot_table = (pt_object.pivot_table * (10**exponent)).round(decimal_points)
     if pt_object.std_table is not None:
-        pt_object.std_table = (pt_object.std_table * (10 ** exponent)).round(decimal_points)
+        pt_object.std_table = (pt_object.std_table * (10**exponent)).round(decimal_points)
 
     return vmin, vmax
 
 
-def create_matrix_plot(pt_object: PivotTable,
-                       config: AttributeDict,
-                       cols: str, idx: str, ax=None,
-                       vmin: None | float = None, vmax: None | float = None,
-                       xticks_log: float | None = None, yticks_log: float | None = None):
+def create_matrix_plot(
+    pt_object: PivotTable,
+    config: AttributeDict,
+    cols: str,
+    idx: str,
+    ax=None,
+    vmin: None | float = None,
+    vmax: None | float = None,
+    xticks_log: float | None = None,
+    yticks_log: float | None = None,
+):
     """
     Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
     """
@@ -186,12 +196,16 @@ def create_matrix_plot(pt_object: PivotTable,
     # CLEANING LAZY USER INPUT
     # cols are x-axis, idx are y-axis
     if cols not in dataframe.columns:
-        log_warn("x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
-                       f"  using '{'optimizer.' + cols}' as 'x-axis' instead.")
+        log_warn(
+            "x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n"
+            + f"  using '{'optimizer.' + cols}' as 'x-axis' instead."
+        )
         cols = "optimizer." + cols
     if idx not in dataframe.columns:
-        log_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
-                       f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
+        log_warn(
+            "y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n"
+            + f"  using '{'optimizer.' + idx}' as 'y-axis' instead."
+        )
         idx = "optimizer." + idx
 
     usetex = config.plotstyle.text.usetex
@@ -216,12 +230,18 @@ def create_matrix_plot(pt_object: PivotTable,
         fmt = f".{decimals}f"
         annot = True
 
-    return sns.heatmap(pivot_table, ax=ax,
-                       annot=annot, fmt=fmt,
-                       annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                       xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
-                       yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
-                       cbar=False, vmin=vmin, vmax=vmax)
+    return sns.heatmap(
+        pivot_table,
+        ax=ax,
+        annot=annot,
+        fmt=fmt,
+        annot_kws={"fontsize": config.plotstyle.matrix_font.size},
+        xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
+        yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
+        cbar=False,
+        vmin=vmin,
+        vmax=vmax,
+    )
 
 
 def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config):
@@ -243,8 +263,8 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
 
     return n_rows, row_names
 
-def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: AttributeDict
-                 ) -> tuple[int, list[str]]:
+
+def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: AttributeDict) -> tuple[int, list[str]]:
     """each matrix has 2 params (on for x and y each), one value, and we aggregate over seeds;
     if there are more than than these 4 parameter with different values,
     we want to put that in seperate rows instead of aggregating over them.
@@ -265,7 +285,9 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
         is_whitelisted = whitelisted_cols == "all" or col in whitelisted_cols
         if any([is_ignored, is_eval_key, not is_whitelisted]):
             if is_whitelisted:
-                log_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
+                log_warn(
+                    f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'."
+                )
             log_debug(f"ignoring {col}")
             continue
         nunique = dataframe[col].nunique(dropna=False)
@@ -273,7 +295,7 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
             log_debug(f"adding {col} since there are {nunique} unique values")
             for unique_hp in dataframe[col].unique():
                 columns_with_non_unique_values.append(f"{col}={unique_hp}")
-            necesarry_rows += (nunique)  # each unique parameter should be an individal plot
+            necesarry_rows += nunique  # each unique parameter should be an individal plot
 
     rows_number = max(necesarry_rows, 1)
     col_names = columns_with_non_unique_values
@@ -290,8 +312,8 @@ def find_global_vmin_vmax(dataframe_list, config):
 
     if num_cols > 1:
         # all subplots should have same colors -> we need to find the limits
-        vmin = float('inf')
-        vmax = float('-inf')
+        vmin = float("inf")
+        vmax = float("-inf")
 
         for i in range(num_cols):
             dataframe = dataframe_list[i]
@@ -299,18 +321,17 @@ def find_global_vmin_vmax(dataframe_list, config):
             idx = config.plot.y_axis[0]
             key = config.plot.metric
 
-            pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx,
-                                 values=key,
-                                 aggfunc='mean')
+            pivot_table = pd.pivot_table(dataframe, columns=cols, index=idx, values=key, aggfunc="mean")
 
             min_value_present_in_current_df = pivot_table.min().min()
             max_value_present_in_current_df = pivot_table.max().max()
 
-            log_debug("colorbar_limits:\n" +
-                            f"  subfigure number {i+1}, checking for metric {key}: \n" +
-                            f"  min value is {min_value_present_in_current_df},\n" +
-                            f"  max value is {max_value_present_in_current_df}")
+            log_debug(
+                "colorbar_limits:\n"
+                + f"  subfigure number {i+1}, checking for metric {key}: \n"
+                + f"  min value is {min_value_present_in_current_df},\n"
+                + f"  max value is {max_value_present_in_current_df}"
+            )
             vmin = min(vmin, min_value_present_in_current_df)
             vmax = max(vmax, max_value_present_in_current_df)
 
@@ -330,11 +351,8 @@ def get_local_vmin_vmax(pt_object: PivotTable) -> tuple[float, float] | None:
 
 
 def create_pivot_tables(
-        dataframe_list: list[pd.DataFrame],
-        config: AttributeDict,
-        n_rows: list[int],
-        row_names_by_col: list[list[str]]
-    ) -> list[list[PivotTable]]:
+    dataframe_list: list[pd.DataFrame], config: AttributeDict, n_rows: list[int], row_names_by_col: list[list[str]]
+) -> list[list[PivotTable]]:
     pivot_tables = [list() for _ in range(len(dataframe_list))]
 
     for i in range(len(dataframe_list)):
@@ -358,24 +376,28 @@ def create_pivot_tables(
                 try:
                     grouped_df = dataframe.groupby([pname]).get_group((pvalue,))
                 except KeyError:
-                    log_warn(f"Was not able to groupby '{pname}'," +
-                              "maybe the data was created with different versions of FOB; skipping this row")
+                    log_warn(
+                        f"Was not able to groupby '{pname}',"
+                        + "maybe the data was created with different versions of FOB; skipping this row"
+                    )
                     log_debug(f"{pname=}{pvalue=}{dataframe.columns=}{dataframe[pname]=}")
                     pivot_tables[i].append(PivotTable(pd.DataFrame(), pd.DataFrame()))
                     continue
             else:
                 grouped_df = dataframe
 
-            pivot_table = pd.pivot_table(grouped_df,
-                                         columns=cols, index=idx,
-                                         values=metric_name,
-                                         aggfunc="mean")
+            pivot_table = pd.pivot_table(grouped_df, columns=cols, index=idx, values=metric_name, aggfunc="mean")
 
             if config.plot.std:
-                pivot_table_agg = pd.pivot_table(grouped_df,
-                                                 columns=cols, index=idx,
-                                                 values=metric_name,
-                                                 aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False)
+                pivot_table_agg = pd.pivot_table(
+                    grouped_df,
+                    columns=cols,
+                    index=idx,
+                    values=metric_name,
+                    aggfunc=config.plot.aggfunc,
+                    fill_value=float("inf"),
+                    dropna=False,
+                )
             else:
                 pivot_table_agg = None
 
@@ -424,7 +446,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
             row_widths.append(len(pivot_tables[i][j].pivot_table.columns))
         widths.append(max(row_widths))
     total_width = sum(widths)
-    width_ratios = [0.975 * w/total_width for w in widths]
+    width_ratios = [0.975 * w / total_width for w in widths]
     # TODO: find better way to set width, so it is fixed for different sizes
     width_ratios.append(0.025)  # For colorbar
 
@@ -453,14 +475,10 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
             if local_limits is not None:
                 vmin, vmax = local_limits
 
-            create_one_grid_element(pt_object,
-                                    config,
-                                    ax, i, j,
-                                    max_i=num_cols,
-                                    max_j=num_rows,
-                                    vmin=vmin,
-                                    vmax=vmax,
-                                    row_names=row_names)
+            create_one_grid_element(
+                pt_object, config, ax, i, j, max_i=num_cols, max_j=num_rows, vmin=vmin, vmax=vmax, row_names=row_names
+            )
+
     # add colorbars
     for j in range(num_rows):
         pt_object = pivot_tables[num_cols - 1][j]
@@ -484,10 +502,8 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
 
 def create_one_grid_element(
-        pt_object: PivotTable,
-        config: AttributeDict,
-        ax, i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
-    ):
+    pt_object: PivotTable, config: AttributeDict, ax, i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
+):
     """does one 'axs' element as it is called in plt"""
     if pt_object.empty:
         return False
@@ -497,24 +513,23 @@ def create_one_grid_element(
     idx = config.plot.y_axis[0]
 
     model_param = row_names[i][j]
-    
+
     # optionally convert axis-tick-labels to logscale
     xticks_log = config.plotstyle.x_axis_labels_log[i]
     yticks_log = config.plotstyle.y_axis_labels_log[j]
-    current_plot = create_matrix_plot(pt_object, config,
-                                      cols, idx, ax=ax,
-                                      vmin=vmin, vmax=vmax,
-                                      xticks_log=xticks_log, yticks_log=yticks_log)
+    current_plot = create_matrix_plot(
+        pt_object, config, cols, idx, ax=ax, vmin=vmin, vmax=vmax, xticks_log=xticks_log, yticks_log=yticks_log
+    )
 
     # LABELS
     # Pretty name for label "learning_rate" => "Learning Rate"
-    # remove x_label of all but last row, remove y_label for all but first column    
+    # remove x_label of all but last row, remove y_label for all but first column
     if i > 0:
-        current_plot.set_ylabel('', labelpad=8)
+        current_plot.set_ylabel("", labelpad=8)
     else:
         current_plot.set_ylabel(pretty_name(current_plot.get_ylabel()))
     if j < max_j - 1:
-        current_plot.set_xlabel('', labelpad=8)
+        current_plot.set_xlabel("", labelpad=8)
     else:
         current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
 
@@ -523,8 +538,8 @@ def create_one_grid_element(
     if config.column_titles is None:
         # reading optimizer and task name after grouping
         df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
-        opti_name = df_entry['optimizer.name']
-        task_name = df_entry['task.name']
+        opti_name = df_entry["optimizer.name"]
+        task_name = df_entry["task.name"]
         title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
     else:
         title = config.column_titles[i]
@@ -533,8 +548,7 @@ def create_one_grid_element(
     current_plot.set_title(title)
 
 
-def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
-                       ) -> list[pd.DataFrame]:
+def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1) -> list[pd.DataFrame]:
     df_list: list[pd.DataFrame] = []
     num_dataframes: int = len(workload_paths)
 
@@ -566,6 +580,7 @@ def set_plotstyle(config: AttributeDict):
     plt.rcParams["font.family"] = config.plotstyle.font.family
     plt.rcParams["font.size"] = config.plotstyle.font.size
 
+
 def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignore pylint: disable=dangerous-default-value
     """
     Tries to use a mapping for the name, else will do some general replacement.
@@ -589,7 +604,7 @@ def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignor
     elif name_without_yaml_prefix in pretty_names.keys():
         name = pretty_names[name_without_yaml_prefix]
     else:
-        name = name.replace('_', ' ').title()
+        name = name.replace("_", " ").title()
     return name
 
 
@@ -628,7 +643,9 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         value_is_none = not config.data_dirs
         value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
         if value_is_none or value_has_wrong_type:
-            raise ValueError(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
+            raise ValueError(
+                f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}"
+            )
 
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):
