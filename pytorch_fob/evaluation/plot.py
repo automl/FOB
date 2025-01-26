@@ -426,31 +426,40 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
     log_debug(f"{n_rows=} and {num_cols=}")
 
-    # TODO adjust figsize based on pivot table dimensions
-    scale = config.plotstyle.scale
-    if num_cols == 1 and n_rows_max > 1:
-        figsize = (2**3 * scale, 2 * 3 * n_rows_max * scale)
-    elif num_cols == 2:
-        figsize = (12 * scale, 5.4 * n_rows_max * scale)
-    elif num_cols > 2:
-        figsize = (12 * (num_cols / 2) * scale, 5.4 * n_rows_max * scale)
-    else:
-        figsize = None
-
     # create pivot tables and extract subplot widths
     pivot_tables = create_pivot_tables(dataframe_list, config, n_rows, row_names)
-    widths = []
+    dims = [list() for _ in range(num_cols)]
     for i in range(num_cols):
-        row_widths = []
         for j in range(n_rows[i]):
-            row_widths.append(len(pivot_tables[i][j].pivot_table.columns))
-        widths.append(max(row_widths))
-    total_width = sum(widths)
-    width_ratios = [0.975 * w / total_width for w in widths]
-    # TODO: find better way to set width, so it is fixed for different sizes
-    width_ratios.append(0.025)  # For colorbar
+            width = len(pivot_tables[i][j].pivot_table.columns)
+            height = len(pivot_tables[i][j].pivot_table.index)
+            dims[i].append((width, height))
 
-    # TODO: use seaborn FacetGrid
+    # calculate subplot widths
+    widths = [max(map(lambda x: x[0], col_dims)) for col_dims in dims]
+    heights = [max([x[1] for x in [dims[i][j] for i in range(num_cols)]]) for j in range(n_rows_max)]
+    total_width = sum(widths)
+    width_ratios = [w / total_width for w in widths]
+
+    # calculate figure dims
+    scale = config.plotstyle.scale
+    fig_width = sum(widths) + len(widths) + 2
+    fig_height = sum(heights) + 2 * len(heights)
+    figsize = [fig_width * scale, fig_height * scale]
+    min_figsize = 3
+    if any(f < min_figsize for f in figsize):
+        factor = max(min_figsize / figsize[0], min_figsize / figsize[1])
+        figsize = list(map(lambda x: x * factor, figsize))
+
+    # adjust for colorbar
+    bar_width = 0.25  # compared to a table entry
+    ratio = figsize[0] / (figsize[0] + bar_width)
+    log_info(f"ratio: {ratio}")
+    width_ratios = list(map(lambda x: x * ratio, width_ratios))
+    width_ratios.append(1 - ratio)
+    figsize[0] += bar_width
+
+    # create figure
     fig, axs = plt.subplots(n_rows_max, num_cols + 1, figsize=figsize, width_ratios=width_ratios)
     if n_rows_max == 1:
         axs = [axs]
