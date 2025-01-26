@@ -123,17 +123,18 @@ def get_ticklabels(values, usetex: bool, use_log: bool) -> list[str] | Literal["
         return "auto"
     
 
-def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, metric_name: str, vmin: float | None, vmax: float | None):
+def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, vmin: float | None, vmax: float | None):
     colormap_name = config.plotstyle.color_palette
     low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
+    metric_name = dataframe.iloc[0]["evaluation.plot.metric"]
     metric_legend = pretty_name(metric_name)
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
-    plt.colorbar(sm, cax=None, ax=ax, cmap=colormap, label=metric_legend)
-
+    sm.set_array([])
+    plt.colorbar(sm, cax=ax, cmap=colormap, label=metric_legend)
 
 def get_exp_dec_format(pt_object: PivotTable) -> tuple[int, int]:
     dataframe = pt_object.grouped_df
@@ -165,14 +166,13 @@ def handle_formatting(pt_object: PivotTable, vmin: float | None, vmax: float | N
 def create_matrix_plot(pt_object: PivotTable,
                        config: AttributeDict,
                        cols: str, idx: str, ax=None,
-                       cbar: bool = True, vmin: None | float = None, vmax: None | float = None,
+                       vmin: None | float = None, vmax: None | float = None,
                        xticks_log: bool = False, yticks_log: bool = False):
     """
     Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
     """
     dataframe = pt_object.grouped_df
-    df_entry = dataframe.iloc[0]
-    metric_name = df_entry["evaluation.plot.metric"]
+    pivot_table = pt_object.pivot_table
 
     # CLEANING LAZY USER INPUT
     # cols are x-axis, idx are y-axis
@@ -184,18 +184,6 @@ def create_matrix_plot(pt_object: PivotTable,
         log_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
                        f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
         idx = "optimizer." + idx
-
-    # use correct formatting
-    vmin, vmax = handle_formatting(pt_object, vmin, vmax)
-    pivot_table = pt_object.pivot_table  # now adjusted to match formatting
-
-    # up to here limits was the min and max over all dataframes, usually we want to use user values
-    local_limits = get_local_vmin_vmax(pt_object)
-    if local_limits is not None:
-        vmin, vmax = local_limits
-
-    if cbar:
-        make_colorbar(dataframe, config, ax, metric_name, vmin, vmax)
 
     usetex = config.plotstyle.text.usetex
     _, decimals = get_exp_dec_format(pt_object)
@@ -220,11 +208,11 @@ def create_matrix_plot(pt_object: PivotTable,
         annot = True
 
     return sns.heatmap(pivot_table, ax=ax,
-                        annot=annot, fmt=fmt,
-                        annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                        xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
-                        yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
-                        cbar=False, vmin=vmin, vmax=vmax)
+                       annot=annot, fmt=fmt,
+                       annot_kws={'fontsize': config.plotstyle.matrix_font.size},
+                       xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
+                       yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
+                       cbar=False, vmin=vmin, vmax=vmax)
 
 
 def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config):
@@ -407,17 +395,11 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
     log_debug(f"{n_rows=} and {num_cols=}")
 
-    # TODO, figsize was just hardcoded for (1, 2) grid and left to default for (1, 1) grid
-    #       probably not worth the hazzle to create something dynamic (atleast not now)
-    # EDIT: it was slightly adapted to allow num rows without being completely unreadable
-    # margin = (num_subfigures - 1) * 0.3
-    # figsize=(5*n_cols + margin, 2.5)
+    # TODO adjust figsize based on pivot table dimensions
     scale = config.plotstyle.scale
     if num_cols == 1 and n_rows_max > 1:
         figsize = (2**3 * scale, 2 * 3 * n_rows_max * scale)
     elif num_cols == 2:
-        # TODO: after removing cbar from left subifgure, it is squished
-        #       there is an argument to share the legend, we should use that
         figsize = (12 * scale, 5.4 * n_rows_max * scale)
     elif num_cols > 2:
         figsize = (12 * (num_cols / 2) * scale, 5.4 * n_rows_max * scale)
@@ -431,43 +413,53 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
         for j in range(n_rows[i]):
             widths.append(len(pivot_tables[i][j].pivot_table.columns))
     total_width = sum(widths)
-    width_ratios = list(map(lambda x: x / total_width, widths))
+    width_ratios = [0.975 * w/total_width for w in widths]
+    # TODO: find better way to set width, so it is fixed for different sizes
+    width_ratios.append(0.025)  # For colorbar
 
     # TODO: use seaborn FacetGrid
-    fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize, width_ratios=width_ratios)
+    fig, axs = plt.subplots(n_rows_max, num_cols + 1, figsize=figsize, width_ratios=width_ratios)
     if n_rows_max == 1:
         axs = [axs]
-    if num_cols == 1:
-        axs = [[ax] for ax in axs]  # adapt for special case so we have unified types
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
 
     # None -> plt will chose vmin and vmax
-    vmin, vmax = find_global_vmin_vmax(dataframe_list, config)
+    global_vmin, global_vmax = find_global_vmin_vmax(dataframe_list, config)
 
     for i in range(num_cols):
-        num_nested_subfigures: int = n_rows[i]
+        num_rows: int = n_rows[i] if config.split_groups else 1
+        for j in range(num_rows):
+            pt_object = pivot_tables[i][j]
+            ax = axs[j][i]
 
-        if not config.split_groups:
-            create_one_grid_element(pivot_tables[i][0],
+            # use correct formatting
+            vmin, vmax = handle_formatting(pt_object, global_vmin, global_vmax)
+
+            # up to here limits was the min and max over all dataframes, usually we want to use user values
+            local_limits = get_local_vmin_vmax(pt_object)
+            if local_limits is not None:
+                vmin, vmax = local_limits
+
+            create_one_grid_element(pt_object,
                                     config,
-                                    axs, i, j=0,
+                                    ax, i, j,
                                     max_i=num_cols,
-                                    max_j=0,
+                                    max_j=num_rows,
                                     vmin=vmin,
                                     vmax=vmax,
                                     row_names=row_names)
-        else:
-            for j in range(num_nested_subfigures):
-                create_one_grid_element(pivot_tables[i][j],
-                                        config,
-                                        axs, i, j,
-                                        max_i=num_cols,
-                                        max_j=num_nested_subfigures,
-                                        vmin=vmin,
-                                        vmax=vmax,
-                                        row_names=row_names)
+    # add colorbars
+    for j in range(num_rows):
+        pt_object = pivot_tables[num_cols - 1][j]
+        ax = axs[j][num_cols]
+        df = pt_object.grouped_df
+        vmin, vmax = handle_formatting(pt_object, global_vmin, global_vmax)
+        local_limits = get_local_vmin_vmax(pt_object)
+        if local_limits is not None:
+            vmin, vmax = local_limits
+        make_colorbar(df, config, ax, vmin, vmax)
 
     if config.plotstyle.tight_layout:
         fig.tight_layout()
@@ -483,8 +475,7 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 def create_one_grid_element(
         pt_object: PivotTable,
         config: AttributeDict,
-        axs,
-        i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
+        ax, i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
     ):
     """does one 'axs' element as it is called in plt"""
     if pt_object.empty:
@@ -493,8 +484,6 @@ def create_one_grid_element(
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
-    # only include colorbar once
-    include_cbar: bool = i == max_i - 1
 
     model_param = row_names[i][j]
     
@@ -502,8 +491,8 @@ def create_one_grid_element(
     xticks_log = config.plotstyle.x_axis_labels_log10[i]
     yticks_log = config.plotstyle.y_axis_labels_log10[j]
     current_plot = create_matrix_plot(pt_object, config,
-                                      cols, idx, ax=axs[j][i],
-                                      cbar=include_cbar, vmin=vmin, vmax=vmax,
+                                      cols, idx, ax=ax,
+                                      vmin=vmin, vmax=vmax,
                                       xticks_log=xticks_log, yticks_log=yticks_log)
 
     # LABELS
