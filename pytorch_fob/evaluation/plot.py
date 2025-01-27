@@ -454,7 +454,6 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     # adjust for colorbar
     bar_width = 0.25  # compared to a table entry
     ratio = figsize[0] / (figsize[0] + bar_width)
-    log_info(f"ratio: {ratio}")
     width_ratios = list(map(lambda x: x * ratio, width_ratios))
     width_ratios.append(1 - ratio)
     figsize[0] += bar_width
@@ -607,13 +606,13 @@ def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignor
         pretty_names: dict[str, str] = yaml_content["names"]
 
     # applying pretty names
-    name_without_yaml_prefix = name.split(".")[-1]
+    name_without_yaml_prefix = name.replace("optimizer.", "").replace("task.", "")
     if name in pretty_names.keys():
         name = pretty_names[name]
     elif name_without_yaml_prefix in pretty_names.keys():
         name = pretty_names[name_without_yaml_prefix]
     else:
-        name = name.replace("_", " ").title()
+        name = name_without_yaml_prefix.replace("_", " ").title()
     return name
 
 
