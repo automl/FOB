@@ -4,7 +4,7 @@ from itertools import repeat
 from math import log
 from os import PathLike
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -117,20 +117,22 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
-def get_ticklabels(values, usetex: bool, use_log: float | None) -> list[str] | Literal["auto"]:
-    if use_log is not None:
-
+def get_ticklabels(values, usetex: bool, cfg: dict[str, Optional[float]]) -> list[str] | Literal["auto"]:
+    log_base = cfg.get("log_label", None)
+    factor = cfg.get("factor", 1.0) or 1.0
+    if log_base is not None:
         def to_loglabel(x: float) -> str:
-            base = use_log
+            x *= factor
+            base = log_base
             exp = round_to_int_if_close(log(x, base))
             if usetex:
                 return f"${base}^{{{exp}}}$"
             else:
                 return f"{base}^({exp})"
-
-        return list(map(to_loglabel, values))
     else:
-        return "auto"
+        def to_loglabel(x: float) -> str:
+            return str(round_to_int_if_close(x * factor, ndigits=3))
+    return list(map(to_loglabel, values))
 
 
 def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, vmin: float | None, vmax: float | None):
@@ -184,8 +186,8 @@ def create_matrix_plot(
     ax=None,
     vmin: None | float = None,
     vmax: None | float = None,
-    xticks_log: float | None = None,
-    yticks_log: float | None = None,
+    x_axis_cfg: dict[str, Any] = {},
+    y_axis_cfg: dict[str, Any] = {},
 ):
     """
     Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
@@ -236,8 +238,8 @@ def create_matrix_plot(
         annot=annot,
         fmt=fmt,
         annot_kws={"fontsize": config.plotstyle.matrix_font.size},
-        xticklabels=get_ticklabels(pivot_table.columns, usetex, xticks_log),
-        yticklabels=get_ticklabels(pivot_table.index, usetex, yticks_log),
+        xticklabels=get_ticklabels(pivot_table.columns, usetex, x_axis_cfg),
+        yticklabels=get_ticklabels(pivot_table.index, usetex, y_axis_cfg),
         cbar=False,
         vmin=vmin,
         vmax=vmax,
@@ -523,10 +525,10 @@ def create_one_grid_element(
     model_param = row_names[i][j]
 
     # optionally convert axis-tick-labels to logscale
-    xticks_log = config.plotstyle.x_axis_labels_log[i]
-    yticks_log = config.plotstyle.y_axis_labels_log[j]
+    x_axis_cfg = {k: v[i] for k, v in config.plotstyle.x_axis.items()}
+    y_axis_cfg = {k: v[j] for k, v in config.plotstyle.y_axis.items()}
     current_plot = create_matrix_plot(
-        pt_object, config, cols, idx, ax=ax, vmin=vmin, vmax=vmax, xticks_log=xticks_log, yticks_log=yticks_log
+        pt_object, config, cols, idx, ax=ax, vmin=vmin, vmax=vmax, x_axis_cfg=x_axis_cfg, y_axis_cfg=y_axis_cfg
     )
 
     # LABELS
@@ -535,11 +537,13 @@ def create_one_grid_element(
     if i > 0:
         current_plot.set_ylabel("", labelpad=8)
     else:
-        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel()))
+        ylabel = pretty_name(current_plot.get_ylabel()) if y_axis_cfg["label"] is None else y_axis_cfg["label"]
+        current_plot.set_ylabel(ylabel)
     if j < max_j - 1:
         current_plot.set_xlabel("", labelpad=8)
     else:
-        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
+        xlabel = pretty_name(current_plot.get_xlabel()) if x_axis_cfg["label"] is None else x_axis_cfg["label"]
+        current_plot.set_xlabel(xlabel)
 
     # TITLE
     # title (heading) of the heatmap: <optimname> on <taskname> (+ additional info)
