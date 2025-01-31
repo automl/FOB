@@ -142,6 +142,7 @@ class EvalConfig(BaseConfig):
         self.checkpoints: list[Literal["last", "best"]] = wrap_list(cfg["checkpoints"])
         self.column_split_key: Optional[str] = cfg.get("column_split_key", None)
         self.column_split_order: Optional[list[str]] = cfg.get("column_split_order", None)
+        self.column_titles: Optional[list[str]] = cfg.get("column_titles", None)
         self.ignore_keys: list[str] = some(ignore_keys, default=[])
         self.aggregate_groups: list[str] = wrap_list(cfg["aggregate_groups"])
         cfg["ignore_keys"] = self.ignore_keys
@@ -151,5 +152,8 @@ class EvalConfig(BaseConfig):
         cfg["output_types"] = self.output_types
         cfg["plot"]["x_axis"] = EndlessList(wrap_list(cfg["plot"]["x_axis"]))
         cfg["plot"]["y_axis"] = EndlessList(wrap_list(cfg["plot"]["y_axis"]))
+        for axis_key in ["x_axis", "y_axis"]:
+            for k, v in cfg["plotstyle"][axis_key].items():
+                cfg["plotstyle"][axis_key][k] = EndlessList(wrap_list(v))
         cfg["split_groups"] = self.split_groups
         super().__init__(cfg)

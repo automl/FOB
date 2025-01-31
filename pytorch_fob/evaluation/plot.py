@@ -1,15 +1,38 @@
 import json
-from pathlib import Path
-from os import PathLike
-from typing import List, Literal
+from dataclasses import dataclass
 from itertools import repeat
+from math import log
+from os import PathLike
+from pathlib import Path
+from typing import Any, List, Literal, Optional
+
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
+from matplotlib.colors import Normalize
+from matplotlib.figure import Figure
+
 from pytorch_fob.engine.parser import YAMLParser
-from pytorch_fob.engine.utils import AttributeDict, convert_type_inside_dict, log_warn, log_info, log_debug
+from pytorch_fob.engine.utils import (
+    AttributeDict,
+    convert_type_inside_dict,
+    log_debug,
+    log_info,
+    log_warn,
+    round_to_int_if_close,
+)
 from pytorch_fob.evaluation import evaluation_path
+
+
+@dataclass
+class PivotTable:
+    grouped_df: pd.DataFrame
+    pivot_table: pd.DataFrame
+    std_table: Optional[pd.DataFrame] = None
+
+    @property
+    def empty(self) -> bool:
+        return self.pivot_table.empty
 
 
 def get_available_trials(dirname: Path, config: AttributeDict, depth: int = 1):
@@ -50,19 +73,17 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     dfs: List[pd.DataFrame] = []
 
     for path in trial_dir_paths:
-
         config_file = path / config.experiment_files.config
         if config.last_instead_of_best:
             result_file = path / config.experiment_files.last_model
         else:
             result_file = path / config.experiment_files.best_model
-        all_files_exist = all([
-            config_file.is_file(),
-            result_file.is_file()
-        ])
+        all_files_exist = all([config_file.is_file(), result_file.is_file()])
         if not all_files_exist:
-            log_warn(f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting." +
-                           f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})")
+            log_warn(
+                f"WARNING: one or more files are missing in {path}. Skipping this hyperparameter setting."
+                + f"  <{config_file}>: {config_file.is_file()} and\n  <{result_file}>: {result_file.is_file()})"
+            )
             continue
 
         yaml_parser = YAMLParser()
@@ -96,95 +117,133 @@ def dataframe_from_trials(trial_dir_paths: List[Path], config: AttributeDict) ->
     return df
 
 
-def create_matrix_plot(dataframe: pd.DataFrame, config: AttributeDict, cols: str, idx: str, ax=None,
-                       cbar: bool = True, vmin: None | int = None, vmax: None | int = None):
-    """
-    Creates one heatmap and puts it into the grid of subplots.
-    Uses pd.pivot_table() and sns.heatmap().
-    """
-    df_entry = dataframe.iloc[0]
-    metric_name = df_entry["evaluation.plot.metric"]
+def get_ticklabels(values, usetex: bool, cfg: dict[str, Optional[float]]) -> list[str] | Literal["auto"]:
+    log_base = cfg.get("log_label", None)
+    factor = cfg.get("factor", 1.0) or 1.0
+    if log_base is not None:
+        def to_loglabel(x: float) -> str:
+            x *= factor
+            base = log_base
+            exp = round_to_int_if_close(log(x, base))
+            if usetex:
+                return f"${base}^{{{exp}}}$"
+            else:
+                return f"{base}^({exp})"
+    else:
+        def to_loglabel(x: float) -> str:
+            return str(round_to_int_if_close(x * factor, ndigits=3))
+    return list(map(to_loglabel, values))
 
-    # CLEANING LAZY USER INPUT
-    # cols are x-axis, idx are y-axis
-    if cols not in dataframe.columns:
-        log_warn("x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
-                       f"  using '{'optimizer.' + cols}' as 'x-axis' instead.")
-        cols = "optimizer." + cols
-    if idx not in dataframe.columns:
-        log_warn("y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n" +
-                       f"  using '{'optimizer.' + idx}' as 'y-axis' instead.")
-        idx = "optimizer." + idx
-    # create pivot table and format the score result
-    pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx, values=metric_name,
-                                 aggfunc='mean')
 
-    fmt = None
-    format_string = dataframe["evaluation.plot.format"].iloc[0]
-
-    # scaline the values given by the user to fit his format needs (-> and adapting the limits)
-    value_exp_factor, decimal_points = format_string.split(".")
-    value_exp_factor = int(value_exp_factor)
-    decimal_points = int(decimal_points)
-    if vmin:
-        vmin *= (10 ** value_exp_factor)
-    if vmax:
-        vmax *= (10 ** value_exp_factor)
-    pivot_table = (pivot_table * (10 ** value_exp_factor)).round(decimal_points)
-    fmt=f".{decimal_points}f"
-
-    # up to here limits was the min and max over all dataframes,
-    # usually we want to use user values
-    if "evaluation.plot.limits" in dataframe.columns:
-        limits = dataframe["evaluation.plot.limits"].iloc[0]
-        if limits:
-            vmin = min(limits)
-            vmax = max(limits)
-            log_debug(f"setting cbar limits to {vmin}, {vmax} ")
-
+def make_colorbar(dataframe: pd.DataFrame, config: AttributeDict, ax, vmin: float | None, vmax: float | None):
     colormap_name = config.plotstyle.color_palette
     low_is_better = dataframe["evaluation.plot.test_metric_mode"].iloc[0] == "min"
     if low_is_better:
         colormap_name += "_r"  # this will "inver" / "flip" the colorbar
     colormap = sns.color_palette(colormap_name, as_cmap=True)
+    metric_name = dataframe.iloc[0]["evaluation.plot.metric"]
     metric_legend = pretty_name(metric_name)
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+    sm.set_array([])
+    plt.colorbar(sm, cax=ax, cmap=colormap, label=metric_legend)
 
-    # FINETUNE POSITION
-    # left bottom width height
-    # cbar_ax = fig.add_axes([0.92, 0.235, 0.02, 0.6])
-    cbar_ax = None
 
-    if not config.plot.std:
-        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=True, fmt=fmt,
-                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
-    else:
-        # BUILD STD TABLE
-        pivot_table_std = pd.pivot_table(dataframe,
-                                        columns=cols, index=idx, values=metric_name,
-                                        aggfunc=config.plot.aggfunc,  fill_value=float("inf"), dropna=False
-                                        )
+def get_exp_dec_format(pt_object: PivotTable) -> tuple[int, int]:
+    dataframe = pt_object.grouped_df
+    format_string = dataframe["evaluation.plot.format"].iloc[0]
+    exponent, decimal_points = format_string.split(".")
+    exponent = int(exponent)
+    decimal_points = int(decimal_points)
+    return exponent, decimal_points
+
+
+def handle_formatting(
+    pt_object: PivotTable, vmin: float | None, vmax: float | None
+) -> tuple[float | None, float | None]:
+    """adjust vmin, vmax and pivot tables based on the format string in the dataframe"""
+    exponent, decimal_points = get_exp_dec_format(pt_object)
+
+    # adjust vmin and vmax to match the formatting
+    if vmin is not None:
+        vmin *= 10**exponent
+    if vmax is not None:
+        vmax *= 10**exponent
+
+    # adjust pivot tables to match the formatting
+    pt_object.pivot_table = (pt_object.pivot_table * (10**exponent)).round(decimal_points)
+    if pt_object.std_table is not None:
+        pt_object.std_table = (pt_object.std_table * (10**exponent)).round(decimal_points)
+
+    return vmin, vmax
+
+
+def create_matrix_plot(
+    pt_object: PivotTable,
+    config: AttributeDict,
+    cols: str,
+    idx: str,
+    ax=None,
+    vmin: None | float = None,
+    vmax: None | float = None,
+    x_axis_cfg: dict[str, Any] = {},
+    y_axis_cfg: dict[str, Any] = {},
+):
+    """
+    Creates one heatmap and puts it into the grid of subplots. Uses sns.heatmap().
+    """
+    dataframe = pt_object.grouped_df
+    pivot_table = pt_object.pivot_table
+
+    # CLEANING LAZY USER INPUT
+    # cols are x-axis, idx are y-axis
+    if cols not in dataframe.columns:
+        log_warn(
+            "x-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n"
+            + f"  using '{'optimizer.' + cols}' as 'x-axis' instead."
+        )
+        cols = "optimizer." + cols
+    if idx not in dataframe.columns:
+        log_warn(
+            "y-axis value not present in the dataframe; did you forget to add a 'optimizer.' as a prefix?\n"
+            + f"  using '{'optimizer.' + idx}' as 'y-axis' instead."
+        )
+        idx = "optimizer." + idx
+
+    usetex = config.plotstyle.text.usetex
+    _, decimals = get_exp_dec_format(pt_object)
+
+    if pt_object.std_table is not None:
+        pivot_table_std = pt_object.std_table
         if float("inf") in pivot_table_std.values.flatten():
             log_warn("WARNING: Not enough data to calculate the std, skipping std in plot")
 
-        pivot_table_std = (pivot_table_std * (10 ** value_exp_factor)).round(decimal_points)
-
+        # create annotation matrix
         annot_matrix = pivot_table.copy().astype("string")
         for i in pivot_table.index:
             for j in pivot_table.columns:
                 mean = pivot_table.loc[i, j]
                 std = pivot_table_std.loc[i, j]
-                std_string = f"\n±({round(std, decimal_points)})" if std != float("inf") else ""  # type: ignore
-                annot_matrix.loc[i, j] = f"{round(mean, decimal_points)}{std_string}"  # type: ignore
-
+                std_string = f"\n±({round(std, decimals)})" if std != float("inf") else ""  # type: ignore
+                annot_matrix.loc[i, j] = f"{round(mean, decimals)}{std_string}"  # type: ignore
+        annot = annot_matrix
         fmt = ""  # cannot format like before, as we do not only have a number
+    else:
+        fmt = f".{decimals}f"
+        annot = True
 
-        return sns.heatmap(pivot_table, ax=ax, cbar_ax=cbar_ax,
-                           annot=annot_matrix, fmt=fmt,
-                           annot_kws={'fontsize': config.plotstyle.matrix_font.size},
-                           cbar=cbar, vmin=vmin, vmax=vmax, cmap=colormap, cbar_kws={'label': f"{metric_legend}"})
+    return sns.heatmap(
+        pivot_table,
+        ax=ax,
+        annot=annot,
+        fmt=fmt,
+        annot_kws={"fontsize": config.plotstyle.matrix_font.size},
+        xticklabels=get_ticklabels(pivot_table.columns, usetex, x_axis_cfg),
+        yticklabels=get_ticklabels(pivot_table.index, usetex, y_axis_cfg),
+        cbar=False,
+        vmin=vmin,
+        vmax=vmax,
+    )
 
 
 def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config):
@@ -206,8 +265,8 @@ def get_all_num_rows_and_their_names(dataframe_list: list[pd.DataFrame], config)
 
     return n_rows, row_names
 
-def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: AttributeDict
-                 ) -> tuple[int, list[str]]:
+
+def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: AttributeDict) -> tuple[int, list[str]]:
     """each matrix has 2 params (on for x and y each), one value, and we aggregate over seeds;
     if there are more than than these 4 parameter with different values,
     we want to put that in seperate rows instead of aggregating over them.
@@ -228,7 +287,9 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
         is_whitelisted = whitelisted_cols == "all" or col in whitelisted_cols
         if any([is_ignored, is_eval_key, not is_whitelisted]):
             if is_whitelisted:
-                log_warn(f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'.")
+                log_warn(
+                    f"{col} is in the whitelist, but will be ignored. Probably {col} is in both 'split_groups' and 'aggregate_groups'."
+                )
             log_debug(f"ignoring {col}")
             continue
         nunique = dataframe[col].nunique(dropna=False)
@@ -236,7 +297,7 @@ def get_num_rows(dataframe: pd.DataFrame, ignored_cols: list[str], config: Attri
             log_debug(f"adding {col} since there are {nunique} unique values")
             for unique_hp in dataframe[col].unique():
                 columns_with_non_unique_values.append(f"{col}={unique_hp}")
-            necesarry_rows += (nunique)  # each unique parameter should be an individal plot
+            necesarry_rows += nunique  # each unique parameter should be an individal plot
 
     rows_number = max(necesarry_rows, 1)
     col_names = columns_with_non_unique_values
@@ -253,8 +314,8 @@ def find_global_vmin_vmax(dataframe_list, config):
 
     if num_cols > 1:
         # all subplots should have same colors -> we need to find the limits
-        vmin = float('inf')
-        vmax = float('-inf')
+        vmin = float("inf")
+        vmax = float("-inf")
 
         for i in range(num_cols):
             dataframe = dataframe_list[i]
@@ -262,22 +323,89 @@ def find_global_vmin_vmax(dataframe_list, config):
             idx = config.plot.y_axis[0]
             key = config.plot.metric
 
-            pivot_table = pd.pivot_table(dataframe,
-                                 columns=cols, index=idx,
-                                 values=key,
-                                 aggfunc='mean')
+            pivot_table = pd.pivot_table(dataframe, columns=cols, index=idx, values=key, aggfunc="mean")
 
             min_value_present_in_current_df = pivot_table.min().min()
             max_value_present_in_current_df = pivot_table.max().max()
 
-            log_debug("colorbar_limits:\n" +
-                            f"  subfigure number {i+1}, checking for metric {key}: \n" +
-                            f"  min value is {min_value_present_in_current_df},\n" +
-                            f"  max value is {max_value_present_in_current_df}")
+            log_debug(
+                "colorbar_limits:\n"
+                + f"  subfigure number {i+1}, checking for metric {key}: \n"
+                + f"  min value is {min_value_present_in_current_df},\n"
+                + f"  max value is {max_value_present_in_current_df}"
+            )
             vmin = min(vmin, min_value_present_in_current_df)
             vmax = max(vmax, max_value_present_in_current_df)
 
     return vmin, vmax
+
+
+def get_local_vmin_vmax(pt_object: PivotTable) -> tuple[float, float] | None:
+    """replace vmin and vmax with custom values if specified"""
+    dataframe = pt_object.grouped_df
+    if "evaluation.plot.limits" in dataframe.columns:
+        limits = dataframe["evaluation.plot.limits"].iloc[0]
+        if limits:
+            vmin = min(limits)
+            vmax = max(limits)
+            log_debug(f"setting cbar limits to {vmin}, {vmax} ")
+            return vmin, vmax
+
+
+def create_pivot_tables(
+    dataframe_list: list[pd.DataFrame], config: AttributeDict, n_rows: list[int], row_names_by_col: list[list[str]]
+) -> list[list[PivotTable]]:
+    pivot_tables = [list() for _ in range(len(dataframe_list))]
+
+    for i in range(len(dataframe_list)):
+        row_names = row_names_by_col[i]
+        for j in range(n_rows[i]):
+            dataframe = dataframe_list[i]
+            df_entry = dataframe.iloc[0]
+            metric_name = df_entry["evaluation.plot.metric"]
+            cols = config.plot.x_axis[i]
+            idx = config.plot.y_axis[j]
+
+            # df grouping for split_groups
+            row_name = row_names[j]
+            if row_name != "default":
+                pname, pvalue = row_name.split("=", maxsplit=1)
+                if pd.api.types.is_numeric_dtype(dataframe[pname]):
+                    try:
+                        pvalue = float(pvalue)
+                    except ValueError:
+                        pass
+                try:
+                    grouped_df = dataframe.groupby([pname]).get_group((pvalue,))
+                except KeyError:
+                    log_warn(
+                        f"Was not able to groupby '{pname}',"
+                        + "maybe the data was created with different versions of FOB; skipping this row"
+                    )
+                    log_debug(f"{pname=}{pvalue=}{dataframe.columns=}{dataframe[pname]=}")
+                    pivot_tables[i].append(PivotTable(pd.DataFrame(), pd.DataFrame()))
+                    continue
+            else:
+                grouped_df = dataframe
+
+            pivot_table = pd.pivot_table(grouped_df, columns=cols, index=idx, values=metric_name, aggfunc="mean")
+
+            if config.plot.std:
+                pivot_table_agg = pd.pivot_table(
+                    grouped_df,
+                    columns=cols,
+                    index=idx,
+                    values=metric_name,
+                    aggfunc=config.plot.aggfunc,
+                    fill_value=float("inf"),
+                    dropna=False,
+                )
+            else:
+                pivot_table_agg = None
+
+            pivot_tables[i].append(PivotTable(grouped_df, pivot_table, pivot_table_agg))
+
+    return pivot_tables
 
 
 def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
@@ -300,58 +428,77 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
 
     log_debug(f"{n_rows=} and {num_cols=}")
 
-    # TODO, figsize was just hardcoded for (1, 2) grid and left to default for (1, 1) grid
-    #       probably not worth the hazzle to create something dynamic (atleast not now)
-    # EDIT: it was slightly adapted to allow num rows without being completely unreadable
-    # margin = (num_subfigures - 1) * 0.3
-    # figsize=(5*n_cols + margin, 2.5)
-    scale = config.plotstyle.scale
-    if num_cols == 1 and n_rows_max > 1:
-        figsize = (2**3 * scale, 2 * 3 * n_rows_max * scale)
-    elif num_cols == 2:
-        # TODO: after removing cbar from left subifgure, it is squished
-        #       there is an argument to share the legend, we should use that
-        figsize = (12 * scale, 5.4 * n_rows_max * scale)
-    elif num_cols > 2:
-        figsize = (12 * (num_cols / 2) * scale, 5.4 * n_rows_max * scale)
-    else:
-        figsize = None
+    # create pivot tables and extract subplot widths
+    pivot_tables = create_pivot_tables(dataframe_list, config, n_rows, row_names)
+    dims = [list() for _ in range(num_cols)]
+    for i in range(num_cols):
+        for j in range(n_rows[i]):
+            width = len(pivot_tables[i][j].pivot_table.columns)
+            height = len(pivot_tables[i][j].pivot_table.index)
+            dims[i].append((width, height))
 
-    # TODO: use seaborn FacetGrid
-    fig, axs = plt.subplots(n_rows_max, num_cols, figsize=figsize)
+    # calculate subplot widths
+    widths = [max(map(lambda x: x[0], col_dims)) for col_dims in dims]
+    heights = [max([x[1] for x in [dims[i][j] for i in range(num_cols)]]) for j in range(n_rows_max)]
+    total_width = sum(widths)
+    width_ratios = [w / total_width for w in widths]
+
+    # calculate figure dims
+    scale = config.plotstyle.scale
+    fig_width = sum(widths) + len(widths) + 2
+    fig_height = sum(heights) + 2 * len(heights)
+    figsize = [fig_width * scale, fig_height * scale]
+    min_figsize = 3
+    if any(f < min_figsize for f in figsize):
+        factor = max(min_figsize / figsize[0], min_figsize / figsize[1])
+        figsize = list(map(lambda x: x * factor, figsize))
+
+    # adjust for colorbar
+    bar_width = 0.25  # compared to a table entry
+    ratio = figsize[0] / (figsize[0] + bar_width)
+    width_ratios = list(map(lambda x: x * ratio, width_ratios))
+    width_ratios.append(1 - ratio)
+    figsize[0] += bar_width
+
+    # create figure
+    fig, axs = plt.subplots(n_rows_max, num_cols + 1, figsize=figsize, width_ratios=width_ratios)
     if n_rows_max == 1:
         axs = [axs]
-    if num_cols == 1:
-        axs = [[ax] for ax in axs]  # adapt for special case so we have unified types
 
     # Adjust left and right margins as needed
     # fig.subplots_adjust(left=0.1, right=0.9, top=0.97, hspace=0.38, bottom=0.05,wspace=0.3)
 
     # None -> plt will chose vmin and vmax
-    vmin, vmax = find_global_vmin_vmax(dataframe_list, config)
+    global_vmin, global_vmax = find_global_vmin_vmax(dataframe_list, config)
 
     for i in range(num_cols):
-        num_nested_subfigures: int = n_rows[i]
+        num_rows: int = n_rows[i] if config.split_groups else 1
+        for j in range(num_rows):
+            pt_object = pivot_tables[i][j]
+            ax = axs[j][i]
 
-        if not config.split_groups:
-            create_one_grid_element(dataframe_list, config, axs, i,
-                                    j=0,
-                                    max_i=num_cols,
-                                    max_j=0,
-                                    vmin=vmin,
-                                    vmax=vmax,
-                                    n_rows=n_rows,
-                                    row_names=row_names)
-        else:
-            for j in range(num_nested_subfigures):
-                create_one_grid_element(dataframe_list, config, axs, i,
-                                        j,
-                                        max_i=num_cols,
-                                        max_j=num_nested_subfigures,
-                                        vmin=vmin,
-                                        vmax=vmax,
-                                        n_rows=n_rows,
-                                        row_names=row_names)
+            # use correct formatting
+            vmin, vmax = handle_formatting(pt_object, global_vmin, global_vmax)
+
+            # up to here limits was the min and max over all dataframes, usually we want to use user values
+            local_limits = get_local_vmin_vmax(pt_object)
+            if local_limits is not None:
+                vmin, vmax = local_limits
+
+            create_one_grid_element(
+                pt_object, config, ax, i, j, max_i=num_cols, max_j=num_rows, vmin=vmin, vmax=vmax, row_names=row_names
+            )
+
+    # add colorbars
+    for j in range(num_rows):
+        pt_object = pivot_tables[num_cols - 1][j]
+        ax = axs[j][num_cols]
+        df = pt_object.grouped_df
+        vmin, vmax = handle_formatting(pt_object, global_vmin, global_vmax)
+        local_limits = get_local_vmin_vmax(pt_object)
+        if local_limits is not None:
+            vmin, vmax = local_limits
+        make_colorbar(df, config, ax, vmin, vmax)
 
     if config.plotstyle.tight_layout:
         fig.tight_layout()
@@ -364,66 +511,56 @@ def create_figure(dataframe_list: list[pd.DataFrame], config: AttributeDict):
     return fig, axs
 
 
-def create_one_grid_element(dataframe_list: list[pd.DataFrame], config: AttributeDict, axs,
-                            i: int, j: int, max_i: int, max_j: int, vmin, vmax, n_rows, row_names):
+def create_one_grid_element(
+    pt_object: PivotTable, config: AttributeDict, ax, i: int, j: int, max_i: int, max_j: int, vmin, vmax, row_names
+):
     """does one 'axs' element as it is called in plt"""
-    num_nested_subfigures: int = n_rows[i]
-    name_for_additional_subplots: list[str] = row_names[i]
-    num_subfigures = max_i  # from left to right
-    num_nested_subfigures = max_j  # from top to bottom
-    dataframe = dataframe_list[i]
+    if pt_object.empty:
+        return False
+    current_dataframe = pt_object.grouped_df
 
     cols = config.plot.x_axis[i]
     idx = config.plot.y_axis[0]
-    # only include colorbar once
-    include_cbar: bool = i == num_subfigures - 1
 
-    model_param = name_for_additional_subplots[j]
-    if model_param == "default":
-        current_dataframe = dataframe  # we do not need to do further grouping
-    else:
-        param_name, param_value = model_param.split("=", maxsplit=1)
-        if pd.api.types.is_numeric_dtype(dataframe[param_name]):
-            param_value = float(param_value)
-        try:
-            current_dataframe = dataframe.groupby([param_name]).get_group((param_value,))
-        except KeyError:
-            log_warn(f"WARNING: was not able to groupby '{param_name}'," +
-                           "maybe the data was created with different versions of fob; skipping this row")
-            log_debug(f"{param_name=}{param_value=}{dataframe.columns=}{dataframe[param_name]=}")
-            return False
-    current_plot = create_matrix_plot(current_dataframe, config,
-                                        cols, idx,
-                                        ax=axs[j][i],
-                                        cbar=include_cbar, vmin=vmin, vmax=vmax)
+    model_param = row_names[i][j]
+
+    # optionally convert axis-tick-labels to logscale
+    x_axis_cfg = {k: v[i] for k, v in config.plotstyle.x_axis.items()}
+    y_axis_cfg = {k: v[j] for k, v in config.plotstyle.y_axis.items()}
+    current_plot = create_matrix_plot(
+        pt_object, config, cols, idx, ax=ax, vmin=vmin, vmax=vmax, x_axis_cfg=x_axis_cfg, y_axis_cfg=y_axis_cfg
+    )
 
     # LABELS
     # Pretty name for label "learning_rate" => "Learning Rate"
-    # remove x_label of all but last row, remove y_label for all but first column    
+    # remove x_label of all but last row, remove y_label for all but first column
     if i > 0:
-        current_plot.set_ylabel('', labelpad=8)
+        current_plot.set_ylabel("", labelpad=8)
     else:
-        current_plot.set_ylabel(pretty_name(current_plot.get_ylabel()))
-    if j < num_nested_subfigures - 1:
-        current_plot.set_xlabel('', labelpad=8)
+        ylabel = pretty_name(current_plot.get_ylabel()) if y_axis_cfg["label"] is None else y_axis_cfg["label"]
+        current_plot.set_ylabel(ylabel)
+    if j < max_j - 1:
+        current_plot.set_xlabel("", labelpad=8)
     else:
-        current_plot.set_xlabel(pretty_name(current_plot.get_xlabel()))
-
-    # reading optimizer and task name after grouping
-    df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
-    opti_name = df_entry['optimizer.name']
-    task_name = df_entry['task.name']
+        xlabel = pretty_name(current_plot.get_xlabel()) if x_axis_cfg["label"] is None else x_axis_cfg["label"]
+        current_plot.set_xlabel(xlabel)
 
     # TITLE
     # title (heading) of the heatmap: <optimname> on <taskname> (+ additional info)
-    title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
-    if max_i > 1 or max_j > 1:
-        title += "" if model_param == "default" else f"\n{model_param}"
+    if config.column_titles is None:
+        # reading optimizer and task name after grouping
+        df_entry = current_dataframe.iloc[0]  # just get an arbitrary trial
+        opti_name = df_entry["optimizer.name"]
+        task_name = df_entry["task.name"]
+        title = f"{pretty_name(opti_name)} on {pretty_name(task_name)}"
+    else:
+        title = config.column_titles[i]
+    if (max_i > 1 or max_j > 1) and model_param != "default":
+        title += f"\n{model_param}"
     current_plot.set_title(title)
 
 
-def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1
-                       ) -> list[pd.DataFrame]:
+def extract_dataframes(workload_paths: List[Path], config: AttributeDict, depth: int = 1) -> list[pd.DataFrame]:
     df_list: list[pd.DataFrame] = []
     num_dataframes: int = len(workload_paths)
 
@@ -455,6 +592,7 @@ def set_plotstyle(config: AttributeDict):
     plt.rcParams["font.family"] = config.plotstyle.font.family
     plt.rcParams["font.size"] = config.plotstyle.font.size
 
+
 def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignore pylint: disable=dangerous-default-value
     """
     Tries to use a mapping for the name, else will do some general replacement.
@@ -472,13 +610,13 @@ def pretty_name(name: str, pretty_names: dict | str = {}) -> str:  # type: ignor
         pretty_names: dict[str, str] = yaml_content["names"]
 
     # applying pretty names
-    name_without_yaml_prefix = name.split(".")[-1]
+    name_without_yaml_prefix = name.replace("optimizer.", "").replace("task.", "")
     if name in pretty_names.keys():
         name = pretty_names[name]
     elif name_without_yaml_prefix in pretty_names.keys():
         name = pretty_names[name_without_yaml_prefix]
     else:
-        name = name.replace('_', ' ').title()
+        name = name_without_yaml_prefix.replace("_", " ").title()
     return name
 
 
@@ -517,7 +655,9 @@ def clean_config(config: AttributeDict) -> AttributeDict:
         value_is_none = not config.data_dirs
         value_has_wrong_type = not isinstance(config.data_dirs, (PathLike, str, list))
         if value_is_none or value_has_wrong_type:
-            raise ValueError(f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}")
+            raise ValueError(
+                f"Error: 'evaluation.data_dirs' was not provided correctly! check for typos in the yaml provided! value given: {config.data_dirs}"
+            )
 
     # allow the user to write a single string instead of a list of strings
     if not isinstance(config.output_types, list):

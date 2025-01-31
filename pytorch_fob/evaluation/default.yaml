@@ -11,6 +11,7 @@ evaluation:
   verbose: False                 # debug prints
   column_split_key: optimizer.name  # if set, will split the dataframe and plot it in columns. Default: optimizer.name
   column_split_order: null        # sets the order in which the columns are plotted.
+  column_titles: null             # sets the title for each column
 
   # keeping the values on null -> automatically figure it out if possible, or let matplotlib decide
   plot:
@@ -31,6 +32,16 @@ evaluation:
 
   plotstyle:
     tight_layout: True
+    # log base on axis tick-labels, e.g. set to 10 for [10^0, 10^-1, 10^-2] instead of [1, 0.1, 0.01]. Can be list of bases to set for each row/column individually
+    x_axis:
+      log_label: null   # log base for x axis
+      label: null       # labels for x axis, list of strings
+      factor: 1.0        # scales the x axis by this value
+    y_axis:
+      log_label: null   # log base for y axis
+      label: null       # labels for y axis, list of strings
+      factor: 1.0        # scales the y axis by this value
+
     text:
       usetex: True               # you can give latex code in the yaml: $\sqrt{\pi \cdot \sigma}$ but some cluster dont have it installed# the font in the tiles of the matrix
 

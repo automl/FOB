@@ -24,6 +24,9 @@ task:
       p: 0.5
     trivial_augment:
       use: true
+    label_flipping:
+      use: false
+      p: 0.1
   target_metric: val_acc
   target_metric_mode: max
 engine:
