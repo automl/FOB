@@ -88,16 +88,22 @@ class WAdam(Optimizer):
                 if len(state) == 0:
                     state["step"] = 0
                     state["running_mean"] = torch.zeros(
-                        grad_shape[:-1]
-                    ).type_as(grad)
+                        grad_shape,
+                    ).type_as(g)
                     state["running_variance"] = torch.zeros(
-                        grad_shape[-1:]
-                    ).type_as(grad)
+                        grad_shape,
+                    ).type_as(g)
 
+                state['step'] += 1
                 step = state['step']
-                step.add(1)
+                step = state['step']
                 m = state['running_mean']
                 v = state['running_variance']
+
+                lr = group['lr']
+                beta1 = group['beta1']
+                beta2 = group['beta2']
+                eps = group['epsilon']
 
                 delta = g - m
                 m.add((1. - beta1) * delta)
@@ -106,10 +112,13 @@ class WAdam(Optimizer):
                 )
 
                 #Debiased step size
-                lr = self._get_lr(group, state)
                 beta1_power = beta1 ** step
                 beta2_power = beta2 ** step
-                alpha = lr * torch.sqrt(1. - beta2_power) / (1. - beta1_power)
+                alpha = lr * math.sqrt(1. - beta2_power) / (1. - beta1_power)
+                print(f'learning rate: {lr}')
+                from IPython import embed
+                embed(colors='linux')
+                XX
                 p.data.sub((m * alpha) / (torch.sqrt(v) + eps))
 
         return loss
@@ -134,3 +143,25 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
             "interval": config.lr_scheduler.interval
         }
     }
+
+
+if __name__=='__main__':
+    params = torch.tensor([0., 0.], requires_grad=True)
+    maxiter = 1000
+    opt = WAdam([params])
+    mc_samples = 3
+    def loss_fn():
+        loc,scale = params
+        scale = torch.exp(scale)
+        q = torch.distributions.Normal(loc, scale)
+        p = torch.distributions.Normal(10., 1.)
+        z = q.rsample((mc_samples,))
+        return torch.mean(q.log_prob(z) - p.log_prob(z))
+
+    from tqdm import trange
+    loss = []
+    for i in trange(maxiter):
+        loss.append(float(opt.step(loss_fn)))
+
+    from IPython import embed
+    embed(colors='linux')
