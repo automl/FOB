@@ -114,7 +114,6 @@ class WAdam(Optimizer):
                 beta1_power = beta1 ** step
                 beta2_power = beta2 ** step
                 alpha = lr * math.sqrt(1. - beta2_power) / (1. - beta1_power)
-                print(f'learning rate: {lr}')
                 p.data.sub_((m * alpha) / (torch.sqrt(v) + eps))
 
         return loss
