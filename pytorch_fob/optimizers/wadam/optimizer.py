@@ -20,12 +20,11 @@ class WAdam(Optimizer):
         params: iterable of parameters to optimize or dicts defining
             parameter groups
         lr: external learning rate (default: None)
-        eps: regularization constans for square gradient
-            and parameter scale respectively (default: (1e-30, 1e-3))
         beta1: coefficient used for computing running averages of gradient
             (default: None)
         beta2: coefficient used for computing running averages of gradient
             (default: None)
+        epsilon: a small constant for numerical stability (default: 1e-7)
     """
 
     def __init__(
@@ -78,7 +77,7 @@ class WAdam(Optimizer):
                 g = p.grad.data
                 if g.is_sparse:
                     raise RuntimeError(
-                        "Adafactor does not support sparse gradients."
+                        "Wadam does not support sparse gradients."
                     )
 
                 state = self.state[p]
@@ -106,8 +105,8 @@ class WAdam(Optimizer):
                 eps = group['epsilon']
 
                 delta = g - m
-                m.add((1. - beta1) * delta)
-                v.add(
+                m.add_((1. - beta1) * delta)
+                v.add_(
                     (beta2 - 1.) * v + (1. - beta2) * delta * (g - m)
                 )
 
@@ -116,10 +115,7 @@ class WAdam(Optimizer):
                 beta2_power = beta2 ** step
                 alpha = lr * math.sqrt(1. - beta2_power) / (1. - beta1_power)
                 print(f'learning rate: {lr}')
-                from IPython import embed
-                embed(colors='linux')
-                XX
-                p.data.sub((m * alpha) / (torch.sqrt(v) + eps))
+                p.data.sub_((m * alpha) / (torch.sqrt(v) + eps))
 
         return loss
 
@@ -148,20 +144,22 @@ def configure_optimizers(model: GroupedModel, config: OptimizerConfig) -> Optimi
 if __name__=='__main__':
     params = torch.tensor([0., 0.], requires_grad=True)
     maxiter = 1000
-    opt = WAdam([params])
-    mc_samples = 3
+    opt = WAdam([params], 1e-3, 0.9, 0.9, 1e-3)
+    mc_samples = 30
     def loss_fn():
+        opt.zero_grad()
         loc,scale = params
         scale = torch.exp(scale)
         q = torch.distributions.Normal(loc, scale)
         p = torch.distributions.Normal(10., 1.)
         z = q.rsample((mc_samples,))
-        return torch.mean(q.log_prob(z) - p.log_prob(z))
+        loss = torch.mean(q.log_prob(z) - p.log_prob(z))
+        loss.backward()
+        return loss
 
     from tqdm import trange
     loss = []
     for i in trange(maxiter):
         loss.append(float(opt.step(loss_fn)))
 
-    from IPython import embed
-    embed(colors='linux')
+
