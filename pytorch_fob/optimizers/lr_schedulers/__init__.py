@@ -30,7 +30,7 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer, config: OptimizerConfig) 
     if config.lr_scheduler.warmup_steps is None or config.lr_scheduler.scheduler == "identity":
         base_scheduler = IdentityLR
         scheduler_kwargs = dict()
-    if config.lr_scheduler.scheduler == "cosine":
+    elif config.lr_scheduler.scheduler == "cosine":
         base_scheduler = CosineAnnealingLR
         scheduler_kwargs = dict(
             T_max=scheduler_steps,
