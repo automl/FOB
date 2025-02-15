@@ -73,7 +73,8 @@ class ImagenetDataModule(TaskDataModule):
     def prepare_data(self):
         # download
         # TODO: find a solution to remove tensorflow from requirements as it is only needed for the download
-        tfds.data_source("imagenet_resized/64x64", data_dir=self.data_dir, download=True)
+        kwargs = {"file_format": "array_record"}
+        tfds.data_source("imagenet_resized/64x64", data_dir=self.data_dir, download=True, builder_kwargs=kwargs)
 
     def setup(self, stage: str):
         """setup is called from every process across all the nodes. Setting state here is recommended.
