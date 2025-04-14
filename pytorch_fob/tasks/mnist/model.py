@@ -5,15 +5,15 @@ from pytorch_fob.optimizers import Optimizer
 
 
 class MNISTModel(TaskModel):
-    def __init__(self, optimizer: Optimizer, config: TaskConfig):
+    def __init__(self, num_hidden: int, activation: str):
 
         input_size = 28 * 28  # 784
         num_classes = 10
-        num_hidden = config.model.num_hidden
-        activation = config.model.activation
-        if activation.lower() == "Sigmoid".lower():
+        num_hidden = num_hidden
+        activation = activation
+        if activation.lower() == "sigmoid":
             self.activation = torch.nn.Sigmoid
-        elif activation.lower() == "ReLU".lower():
+        elif activation.lower() == "relu":
             self.activation = torch.nn.ReLU
         else:
             raise NotImplementedError(f"{activation} is not supported for mnist yet")
@@ -25,7 +25,7 @@ class MNISTModel(TaskModel):
             self.activation(),
             torch.nn.Linear(num_hidden, num_classes, bias=True),
         )
-        super().__init__(model, optimizer, config)
+        super().__init__(model)
         # negative log likelihood loss
         self.loss_fn = torch.nn.functional.nll_loss
 

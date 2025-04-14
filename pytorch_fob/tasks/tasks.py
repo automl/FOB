@@ -30,15 +30,14 @@ class TaskModel(LightningModule):
     def __init__(
             self,
             model: nn.Module | GroupedModel,
-            optimizer: Optimizer,
-            config: TaskConfig,
             **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
-        self.config = config
-        self.optimizer = optimizer
         self.model = model if isinstance(model, GroupedModel) else GroupedModel(model)
         self.optimizer_times_ms = []
+
+    def set_optimizer(self, optimizer: Optimizer):
+        self.optimizer = optimizer
 
     def forward(self, *args, **kwargs):
         return self.model.forward(*args, **kwargs)
@@ -61,12 +60,11 @@ class TaskModel(LightningModule):
 
 
 class TaskDataModule(LightningDataModule):
-    def __init__(self, config: TaskConfig) -> None:
+    def __init__(self, data_dir) -> None:
         super().__init__()
-        self.config = config
-        self.workers: int = min(config.workers, 16)
-        self.data_dir: Path = config.data_dir / config.name
-        self.batch_size: int = config.batch_size
+        self.workers: int = 4
+        self.data_dir: Path = data_dir
+        self.batch_size: int
         self.data_train: Any
         self.data_val: Any
         self.data_test: Any
@@ -80,6 +78,9 @@ class TaskDataModule(LightningDataModule):
         if not self.batch_size or self.batch_size < 1:
             raise NotImplementedError("Each task configures its own batch_size. \
                                       Please set it explicitely, to avoid confusion.")
+
+    def set_batch_size(self, batch_size: int):
+        self.batch_size = batch_size
 
     def train_dataloader(self):
         self.check_dataset(self.data_train)
