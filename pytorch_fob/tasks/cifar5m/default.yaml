@@ -1,0 +1,42 @@
+task:
+  name: cifar5m
+  output_dir_name: cifar5m
+  batch_size: 256
+  max_epochs: null
+  max_steps: 19540  # always train for as many steps as there are images (max_train_size / batch_size)
+  label_smoothing: 0.0
+  train_size: 5002240
+  val_size: 1000448
+  model:
+    name: resnet18
+    hidden_channel: 64
+    kernel_size: 3
+    padding: 1
+    maxpool: false
+  train_transforms:
+    random_crop:
+      use: true
+      size: 32
+      padding: 4
+      padding_mode: reflect
+    horizontal_flip:
+      use: true
+      p: 0.5
+    trivial_augment:
+      use: true
+  target_metric: val_acc
+  target_metric_mode: max
+engine:
+  devices: 1
+  sbatch_args:
+    time: 00:25:00
+optimizer:
+  name: adamw_baseline
+  learning_rate: 1.0e-3
+  weight_decay: 0.1
+evaluation:
+  plot:
+    metric: test_acc
+    test_metric_mode: max
+    format: "2.2"
+    limits: [60, 80]
