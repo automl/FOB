@@ -49,7 +49,6 @@ class CIFAR5MDataset(Dataset):
                 self.file_lengths.append(length)
                 self.file_offsets.append(self.file_offsets[-1] + length)
 
-
         self.total_length = self.file_offsets[-1]
         log_debug(f"File offsets: {self.file_offsets}")
         log_debug(f"Total length: {self.total_length}")
@@ -146,12 +145,8 @@ class CIFAR5MDataModule(TaskDataModule):
         self.nsamples = 6002688
         self.max_train_size = 5002240
         self.max_val_size = 1000448
-        assert self.config.train_size <= self.max_train_size, (
-            "Train size must be less than total number of samples."
-        )
-        assert self.config.val_size <= self.max_val_size, (
-            "Val size must be less than total number of samples."
-        )
+        assert self.config.train_size <= self.max_train_size, "Train size must be less than total number of samples."
+        assert self.config.val_size <= self.max_val_size, "Val size must be less than total number of samples."
         self._full_ds = None
         self._indices = None
 
@@ -204,7 +199,7 @@ class CIFAR5MDataModule(TaskDataModule):
 
     def _init_dataset(self, preload: bool = False):
         if self._full_ds is None or (preload and not self._full_ds.preload):
-            npz_files = list(map(str, (self.data_dir / "download").iterdir()))
+            npz_files = list(filter(lambda x: x.endswith(".npz"), map(str, (self.data_dir / "download").iterdir())))
             self._full_ds = CIFAR5MDataset(
                 npz_files,
                 preload=preload,

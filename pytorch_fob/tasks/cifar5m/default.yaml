@@ -15,21 +15,21 @@ task:
     maxpool: false
   train_transforms:
     random_crop:
-      use: true
+      use: false
       size: 32
       padding: 4
       padding_mode: reflect
     horizontal_flip:
-      use: true
+      use: false
       p: 0.5
     trivial_augment:
-      use: true
+      use: false
   target_metric: val_acc
   target_metric_mode: max
 engine:
   devices: 1
   sbatch_args:
-    time: 00:25:00
+    time: 00:20:00
 optimizer:
   name: adamw_baseline
   learning_rate: 1.0e-3
@@ -39,4 +39,4 @@ evaluation:
     metric: test_acc
     test_metric_mode: max
     format: "2.2"
-    limits: [60, 80]
+    limits: [80, 100]
